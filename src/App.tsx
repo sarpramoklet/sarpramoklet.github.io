@@ -1,4 +1,6 @@
-import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { HashRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Menu } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import MeetingDashboard from './pages/MeetingDashboard';
@@ -13,15 +15,40 @@ import Assignment from './pages/Assignment';
 import Performance from './pages/Performance';
 import Utilities from './pages/Utilities';
 
+// Scroll to top component when route changes
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    // Also scroll the main content area
+    const mainContent = document.querySelector('.content-container');
+    if (mainContent) {
+      mainContent.scrollTo(0, 0);
+    }
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
+};
 
 function App() {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
   return (
     <Router>
+      <ScrollToTop />
       <div className="app-layout">
-        <Sidebar />
+        <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
+        
         <main className="main-content">
           <div className="bg-glow"></div>
-          <div style={{ padding: '2rem', flex: 1, overflowY: 'auto' }}>
+          
+          <div className="mobile-header">
+            <button className="mobile-menu-btn" onClick={() => setIsSidebarOpen(true)}>
+              <Menu size={24} />
+            </button>
+            <h1 className="mobile-title gradient-text">Sarpramoklet</h1>
+          </div>
+          
+          <div className="content-container">
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/meeting" element={<MeetingDashboard />} />
