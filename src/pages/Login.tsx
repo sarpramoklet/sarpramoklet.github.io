@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, KeyRound } from 'lucide-react';
+import { Shield, KeyRound, Lock } from 'lucide-react';
 
 interface LoginProps {
   onLogin: (email: string) => void;
@@ -8,16 +8,17 @@ interface LoginProps {
 
 const Login = ({ onLogin }: LoginProps) => {
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (email === 'hadi@smktelkom-mlg.sch.id') {
+    if (email === 'hadi@smktelkom-mlg.sch.id' && password === 'mokletjaya') {
       onLogin(email);
       navigate('/');
     } else {
-      setError('Akses ditolak. Email tidak terdaftar sebagai Administrator.');
+      setError('Akses ditolak. Email tidak terdaftar atau password salah.');
     }
   };
 
@@ -57,6 +58,33 @@ const Login = ({ onLogin }: LoginProps) => {
                 required
               />
               <KeyRound size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Password</label>
+            <div style={{ position: 'relative' }}>
+              <input 
+                type="password" 
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setError('');
+                }}
+                placeholder="••••••••"
+                style={{ 
+                  width: '100%', 
+                  padding: '0.8rem 1rem 0.8rem 2.8rem', 
+                  borderRadius: '8px', 
+                  background: 'rgba(0,0,0,0.2)', 
+                  border: '1px solid var(--border-subtle)', 
+                  color: 'var(--text-primary)',
+                  outline: 'none',
+                  transition: 'var(--trans-fast)'
+                }} 
+                required
+              />
+              <Lock size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
             </div>
             {error && (
               <p style={{ color: 'var(--accent-rose)', fontSize: '0.8rem', marginTop: '0.2rem' }}>{error}</p>
