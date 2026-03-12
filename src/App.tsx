@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import Sidebar from './components/Sidebar';
@@ -14,6 +14,7 @@ import Personnel from './pages/Personnel';
 import Assignment from './pages/Assignment';
 import Performance from './pages/Performance';
 import Utilities from './pages/Utilities';
+import Login from './pages/Login';
 
 // Scroll to top component when route changes
 const ScrollToTop = () => {
@@ -29,8 +30,19 @@ const ScrollToTop = () => {
   return null;
 };
 
+// Protected Route Component
+const ProtectedRoute = ({ isLoggedIn, children }: { isLoggedIn: boolean, children: React.ReactNode }) => {
+  if (!isLoggedIn) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+};
+
 function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    return localStorage.getItem('userEmail') === 'hadi@smktelkom-mlg.sch.id';
+  });
   const [isLightMode, setIsLightMode] = useState(() => {
     return localStorage.getItem('theme') === 'light';
   });
@@ -53,7 +65,9 @@ function App() {
           isOpen={isSidebarOpen} 
           setIsOpen={setIsSidebarOpen} 
           isLightMode={isLightMode} 
-          setIsLightMode={setIsLightMode} 
+          setIsLightMode={setIsLightMode}
+          isLoggedIn={isLoggedIn}
+          setIsLoggedIn={setIsLoggedIn}
         />
         
         <main className="main-content">
@@ -68,23 +82,27 @@ function App() {
           
           <div className="content-container">
             <Routes>
+              {/* Public Routes */}
+              <Route path="/login" element={<Login onLogin={(email) => { localStorage.setItem('userEmail', email); setIsLoggedIn(true); }} />} />
               <Route path="/" element={<Dashboard />} />
               <Route path="/meeting" element={<MeetingDashboard />} />
-              <Route path="/tickets" element={<Tickets />} />
               <Route path="/it" element={<ITPage />} />
               <Route path="/lab" element={<LabPage />} />
               <Route path="/sarpras" element={<SarprasPage />} />
-              <Route path="/assets" element={<Assets />} />
-              <Route path="/personnel" element={<Personnel />} />
-              <Route path="/assignment" element={<Assignment />} />
               <Route path="/performance" element={<Performance />} />
-              <Route path="/utilities" element={<Utilities />} />
-              {/* Dummy pages for the rest */}
-              <Route path="/maintenance" element={<DummyPage title="Jadwal Maintenance" />} />
-              <Route path="/rooms" element={<DummyPage title="Gedung & Ruang" />} />
-              <Route path="/projects" element={<DummyPage title="Proyek & Pengembangan" />} />
-              <Route path="/sop" element={<DummyPage title="SOP & Dokumen" />} />
-              <Route path="/notifications" element={<DummyPage title="Notifikasi Pribadi" />} />
+
+              {/* Protected Routes */}
+              <Route path="/tickets" element={<ProtectedRoute isLoggedIn={isLoggedIn}><Tickets /></ProtectedRoute>} />
+              <Route path="/utilities" element={<ProtectedRoute isLoggedIn={isLoggedIn}><Utilities /></ProtectedRoute>} />
+              <Route path="/assets" element={<ProtectedRoute isLoggedIn={isLoggedIn}><Assets /></ProtectedRoute>} />
+              <Route path="/personnel" element={<ProtectedRoute isLoggedIn={isLoggedIn}><Personnel /></ProtectedRoute>} />
+              <Route path="/assignment" element={<ProtectedRoute isLoggedIn={isLoggedIn}><Assignment /></ProtectedRoute>} />
+              <Route path="/projects" element={<ProtectedRoute isLoggedIn={isLoggedIn}><DummyPage title="Proyek & Pengembangan" /></ProtectedRoute>} />
+              <Route path="/sop" element={<ProtectedRoute isLoggedIn={isLoggedIn}><DummyPage title="SOP & Dokumen" /></ProtectedRoute>} />
+              <Route path="/notifications" element={<ProtectedRoute isLoggedIn={isLoggedIn}><DummyPage title="Notifikasi Pribadi" /></ProtectedRoute>} />
+              <Route path="/maintenance" element={<ProtectedRoute isLoggedIn={isLoggedIn}><DummyPage title="Jadwal Maintenance" /></ProtectedRoute>} />
+              <Route path="/rooms" element={<ProtectedRoute isLoggedIn={isLoggedIn}><DummyPage title="Gedung & Ruang" /></ProtectedRoute>} />
+              
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </div>
