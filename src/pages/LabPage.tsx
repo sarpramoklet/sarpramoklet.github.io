@@ -45,8 +45,8 @@ const LabPage = () => {
             </div>
           </div>
           <div>
-            <div className="stat-value">4</div>
-            <div className="stat-trend trend-up">Aplikasi IoT, Media Interaktif</div>
+            <div className="stat-value">6</div>
+            <div className="stat-trend trend-up">Aplikasi Terdaftar Layanan HKI</div>
           </div>
         </div>
       </div>
@@ -95,25 +95,25 @@ const LabPage = () => {
           </p>
           
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
-            <a href="#" className="badge" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', border: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.03)', color: 'var(--text-primary)', padding: '0.5rem 1rem', textDecoration: 'none', transition: 'var(--trans-fast)', fontSize: '0.85rem' }}>
+            <a href="https://molecul-game.vercel.app/" target="_blank" rel="noreferrer" className="badge" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', border: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.03)', color: 'var(--text-primary)', padding: '0.5rem 1rem', textDecoration: 'none', transition: 'var(--trans-fast)', fontSize: '0.85rem' }}>
               MoLeCuL <ArrowUpRight size={14} />
             </a>
-            <a href="#" className="badge" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', border: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.03)', color: 'var(--text-primary)', padding: '0.5rem 1rem', textDecoration: 'none', transition: 'var(--trans-fast)', fontSize: '0.85rem' }}>
+            <a href="https://mexpo.id/" target="_blank" rel="noreferrer" className="badge" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', border: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.03)', color: 'var(--text-primary)', padding: '0.5rem 1rem', textDecoration: 'none', transition: 'var(--trans-fast)', fontSize: '0.85rem' }}>
               Mexpo <ArrowUpRight size={14} />
             </a>
             <a href="https://myedotel.id" target="_blank" rel="noreferrer" className="badge" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', border: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.03)', color: 'var(--text-primary)', padding: '0.5rem 1rem', textDecoration: 'none', transition: 'var(--trans-fast)', fontSize: '0.85rem' }}>
               myedotel.id <ArrowUpRight size={14} />
             </a>
-            <a href="#" className="badge" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', border: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.03)', color: 'var(--text-primary)', padding: '0.5rem 1rem', textDecoration: 'none', transition: 'var(--trans-fast)', fontSize: '0.85rem' }}>
+            <a href="https://telkom-society.smktelkom-mlg.sch.id/" target="_blank" rel="noreferrer" className="badge" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', border: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.03)', color: 'var(--text-primary)', padding: '0.5rem 1rem', textDecoration: 'none', transition: 'var(--trans-fast)', fontSize: '0.85rem' }}>
               Telkom Society <ArrowUpRight size={14} />
             </a>
-            <a href="#" className="badge" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', border: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.03)', color: 'var(--text-primary)', padding: '0.5rem 1rem', textDecoration: 'none', transition: 'var(--trans-fast)', fontSize: '0.85rem' }}>
+            <a href="https://portofolio.smktelkom-mlg.sch.id/" target="_blank" rel="noreferrer" className="badge" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', border: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.03)', color: 'var(--text-primary)', padding: '0.5rem 1rem', textDecoration: 'none', transition: 'var(--trans-fast)', fontSize: '0.85rem' }}>
               Portofolio Siswa <ArrowUpRight size={14} />
             </a>
-            <a href="#" className="badge" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', border: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.03)', color: 'var(--text-primary)', padding: '0.5rem 1rem', textDecoration: 'none', transition: 'var(--trans-fast)', fontSize: '0.85rem' }}>
+            <a href="https://app.smktelkom-mlg.sch.id/" target="_blank" rel="noreferrer" className="badge" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', border: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.03)', color: 'var(--text-primary)', padding: '0.5rem 1rem', textDecoration: 'none', transition: 'var(--trans-fast)', fontSize: '0.85rem' }}>
               Moklet App <ArrowUpRight size={14} />
             </a>
-            <a href="#" className="badge" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', border: 'none', background: '#b91c1c', color: 'white', padding: '0.5rem 1rem', textDecoration: 'none', transition: 'var(--trans-fast)', fontSize: '0.85rem', boxShadow: '0 4px 14px rgba(185, 28, 28, 0.4)' }}>
+            <a href="https://drive.google.com/drive/folders/1n5pXVCFvSc5UmkaUkwjlIEQsmvXCBPql?usp=sharing" target="_blank" rel="noreferrer" className="badge" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', border: 'none', background: '#b91c1c', color: 'white', padding: '0.5rem 1rem', textDecoration: 'none', transition: 'var(--trans-fast)', fontSize: '0.85rem', boxShadow: '0 4px 14px rgba(185, 28, 28, 0.4)' }}>
                Sertifikat HKI Moklet <ArrowUpRight size={14} />
             </a>
           </div>
