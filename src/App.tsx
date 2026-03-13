@@ -84,7 +84,7 @@ function App() {
             <Routes>
               {/* Public Routes */}
               <Route path="/login" element={<Login onLogin={(email) => { localStorage.setItem('userEmail', email); setIsLoggedIn(true); }} />} />
-              <Route path="/" element={<Dashboard />} />
+              <Route path="/" element={<Dashboard isLoggedIn={isLoggedIn} />} />
               <Route path="/meeting" element={<MeetingDashboard />} />
               <Route path="/it" element={<ITPage />} />
               <Route path="/lab" element={<LabPage />} />

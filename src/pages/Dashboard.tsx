@@ -1,6 +1,6 @@
-
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Activity, Clock10, CheckSquare, TriangleAlert, Server, Component, Building, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Activity, Clock10, CheckSquare, TriangleAlert, Server, Component, Building, ArrowUpRight, ArrowDownRight, UserCircle2 } from 'lucide-react';
+import { CURRENT_USER } from '../data/organization';
 
 const areaData = [
   { name: 'Jan', IT: 400, Lab: 240, Sarpras: 240 },
@@ -25,9 +25,25 @@ const recentIssues = [
   { id: 'TKT-1046', title: 'Request Kabel LAN Tambahan', unit: 'IT', time: 'Kemarin', priority: 'Low', status: 'Selesai' },
 ];
 
-const Dashboard = () => {
+interface DashboardProps {
+  isLoggedIn?: boolean;
+}
+
+const Dashboard = ({ isLoggedIn = false }: DashboardProps) => {
   return (
     <div className="animate-fade-in">
+      {isLoggedIn && (
+        <div className="glass-panel" style={{ padding: '1.25rem 1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', borderLeft: '4px solid var(--accent-blue)', background: 'linear-gradient(90deg, var(--accent-blue-ghost), transparent)' }}>
+          <div style={{ padding: '8px', background: 'var(--bg-card)', borderRadius: '12px', color: 'var(--accent-blue)', border: '1px solid var(--border-subtle)' }}>
+            <UserCircle2 size={24} />
+          </div>
+          <div>
+            <h2 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 700 }}>Selamat Datang, {CURRENT_USER.nama}</h2>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>Sistem mengidentifikasi Anda sebagai <strong>{CURRENT_USER.jabatan}</strong>. Kontrol penuh diaktifkan.</p>
+          </div>
+        </div>
+      )}
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <div>
           <h1 className="page-title gradient-text">Pusat Kendali Layanan Internal</h1>
