@@ -1,6 +1,9 @@
+import { useState, useEffect } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Activity, Clock10, CheckSquare, TriangleAlert, Server, Component, Building, ArrowUpRight, ArrowDownRight, UserCircle2, TrendingUp, Wallet } from 'lucide-react';
+import { Activity, Clock10, CheckSquare, TriangleAlert, Server, Component, Building, ArrowUpRight, ArrowDownRight, UserCircle2, TrendingUp, Wallet, Loader2 } from 'lucide-react';
 import { getCurrentUser, ROLES } from '../data/organization';
+
+const API_URL = "https://script.google.com/macros/s/AKfycbzjzoObkhyXuVA3czMoMutwqW3MjuD4oJ9xYsMotlOC30z0c2dPaE525DhxKM2J9vsCIw/exec";
 
 const areaData = [
   { name: 'Jan', IT: 400, Lab: 240, Sarpras: 240 },
@@ -32,6 +35,39 @@ interface DashboardProps {
 const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => {
   const currentUser = getCurrentUser();
   const isPimpinan = currentUser.roleAplikasi === ROLES.PIMPINAN;
+  const isAuthorizedFinance = isPimpinan || currentUser.roleAplikasi === ROLES.PIC_ADMIN;
+  
+  const [financeLoading, setFinanceLoading] = useState(true);
+  const [financeData, setFinanceData] = useState({ totalIncome: 0, totalExpense: 0, balance: 0 });
+
+  useEffect(() => {
+    const fetchFinance = async () => {
+      try {
+        const resp = await fetch(API_URL);
+        const data = await resp.json();
+        if (data && Array.isArray(data)) {
+          const mapped = data.map((item: any) => ({
+            id: item.id || item.ID || '',
+            date: item.date || item.Tanggal || '',
+            amount: item.amount || item.Amount || 0,
+            type: item.type || item.Tipe || ''
+          }));
+          const income = mapped.filter((item: any) => item.type === 'income').reduce((acc, curr) => acc + Number(curr.amount), 0);
+          const expense = mapped.filter((item: any) => item.type === 'expense').reduce((acc, curr) => acc + Number(curr.amount), 0);
+          setFinanceData({ totalIncome: income, totalExpense: expense, balance: income - expense });
+        }
+      } catch (error) {
+        console.error("Dashboard finance fetch error:", error);
+      } finally {
+        setFinanceLoading(false);
+      }
+    };
+    fetchFinance();
+  }, []);
+
+  const formatIDR = (val: number) => {
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
+  };
 
   const recentIssues = [
     { id: 'TKT-1049', title: 'Server Database Down', unit: 'IT', time: '1 jam lalu', priority: 'High', status: 'Dikerjakan' },
@@ -202,23 +238,27 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         </div>
       </div>
 
-      {isPimpinan && (
+      {isAuthorizedFinance && (
         <div className="glass-panel delay-300" style={{ marginBottom: '1.5rem', padding: '1.5rem', background: 'linear-gradient(135deg, var(--accent-violet-ghost), transparent)' }}>
            <div className="flex-row-responsive">
              <div>
                <h3 style={{ fontSize: '1.1rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                 <Wallet size={20} color="var(--accent-violet)" /> Ringkasan Keuangan Operasional
+                 <Wallet size={20} color="var(--accent-violet)" /> Ringkasan Keuangan Operasional {financeLoading && <Loader2 size={16} className="animate-spin" />}
                </h3>
                <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Status kas dan saldo yang dikelola oleh Tata Kelola (Amalia)</p>
              </div>
-             <div style={{ display: 'flex', gap: '2rem', justifyContent: 'space-between', width: isPimpinan ? 'auto' : '100%' }}>
+             <div style={{ display: 'flex', gap: '2rem', justifyContent: 'space-between', width: 'auto' }}>
                 <div style={{ textAlign: 'right' }}>
-                   <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>Rp 49.260.000</div>
+                   <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                     {financeLoading ? '---' : formatIDR(financeData.balance)}
+                   </div>
                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>SALDO SAAT INI</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                   <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--accent-rose)' }}>Rp 8.240.000</div>
-                   <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>PENGELUARAN BULAN INI</div>
+                   <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--accent-rose)' }}>
+                     {financeLoading ? '---' : formatIDR(financeData.totalExpense)}
+                   </div>
+                   <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>TOTAL PENGELUARAN</div>
                 </div>
              </div>
            </div>
