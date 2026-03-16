@@ -14,10 +14,12 @@ const Personnel = () => {
 
   const isKaur = currentUser.roleAplikasi.includes('Koordinator');
   const isPimpinan = currentUser.roleAplikasi === ROLES.PIMPINAN;
+  const isPicAdmin = currentUser.roleAplikasi === ROLES.PIC_ADMIN;
+  const hasFullAccess = isPimpinan || isPicAdmin;
 
   const filteredUsers = USERS.filter(user => {
-    // Hadi sees all
-    if (isPimpinan) {
+    // Hadi and Amalia see all
+    if (hasFullAccess) {
        return user.nama.toLowerCase().includes(searchTerm.toLowerCase()) || 
               user.unit.toLowerCase().includes(searchTerm.toLowerCase());
     }
@@ -52,7 +54,7 @@ const Personnel = () => {
           <h1 className="page-title gradient-text">Manajemen Personel {currentUser.unit !== 'Semua Unit' ? `- Unit ${currentUser.unit}` : ''}</h1>
           <p className="page-subtitle" style={{ margin: 0 }}>Daftar personel, role aplikasi, dan struktur organisasi</p>
         </div>
-        {isKaur && (
+        {(isKaur || hasFullAccess) && (
           <button className="btn btn-primary" style={{ alignSelf: 'flex-start' }}>
             <Plus size={18} /> <span className="mobile-hide">Tambah Personel Baru</span><span style={{ display: 'none' }} className="mobile-show">Tambah</span>
           </button>
@@ -111,7 +113,7 @@ const Personnel = () => {
                   </div>
                 </td>
                 <td>
-                  {(isKaur || isPimpinan) && (
+                  {(isKaur || hasFullAccess) && (
                     <button 
                       className="btn btn-outline" 
                       onClick={() => handleManage(user)}

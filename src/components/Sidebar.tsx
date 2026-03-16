@@ -82,10 +82,9 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
                return allowed.includes(item.name);
             }
             
-            // Amalia (Tata Kelola / Keuangan)
+            // Amalia (Tata Kelola / Keuangan) - Same access as Waka
             if (user.unit === 'Tata Kelola') {
-               const allowed = [...alwaysVisible, 'Tata Kelola Keuangan', 'Personel', 'SOP & Dokumen'];
-               return allowed.includes(item.name);
+               return true;
             }
             
             return alwaysVisible.includes(item.name);

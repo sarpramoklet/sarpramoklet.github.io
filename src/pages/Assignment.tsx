@@ -8,13 +8,15 @@ const Assignment = () => {
 
   const isKaur = currentUser.roleAplikasi.includes('Koordinator');
   const isPimpinan = currentUser.roleAplikasi === ROLES.PIMPINAN;
+  const isPicAdmin = currentUser.roleAplikasi === ROLES.PIC_ADMIN;
+  const hasFullAccess = isPimpinan || isPicAdmin;
 
   const filteredAssignments = USERS.filter(u => {
     // Basic filter: not an executive/pimpinan themselves typically, or show subordinates
     if (u.atasanLangsung === null && !isPimpinan) return false;
     
-    // Hadi (Pimpinan) sees everyone
-    if (isPimpinan) {
+    // Hadi and Amalia see everyone
+    if (hasFullAccess) {
       return u.nama.toLowerCase().includes(searchTerm.toLowerCase()) || 
              u.unit.toLowerCase().includes(searchTerm.toLowerCase());
     }
@@ -43,7 +45,7 @@ const Assignment = () => {
           <h1 className="page-title gradient-text">Penugasan & Beban Kerja {currentUser.unit !== 'Semua Unit' ? `- Unit ${currentUser.unit}` : ''}</h1>
           <p className="page-subtitle" style={{ margin: 0 }}>Pantau distribusi pekerjaan, load dan overtime personil</p>
         </div>
-        {isKaur && (
+        {(isKaur || hasFullAccess) && (
           <button className="btn btn-primary" style={{ alignSelf: 'flex-start' }}>
             <Plus size={18} /> <span className="mobile-hide">Beri Tugas Baru</span><span style={{ display: 'none' }} className="mobile-show">Tugas</span>
           </button>
