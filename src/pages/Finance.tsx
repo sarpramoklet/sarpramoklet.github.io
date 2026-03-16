@@ -101,8 +101,11 @@ const Finance = () => {
         })
       });
       
+      // Update local state immediately
+      setTransactions(prev => prev.filter(t => t.id !== id));
+      
       // Delay refresh for DB consistency
-      setTimeout(fetchTransactions, 1000);
+      setTimeout(fetchTransactions, 1500);
     } catch (error) {
       console.error("Error deleting finance record:", error);
       alert("Gagal menghapus data.");

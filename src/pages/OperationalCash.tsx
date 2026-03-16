@@ -75,6 +75,7 @@ const OperationalCash = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Form State
+  const [editingTrx, setEditingTrx] = useState<Transaction | null>(null);
   const [formData, setFormData] = useState({
     tanggal: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }),
     keterangan: '',
@@ -122,6 +123,17 @@ const OperationalCash = () => {
     });
   };
 
+  const handleEdit = (trx: Transaction) => {
+    setEditingTrx(trx);
+    setFormData({
+      tanggal: trx.tanggal,
+      keterangan: trx.keterangan,
+      type: trx.debit > 0 ? 'debit' : 'kredit',
+      nominal: (trx.debit || trx.kredit).toString()
+    });
+    setIsModalOpen(true);
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm('Hapus transaksi ini dari database?')) return;
     
@@ -138,8 +150,10 @@ const OperationalCash = () => {
         })
       });
       
-      // Delay to allow GCP to update
-      setTimeout(fetchData, 1000);
+      // Update local state immediately
+      setTransactions(prev => prev.filter(t => t.id !== id));
+      // Refresh for consistency
+      setTimeout(fetchData, 1500);
     } catch (error) {
       console.error("Error deleting cash entry:", error);
       alert("Gagal menghapus data.");
@@ -152,31 +166,27 @@ const OperationalCash = () => {
     setIsSubmitting(true);
 
     const nominalValue = Number(formData.nominal);
-    const lastSaldo = transactions.length > 0 ? transactions[transactions.length - 1].saldo : 0;
     const debit = formData.type === 'debit' ? nominalValue : 0;
     const kredit = formData.type === 'kredit' ? nominalValue : 0;
-    const nextSaldo = lastSaldo + debit - kredit;
+    const id = editingTrx ? editingTrx.id : `TU-${Date.now()}`;
 
     const newEntry: any = {
       action: 'FINANCE_RECORD',
       sheetName: 'Kas_TU',
-      id: `TU-${Date.now()}`,
-      // Sending both cases to ensure compatibility with Gas Script
+      id,
+      // Sending both cases for safety
       Tanggal: formData.tanggal,
       Keterangan: formData.keterangan,
       Debit: debit,
       Kredit: kredit,
-      Saldo: nextSaldo,
-      // Lowercase too just in case
+      // Lowercase too
       tanggal: formData.tanggal,
       keterangan: formData.keterangan,
       debit: debit,
-      kredit: kredit,
-      saldo: nextSaldo
+      kredit: kredit
     };
 
     try {
-      // 1. Send to Database
       await fetch(API_URL, {
         method: "POST",
         mode: "no-cors",
@@ -184,20 +194,16 @@ const OperationalCash = () => {
         body: JSON.stringify(newEntry)
       });
       
-      // 2. Update status immediately for UX
-      const localEntry = {
-        id: newEntry.id,
-        tanggal: formData.tanggal,
-        keterangan: formData.keterangan,
-        debit: debit,
-        kredit: kredit,
-        saldo: nextSaldo
-      };
-      
-      setTransactions([...transactions, localEntry]);
-      
-      // 3. Close modal and reset form
+      // Update locally
+      const localRecord = { id, tanggal: formData.tanggal, keterangan: formData.keterangan, debit, kredit, saldo: 0 };
+      if (editingTrx) {
+        setTransactions(prev => prev.map(t => t.id === id ? { ...t, ...localRecord } : t));
+      } else {
+        setTransactions([...transactions, localRecord as any]);
+      }
+
       setIsModalOpen(false);
+      setEditingTrx(null);
       setFormData({ 
         tanggal: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }), 
         keterangan: '', 
@@ -205,11 +211,10 @@ const OperationalCash = () => {
         nominal: '' 
       });
       
-      // 4. Background Refresh after delay to ensure DB is consistent
-      setTimeout(fetchData, 2000);
+      setTimeout(fetchData, 1500);
     } catch (error) {
       console.error("Error submitting cash entry:", error);
-      alert("Gagal menyimpan data ke database. Cek koneksi Anda.");
+      alert("Gagal menyimpan data.");
     } finally {
       setIsSubmitting(false);
     }
@@ -223,12 +228,20 @@ const OperationalCash = () => {
     }).format(num);
   };
 
+  const transactionsWithBalance = useMemo(() => {
+    let currentBalance = 0;
+    return transactions.map(item => {
+      currentBalance = currentBalance + (Number(item.debit) || 0) - (Number(item.kredit) || 0);
+      return { ...item, saldo: currentBalance };
+    });
+  }, [transactions]);
+
   const filteredTransactions = useMemo(() => {
-    return transactions.filter(t => 
+    return transactionsWithBalance.filter(t => 
       t.keterangan.toLowerCase().includes(searchTerm.toLowerCase()) ||
       t.tanggal.toLowerCase().includes(searchTerm.toLowerCase())
     ).reverse();
-  }, [transactions, searchTerm]);
+  }, [transactionsWithBalance, searchTerm]);
 
   const stats = useMemo(() => {
     const totalDebit = transactions.reduce((acc, curr) => acc + (Number(curr.debit) || 0), 0);
@@ -242,11 +255,11 @@ const OperationalCash = () => {
 
   // Mini Chart Data (latest 15 saldo points)
   const chartData = useMemo(() => {
-    return transactions.slice(-15).map(t => ({
+    return transactionsWithBalance.slice(-15).map(t => ({
       name: t.tanggal,
-      saldo: Number(t.saldo) || 0
+      saldo: t.saldo
     }));
-  }, [transactions]);
+  }, [transactionsWithBalance]);
 
   return (
     <div className="animate-fade-in" style={{ paddingBottom: '3rem' }}>
@@ -422,7 +435,13 @@ const OperationalCash = () => {
                 {isAuthorized && (
                   <td style={{ textAlign: 'center' }}>
                     <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
-                      <button className="btn-icon" style={{ padding: '8px', background: 'rgba(255,255,255,0.05)' }}><Edit3 size={15} /></button>
+                      <button 
+                        className="btn-icon" 
+                        onClick={() => handleEdit(trx)}
+                        style={{ padding: '8px', background: 'rgba(255,255,255,0.05)' }}
+                      >
+                        <Edit3 size={15} />
+                      </button>
                       <button 
                         className="btn-icon" 
                         onClick={() => handleDelete(trx.id)}
@@ -451,12 +470,12 @@ const OperationalCash = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                  <div style={{ padding: '8px', background: 'var(--accent-blue-ghost)', color: 'var(--accent-blue)', borderRadius: '10px' }}>
-                   <Plus size={24} />
+                   {editingTrx ? <Edit3 size={24} /> : <Plus size={24} />}
                  </div>
-                 <h2 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0 }}>Catat Kas Baru</h2>
+                 <h2 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0 }}>{editingTrx ? 'Ubah Transaksi' : 'Catat Kas Baru'}</h2>
               </div>
               <button 
-                onClick={() => setIsModalOpen(false)} 
+                onClick={() => { setIsModalOpen(false); setEditingTrx(null); }} 
                 style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '8px', borderRadius: '50%', display: 'flex' }}
               >
                 <X size={20} />
