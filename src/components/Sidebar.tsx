@@ -62,37 +62,33 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
             if (user.unit === 'Semua Unit') return true;
             
             // Common menus for all authenticated staff
-            const commonMenus = [
-              'Dashboard', 'Rapat Bulanan', 'Kinerja Personel', 
-              'Permintaan Layanan', 'Tagihan Utilitas', 'Personel', 
-              'Penugasan', 'Proyek & Pengembangan', 'SOP & Dokumen', 'Notifikasi'
-            ];
+            const alwaysVisible = ['Dashboard', 'Rapat Bulanan', 'Notifikasi'];
 
             // Chusni (Koordinator Laboratorium)
             if (user.unit === 'Laboratorium') {
-               const allowed = [...commonMenus, 'Laboratorium'];
+               const allowed = [...alwaysVisible, 'Laboratorium', 'Permintaan Layanan', 'Penugasan', 'Kinerja Personel', 'Proyek & Pengembangan'];
                return allowed.includes(item.name);
             }
 
             // Whyna (Koordinator IT)
             if (user.unit === 'IT') {
-               const allowed = [...commonMenus, 'IT Services'];
+               const allowed = [...alwaysVisible, 'IT Services', 'Permintaan Layanan', 'Penugasan', 'Kinerja Personel', 'Proyek & Pengembangan'];
                return allowed.includes(item.name);
             }
 
             // Ekon (Koordinator Sarpras)
             if (user.unit === 'Sarpras') {
-               const allowed = [...commonMenus, 'Sarpras', 'Aset & Inventaris'];
+               const allowed = [...alwaysVisible, 'Sarpras', 'Permintaan Layanan', 'Tagihan Utilitas', 'Aset & Inventaris', 'Penugasan', 'Kinerja Personel', 'Proyek & Pengembangan'];
                return allowed.includes(item.name);
             }
             
             // Amalia (Tata Kelola / Keuangan)
             if (user.unit === 'Tata Kelola') {
-               const allowed = [...commonMenus, 'Tata Kelola Keuangan'];
+               const allowed = [...alwaysVisible, 'Tata Kelola Keuangan', 'Personel', 'SOP & Dokumen'];
                return allowed.includes(item.name);
             }
             
-            return true;
+            return alwaysVisible.includes(item.name);
           }).map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
