@@ -91,13 +91,13 @@ const Finance = () => {
     const id = trx.id;
     setLoading(true);
     try {
-      // Trying to use a very explicit DELETE action and multiple ID keys
-      await fetch(API_URL, {
+      // Trying FINANCE_DELETE to match the naming convention of FINANCE_RECORD
+      await fetch(`${API_URL}?action=FINANCE_DELETE&sheetName=Finance`, {
         method: "POST",
         mode: "no-cors",
         headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({ 
-          action: 'DELETE', 
+          action: 'FINANCE_DELETE', 
           sheetName: 'Finance',
           id: id,
           ID: id,
