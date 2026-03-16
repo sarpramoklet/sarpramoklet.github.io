@@ -100,7 +100,7 @@ const OperationalCash = () => {
           debit: Number(item.debit || item.Debit || 0),
           kredit: Number(item.kredit || item.Kredit || 0),
           saldo: Number(item.saldo || item.Saldo || 0)
-        }));
+        })).filter((item: any) => item.tanggal && (item.debit > 0 || item.kredit > 0 || item.keterangan));
         setTransactions(calculateBalances(mapped));
       } else {
         setTransactions(SEED_DATA);
@@ -115,11 +115,36 @@ const OperationalCash = () => {
 
   const calculateBalances = (data: Transaction[]) => {
     let currentBalance = 0;
-    // Sort by chronological order first if possible, here assuming the array order is chronological
+    // We assume chronological order from sheet
     return data.map(item => {
       currentBalance = currentBalance + (Number(item.debit) || 0) - (Number(item.kredit) || 0);
       return { ...item, saldo: currentBalance };
     });
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Hapus transaksi ini dari database?')) return;
+    
+    setLoading(true);
+    try {
+      await fetch(API_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ 
+          action: 'DELETE_FINANCE_RECORD', 
+          sheetName: 'Kas_TU',
+          id 
+        })
+      });
+      
+      // Delay to allow GCP to update
+      setTimeout(fetchData, 1000);
+    } catch (error) {
+      console.error("Error deleting cash entry:", error);
+      alert("Gagal menghapus data.");
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -128,12 +153,13 @@ const OperationalCash = () => {
 
     const nominalValue = Number(formData.nominal);
     const newEntry = {
-      id: Date.now().toString(),
+      action: 'FINANCE_RECORD',
+      sheetName: 'Kas_TU',
+      id: `TU-${Date.now()}`,
       tanggal: formData.tanggal,
       keterangan: formData.keterangan,
       debit: formData.type === 'debit' ? nominalValue : 0,
-      kredit: formData.type === 'kredit' ? nominalValue : 0,
-      sheetName: 'Kas_TU'
+      kredit: formData.type === 'kredit' ? nominalValue : 0
     };
 
     try {
@@ -144,8 +170,7 @@ const OperationalCash = () => {
         body: JSON.stringify(newEntry)
       });
       
-      const updated = [...transactions, newEntry as any];
-      setTransactions(calculateBalances(updated));
+      // Success - Reset and Refresh
       setIsModalOpen(false);
       setFormData({ 
         tanggal: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }), 
@@ -153,6 +178,9 @@ const OperationalCash = () => {
         type: 'kredit', 
         nominal: '' 
       });
+      
+      // Delay refresh for DB consistency
+      setTimeout(fetchData, 1500);
     } catch (error) {
       console.error("Error submitting cash entry:", error);
       alert("Gagal menyimpan data.");
@@ -369,7 +397,13 @@ const OperationalCash = () => {
                   <td style={{ textAlign: 'center' }}>
                     <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
                       <button className="btn-icon" style={{ padding: '8px', background: 'rgba(255,255,255,0.05)' }}><Edit3 size={15} /></button>
-                      <button className="btn-icon" style={{ padding: '8px', color: 'var(--accent-rose)', background: 'rgba(244, 63, 94, 0.05)' }}><Trash2 size={15} /></button>
+                      <button 
+                        className="btn-icon" 
+                        onClick={() => handleDelete(trx.id)}
+                        style={{ padding: '8px', color: 'var(--accent-rose)', background: 'rgba(244, 63, 94, 0.05)' }}
+                      >
+                        <Trash2 size={15} />
+                      </button>
                     </div>
                   </td>
                 )}
