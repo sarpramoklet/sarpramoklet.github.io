@@ -15,6 +15,7 @@ import Finance from './pages/Finance';
 import Assignment from './pages/Assignment';
 import Performance from './pages/Performance';
 import Utilities from './pages/Utilities';
+import AccessLogs from './pages/AccessLogs';
 import Login from './pages/Login';
 import { getCurrentUser } from './data/organization';
 import { logAccess } from './utils/logger';
@@ -121,6 +122,7 @@ function App() {
               <Route path="/assets" element={<ProtectedRoute isLoggedIn={isLoggedIn}><Assets /></ProtectedRoute>} />
               <Route path="/personnel" element={<ProtectedRoute isLoggedIn={isLoggedIn}><Personnel /></ProtectedRoute>} />
               <Route path="/finance" element={<ProtectedRoute isLoggedIn={isLoggedIn}><Finance /></ProtectedRoute>} />
+              <Route path="/logs" element={<ProtectedRoute isLoggedIn={isLoggedIn}><AccessLogs /></ProtectedRoute>} />
               <Route path="/assignment" element={<ProtectedRoute isLoggedIn={isLoggedIn}><Assignment /></ProtectedRoute>} />
               <Route path="/projects" element={<ProtectedRoute isLoggedIn={isLoggedIn}><DummyPage title="Proyek & Pengembangan" /></ProtectedRoute>} />
               <Route path="/sop" element={<ProtectedRoute isLoggedIn={isLoggedIn}><DummyPage title="SOP & Dokumen" /></ProtectedRoute>} />
