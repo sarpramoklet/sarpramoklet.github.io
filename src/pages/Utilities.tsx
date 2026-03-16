@@ -11,71 +11,17 @@ const formatRupiah = (number: number) => {
   }).format(number);
 };
 
+import { UTILITIES_DATA as utlitiesData, UTILITY_MONTHS as months, getUtilityChartData } from '../data/utilities';
+
 const Utilities = () => {
   const [activeTab, setActiveTab] = useState('rekap');
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // Data from image
-  const utlitiesData = [
-    {
-      id: 1,
-      pelanggan: 'PLN – Yayasan Sandykara',
-      type: 'PLN',
-      history: {
-        'Des 25': 7336630,
-        'Jan': 4592250,
-        'Feb': 6556510,
-        'Mar': 4631850
-      }
-    },
-    {
-      id: 2,
-      pelanggan: 'PLN – SMK Telkom',
-      type: 'PLN',
-      history: {
-        'Des 25': 9874990,
-        'Jan': 7814800,
-        'Feb': 11782720,
-        'Mar': 7814800
-      }
-    },
-    {
-      id: 3,
-      pelanggan: 'PLN – Kantin',
-      type: 'PLN',
-      history: {
-        'Des 25': 4992210,
-        'Jan': 2126160,
-        'Feb': 5994190,
-        'Mar': 3833910
-      }
-    },
-    {
-      id: 4,
-      pelanggan: 'PDAM – Yys Sandhikara',
-      type: 'PDAM',
-      history: {
-        'Des 25': 1041000,
-        'Jan': 1041000,
-        'Feb': 792500,
-        'Mar': 1072500
-      }
-    }
-  ];
-
-  const months = ['Des 25', 'Jan', 'Feb', 'Mar'];
 
   const calculateTotal = (month: string) => {
     return utlitiesData.reduce((acc, curr) => acc + (curr.history[month as keyof typeof curr.history] || 0), 0);
   };
 
-  const chartData = months.map(month => {
-    return {
-      name: month,
-      PLN: utlitiesData.filter(d => d.type === 'PLN').reduce((acc, curr) => acc + (curr.history[month as keyof typeof curr.history] || 0), 0),
-      PDAM: utlitiesData.filter(d => d.type === 'PDAM').reduce((acc, curr) => acc + (curr.history[month as keyof typeof curr.history] || 0), 0),
-    };
-  });
+  const chartData = getUtilityChartData();
 
   return (
     <div className="animate-fade-in" style={{ paddingBottom: '3rem' }}>

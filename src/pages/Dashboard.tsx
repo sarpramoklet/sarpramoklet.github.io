@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Activity, Clock10, CheckSquare, TriangleAlert, ArrowUpRight, ArrowDownRight, UserCircle2, TrendingUp, Wallet, Loader2 } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
+import { Activity, Clock10, CheckSquare, TriangleAlert, ArrowUpRight, ArrowDownRight, UserCircle2, TrendingUp, Wallet, Loader2, Zap, Droplets } from 'lucide-react';
 import { getCurrentUser, ROLES } from '../data/organization';
+import { getUtilityChartData } from '../data/utilities';
 
 const FINANCE_API_URL = "https://script.google.com/macros/s/AKfycbwzimTeSIIEpjUMVfI4EEc90ZDEixIeMBM9WFBQKPulYHYGF2CqhwjHgQe0ZMB7SfNSGw/exec";
 
@@ -312,6 +313,60 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           </div>
         </div>
       )}
+
+
+      {/* Analisa Utilitas PLN & PDAM */}
+      <div className="dashboard-grid delay-300" style={{ marginBottom: '1.5rem' }}>
+        <div className="glass-panel chart-container" style={{ minHeight: '320px', background: 'linear-gradient(135deg, var(--accent-amber-ghost), transparent)' }}>
+          <div className="chart-header">
+            <div>
+              <h3 style={{ fontSize: '0.9rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Zap size={18} color="var(--accent-amber)" /> Tren Tagihan PLN (Listrik)
+              </h3>
+              <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Fasilitas & Gedung Sekolah</p>
+            </div>
+          </div>
+          <div style={{ flex: 1, minHeight: 0, marginTop: '1rem' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={getUtilityChartData()} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
+                <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
+                <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `Rp${v/1000000}jt`} />
+                <RechartsTooltip 
+                  formatter={(v: any) => formatIDR(v as number)}
+                  contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-focus)', borderRadius: '8px', fontSize: '10px' }}
+                />
+                <Bar dataKey="PLN" fill="var(--accent-amber)" radius={[4, 4, 0, 0]} barSize={24} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="glass-panel chart-container" style={{ minHeight: '320px', background: 'linear-gradient(135deg, var(--accent-cyan-ghost), transparent)' }}>
+          <div className="chart-header">
+            <div>
+              <h3 style={{ fontSize: '0.9rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Droplets size={18} color="var(--accent-cyan)" /> Tren Tagihan PDAM (Air)
+              </h3>
+              <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Pemakaian Air Bersih Terpusat</p>
+            </div>
+          </div>
+          <div style={{ flex: 1, minHeight: 0, marginTop: '1rem' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={getUtilityChartData()} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
+                <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
+                <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `Rp${(v/1000000).toFixed(1)}jt`} />
+                <RechartsTooltip 
+                  formatter={(v: any) => formatIDR(v as number)}
+                  contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-focus)', borderRadius: '8px', fontSize: '10px' }}
+                />
+                <Bar dataKey="PDAM" fill="var(--accent-cyan)" radius={[4, 4, 0, 0]} barSize={24} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
 
 
       {isPimpinan && (
