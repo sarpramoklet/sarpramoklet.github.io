@@ -88,7 +88,7 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
             
             // Amalia (Tata Kelola / Keuangan)
             if (user.unit === 'Tata Kelola') {
-               const allowed = [...commonMenus];
+               const allowed = [...commonMenus, 'Tata Kelola Keuangan'];
                return allowed.includes(item.name);
             }
             

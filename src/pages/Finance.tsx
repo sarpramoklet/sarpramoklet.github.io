@@ -1,22 +1,72 @@
 import { useState } from 'react';
-import { Wallet, TrendingUp, TrendingDown, Plus, Download, ArrowUpRight, ArrowDownRight, LayoutDashboard, History, PiggyBank, ReceiptText } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, Plus, ArrowUpRight, ArrowDownRight, LayoutDashboard, History, PiggyBank, ReceiptText, Edit3, Trash2, X, Save } from 'lucide-react';
 
 const Finance = () => {
   const [activeTab, setActiveTab] = useState('summary');
+  const [showModal, setShowModal] = useState(false);
+  const [editingTrx, setEditingTrx] = useState<any>(null);
+  const [transactions, setTransactions] = useState([
+    { id: 'TRX-001', title: 'Pembelian Router Core Lab', category: 'IT Support', amount: '3500000', type: 'expense', date: '2026-03-12', status: 'Approved' },
+    { id: 'TRX-002', title: 'Pemeliharaan AC Ruang Server', category: 'Sarpras', amount: '1250000', type: 'expense', date: '2026-03-14', status: 'Pending' },
+    { id: 'TRX-003', title: 'Top-up Anggaran Operasional', category: 'Yayasan', amount: '10000000', type: 'income', date: '2026-03-15', status: 'Success' },
+    { id: 'TRX-004', title: 'Bahan Praktik Siswa (IoT)', category: 'Laboratorium', amount: '2400000', type: 'expense', date: '2026-03-16', status: 'Approved' },
+  ]);
 
-  const stats = [
-    { title: 'Saldo Awal (Mar)', value: 'Rp 45.000.000', icon: PiggyBank, color: 'var(--accent-blue)' },
-    { title: 'Pemasukan', value: 'Rp 12.500.000', icon: TrendingUp, color: 'var(--accent-emerald)' },
-    { title: 'Pengeluaran', value: 'Rp 8.240.000', icon: TrendingDown, color: 'var(--accent-rose)' },
-    { title: 'Saldo Saat Ini', value: 'Rp 49.260.000', icon: Wallet, color: 'var(--accent-violet)' },
-  ];
+  const [formData, setFormData] = useState({
+    title: '',
+    category: 'IT Support',
+    amount: '',
+    type: 'expense',
+    date: new Date().toISOString().split('T')[0]
+  });
 
-  const transactions = [
-    { id: 'TRX-001', title: 'Pembelian Router Core Lab', category: 'IT Support', amount: 'Rp 3.500.000', type: 'expense', date: '12 Mar 2026', status: 'Approved' },
-    { id: 'TRX-002', title: 'Pemeliharaan AC Ruang Server', category: 'Sarpras', amount: 'Rp 1.250.000', type: 'expense', date: '14 Mar 2026', status: 'Pending' },
-    { id: 'TRX-003', title: 'Top-up Anggaran Operasional', category: 'Yayasan', amount: 'Rp 10.000.000', type: 'income', date: '15 Mar 2026', status: 'Success' },
-    { id: 'TRX-004', title: 'Bahan Praktik Siswa (IoT)', category: 'Laboratorium', amount: 'Rp 2.400.000', type: 'expense', date: '16 Mar 2026', status: 'Approved' },
-  ];
+  const formatIDR = (val: string) => {
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(val));
+  };
+
+  const handleCreate = () => {
+    setEditingTrx(null);
+    setFormData({
+      title: '',
+      category: 'IT Support',
+      amount: '',
+      type: 'expense',
+      date: new Date().toISOString().split('T')[0]
+    });
+    setShowModal(true);
+  };
+
+  const handleEdit = (trx: any) => {
+    setEditingTrx(trx);
+    setFormData({
+      title: trx.title,
+      category: trx.category,
+      amount: trx.amount,
+      type: trx.type,
+      date: trx.date
+    });
+    setShowModal(true);
+  };
+
+  const handleDelete = (id: string) => {
+    if (confirm('Hapus laporan keuangan ini?')) {
+      setTransactions(transactions.filter(t => t.id !== id));
+    }
+  };
+
+  const handleSave = () => {
+    if (editingTrx) {
+      setTransactions(transactions.map(t => t.id === editingTrx.id ? { ...t, ...formData } : t));
+    } else {
+      const newTrx = {
+        ...formData,
+        id: `TRX-00${transactions.length + 1}`,
+        status: formData.type === 'expense' ? 'Pending' : 'Success'
+      };
+      setTransactions([newTrx, ...transactions]);
+    }
+    setShowModal(false);
+  };
 
   return (
     <div className="animate-fade-in" style={{ paddingBottom: '3rem' }}>
@@ -27,16 +77,21 @@ const Finance = () => {
         </div>
         <div style={{ display: 'flex', gap: '1rem' }}>
           <button className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Download size={18} /> Ekspor PDF
+            <PiggyBank size={18} /> Kelola Saldo
           </button>
-          <button className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <button className="btn btn-primary" onClick={handleCreate} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Plus size={18} /> Tambah Laporan
           </button>
         </div>
       </div>
 
       <div className="stats-grid" style={{ marginBottom: '2rem' }}>
-        {stats.map((stat, i) => {
+        {[
+          { title: 'Saldo Awal (Mar)', value: '45000000', icon: PiggyBank, color: 'var(--accent-blue)' },
+          { title: 'Pemasukan', value: transactions.filter(t => t.type === 'income').reduce((acc, curr) => acc + Number(curr.amount), 0).toString(), icon: TrendingUp, color: 'var(--accent-emerald)' },
+          { title: 'Pengeluaran', value: transactions.filter(t => t.type === 'expense').reduce((acc, curr) => acc + Number(curr.amount), 0).toString(), icon: TrendingDown, color: 'var(--accent-rose)' },
+          { title: 'Saldo Saat Ini', value: (45000000 + transactions.filter(t => t.type === 'income').reduce((acc, curr) => acc + Number(curr.amount), 0) - transactions.filter(t => t.type === 'expense').reduce((acc, curr) => acc + Number(curr.amount), 0)).toString(), icon: Wallet, color: 'var(--accent-violet)' },
+        ].map((stat, i) => {
           const Icon = stat.icon;
           return (
             <div key={i} className={`glass-panel stat-card delay-${(i + 1) * 100}`}>
@@ -47,7 +102,7 @@ const Finance = () => {
                 </div>
               </div>
               <div style={{ marginTop: '1rem' }}>
-                <div className="stat-value" style={{ fontSize: '1.5rem' }}>{stat.value}</div>
+                <div className="stat-value" style={{ fontSize: '1.5rem' }}>{formatIDR(stat.value)}</div>
               </div>
             </div>
           );
@@ -128,12 +183,7 @@ const Finance = () => {
           <table>
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Keterangan</th>
-                <th>Kategori</th>
-                <th>Tanggal</th>
-                <th>Nilai</th>
-                <th>Status</th>
+                <th>Pilihan</th>
               </tr>
             </thead>
             <tbody>
@@ -150,7 +200,7 @@ const Finance = () => {
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, color: trx.type === 'expense' ? 'var(--accent-rose)' : 'var(--accent-emerald)' }}>
                       {trx.type === 'expense' ? <ArrowDownRight size={14} /> : <ArrowUpRight size={14} />}
-                      {trx.amount}
+                      {formatIDR(trx.amount)}
                     </div>
                   </td>
                   <td>
@@ -158,10 +208,108 @@ const Finance = () => {
                       {trx.status}
                     </span>
                   </td>
+                  <td>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button className="btn-icon" onClick={() => handleEdit(trx)} style={{ color: 'var(--accent-blue)' }}>
+                        <Edit3 size={16} />
+                      </button>
+                      <button className="btn-icon" onClick={() => handleDelete(trx.id)} style={{ color: 'var(--accent-rose)' }}>
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {showModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: '500px', border: '1px solid var(--accent-blue-ghost)' }}>
+            <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ fontSize: '1.25rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                {editingTrx ? <Edit3 size={20} color="var(--accent-blue)" /> : <Plus size={20} color="var(--accent-blue)" />}
+                {editingTrx ? 'Ubah Laporan Keuangan' : 'Tambah Laporan Keuangan'}
+              </h2>
+              <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(255,255,255,0.05)', padding: '0.25rem', borderRadius: '8px' }}>
+                 <button 
+                   onClick={() => setFormData({...formData, type: 'expense'})}
+                   style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: 'none', background: formData.type === 'expense' ? 'var(--accent-rose)' : 'transparent', color: 'white', cursor: 'pointer', fontSize: '0.85rem' }}
+                 >Pengeluaran</button>
+                 <button 
+                   onClick={() => setFormData({...formData, type: 'income'})}
+                   style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: 'none', background: formData.type === 'income' ? 'var(--accent-emerald)' : 'transparent', color: 'white', cursor: 'pointer', fontSize: '0.85rem' }}
+                 >Pemasukan</button>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Keterangan / Judul</label>
+                <input 
+                  type="text" 
+                  value={formData.title}
+                  onChange={(e) => setFormData({...formData, title: e.target.value})}
+                  placeholder="Contoh: Pembelian Alat Lab" 
+                  style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-subtle)', borderRadius: '8px', padding: '0.75rem', color: 'white', outline: 'none' }} 
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Kategori</label>
+                  <select 
+                    value={formData.category}
+                    onChange={(e) => setFormData({...formData, category: e.target.value})}
+                    style={{ width: '100%', background: '#1a1a1a', border: '1px solid var(--border-subtle)', borderRadius: '8px', padding: '0.75rem', color: 'white', outline: 'none' }}
+                  >
+                    <option>IT Support</option>
+                    <option>Laboratorium</option>
+                    <option>Sarpras</option>
+                    <option>Yayasan</option>
+                    <option>Lainnya</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Tanggal</label>
+                  <input 
+                    type="date" 
+                    value={formData.date}
+                    onChange={(e) => setFormData({...formData, date: e.target.value})}
+                    style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-subtle)', borderRadius: '8px', padding: '0.75rem', color: 'white', outline: 'none' }} 
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Nilai (Rp)</label>
+                <input 
+                  type="number" 
+                  value={formData.amount}
+                  onChange={(e) => setFormData({...formData, amount: e.target.value})}
+                  placeholder="Masukkan nominal..." 
+                  style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-subtle)', borderRadius: '8px', padding: '0.75rem', color: 'white', outline: 'none' }} 
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                <button onClick={() => setShowModal(false)} className="btn btn-outline" style={{ flex: 1 }}>Batal</button>
+                <button 
+                  onClick={handleSave}
+                  className="btn btn-primary" 
+                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                >
+                  <Save size={18} /> Simpan Laporan
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
