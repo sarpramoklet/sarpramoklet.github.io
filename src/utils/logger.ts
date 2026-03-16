@@ -24,7 +24,8 @@ export const logAccess = async (user: User) => {
     unit: user.unit,
     roleAplikasi: user.roleAplikasi,
     email: localStorage.getItem('userEmail') || 'unknown',
-    browser: navigator.userAgent
+    browser: navigator.userAgent,
+    sheetName: 'Log_Akses'
   };
 
   try {

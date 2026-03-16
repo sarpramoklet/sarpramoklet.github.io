@@ -69,12 +69,17 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       if (!isPimpinan) return;
       setLogsLoading(true);
       try {
-        const resp = await fetch(LOG_API_URL);
+        // Explicitly requesting 'Log_Akses' sheet (trying both common param names)
+        const resp = await fetch(`${LOG_API_URL}?sheetName=Log_Akses&sheet=Log_Akses`);
         const data = await resp.json();
         if (data && Array.isArray(data)) {
-          // Filter by action 'LOG_ACCESS' which is sent by logger.ts
+          // If the sheet itself is Logs, any row with a name/nama is likely a log
+          // But we still filter to be safe if the sheet is mixed
           const logs = data.filter((item: any) => 
-            (item.action === 'LOG_ACCESS') || (item.type === 'LOG_ACCESS') || (item.Tipe === 'LOG_ACCESS')
+            (item.action === 'LOG_ACCESS') || 
+            (item.type === 'LOG_ACCESS') || 
+            (item.action === 'Log_Akses') ||
+            (item.Nama || item.nama) // If it has a name, and it's from Log_Akses sheet, it's a log
           );
           setAccessLogs(logs.reverse().slice(0, 10)); // Top 10 latest
         }
