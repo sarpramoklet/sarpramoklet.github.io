@@ -152,17 +152,31 @@ const OperationalCash = () => {
     setIsSubmitting(true);
 
     const nominalValue = Number(formData.nominal);
-    const newEntry = {
+    const lastSaldo = transactions.length > 0 ? transactions[transactions.length - 1].saldo : 0;
+    const debit = formData.type === 'debit' ? nominalValue : 0;
+    const kredit = formData.type === 'kredit' ? nominalValue : 0;
+    const nextSaldo = lastSaldo + debit - kredit;
+
+    const newEntry: any = {
       action: 'FINANCE_RECORD',
       sheetName: 'Kas_TU',
       id: `TU-${Date.now()}`,
+      // Sending both cases to ensure compatibility with Gas Script
+      Tanggal: formData.tanggal,
+      Keterangan: formData.keterangan,
+      Debit: debit,
+      Kredit: kredit,
+      Saldo: nextSaldo,
+      // Lowercase too just in case
       tanggal: formData.tanggal,
       keterangan: formData.keterangan,
-      debit: formData.type === 'debit' ? nominalValue : 0,
-      kredit: formData.type === 'kredit' ? nominalValue : 0
+      debit: debit,
+      kredit: kredit,
+      saldo: nextSaldo
     };
 
     try {
+      // 1. Send to Database
       await fetch(API_URL, {
         method: "POST",
         mode: "no-cors",
@@ -170,7 +184,19 @@ const OperationalCash = () => {
         body: JSON.stringify(newEntry)
       });
       
-      // Success - Reset and Refresh
+      // 2. Update status immediately for UX
+      const localEntry = {
+        id: newEntry.id,
+        tanggal: formData.tanggal,
+        keterangan: formData.keterangan,
+        debit: debit,
+        kredit: kredit,
+        saldo: nextSaldo
+      };
+      
+      setTransactions([...transactions, localEntry]);
+      
+      // 3. Close modal and reset form
       setIsModalOpen(false);
       setFormData({ 
         tanggal: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }), 
@@ -179,11 +205,11 @@ const OperationalCash = () => {
         nominal: '' 
       });
       
-      // Delay refresh for DB consistency
-      setTimeout(fetchData, 1500);
+      // 4. Background Refresh after delay to ensure DB is consistent
+      setTimeout(fetchData, 2000);
     } catch (error) {
       console.error("Error submitting cash entry:", error);
-      alert("Gagal menyimpan data.");
+      alert("Gagal menyimpan data ke database. Cek koneksi Anda.");
     } finally {
       setIsSubmitting(false);
     }
@@ -205,8 +231,8 @@ const OperationalCash = () => {
   }, [transactions, searchTerm]);
 
   const stats = useMemo(() => {
-    const totalDebit = transactions.reduce((acc, curr) => acc + (curr.debit || 0), 0);
-    const totalKredit = transactions.reduce((acc, curr) => acc + (curr.kredit || 0), 0);
+    const totalDebit = transactions.reduce((acc, curr) => acc + (Number(curr.debit) || 0), 0);
+    const totalKredit = transactions.reduce((acc, curr) => acc + (Number(curr.kredit) || 0), 0);
     return {
       totalDebit,
       totalKredit,
@@ -218,7 +244,7 @@ const OperationalCash = () => {
   const chartData = useMemo(() => {
     return transactions.slice(-15).map(t => ({
       name: t.tanggal,
-      saldo: t.saldo
+      saldo: Number(t.saldo) || 0
     }));
   }, [transactions]);
 
