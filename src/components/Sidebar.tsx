@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { NAVIGATION } from '../navigation';
 import { Activity, UserCircle2, X, Sun, Moon, LogOut, LogIn } from 'lucide-react';
-import { CURRENT_USER } from '../data/organization';
+import { getCurrentUser } from '../data/organization';
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -53,7 +53,27 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
         </div>
 
         <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem', overflowY: 'auto' }}>
-          {NAVIGATION.filter(item => !item.authRequired || isLoggedIn).map((item) => {
+          {NAVIGATION.filter(item => {
+            if (!item.authRequired) return true;
+            if (!isLoggedIn) return false;
+            
+            const user = getCurrentUser();
+            // Hadi (Semua Unit) has full access
+            if (user.unit === 'Semua Unit') return true;
+            
+            // Chusni (Koordinator Laboratorium)
+            if (user.unit === 'Laboratorium') {
+               // Lab specific access: exclude utilities and assets and tickets for other units?
+               // Actually, tickets/personnel/assignment/projects can be for everyone to view their own unit's data.
+               // Let's restrict typical Sarpras stuff from Lab
+               if (item.name === 'Tagihan Utilitas' || item.name === 'Aset & Inventaris' || item.name === 'Sarpras') {
+                 return false;
+               }
+               return true;
+            }
+            
+            return true;
+          }).map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
             
@@ -83,10 +103,10 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
               </div>
               <div style={{ overflow: 'hidden' }}>
                 <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {isLoggedIn ? CURRENT_USER.nama : 'Akses Publik'}
+                  {isLoggedIn ? getCurrentUser().nama : 'Akses Publik'}
                 </p>
                 <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {isLoggedIn ? CURRENT_USER.jabatan : 'Tamu'}
+                  {isLoggedIn ? getCurrentUser().jabatan : 'Tamu'}
                 </p>
               </div>
             </div>

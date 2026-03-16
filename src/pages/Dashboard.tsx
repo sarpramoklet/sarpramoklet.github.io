@@ -1,6 +1,6 @@
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Activity, Clock10, CheckSquare, TriangleAlert, Server, Component, Building, ArrowUpRight, ArrowDownRight, UserCircle2 } from 'lucide-react';
-import { CURRENT_USER } from '../data/organization';
+import { getCurrentUser } from '../data/organization';
 
 const areaData = [
   { name: 'Jan', IT: 400, Lab: 240, Sarpras: 240 },
@@ -43,8 +43,8 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
             )}
           </div>
           <div>
-            <h2 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 700 }}>Selamat Datang, {CURRENT_USER.nama}</h2>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>Sistem mengidentifikasi Anda sebagai <strong>{CURRENT_USER.jabatan}</strong>. Kontrol penuh diaktifkan.</p>
+            <h2 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 700 }}>Selamat Datang, {getCurrentUser().nama}</h2>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>Sistem mengidentifikasi Anda sebagai <strong>{getCurrentUser().jabatan}</strong>. Kontrol penuh diaktifkan.</p>
           </div>
         </div>
       )}

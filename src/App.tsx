@@ -41,7 +41,8 @@ const ProtectedRoute = ({ isLoggedIn, children }: { isLoggedIn: boolean, childre
 function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    return localStorage.getItem('userEmail') === 'hadi@smktelkom-mlg.sch.id';
+    const email = localStorage.getItem('userEmail');
+    return email === 'hadi@smktelkom-mlg.sch.id' || email === 'chusni@smktelkom-mlg.sch.id';
   });
   const [userPicture, setUserPicture] = useState(() => {
     return localStorage.getItem('userPicture') || '';

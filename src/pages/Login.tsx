@@ -19,7 +19,8 @@ const Login = ({ onLogin }: LoginProps) => {
     if (credentialResponse.credential) {
       try {
         const decoded = jwtDecode(credentialResponse.credential) as any;
-        if (decoded?.email === 'hadi@smktelkom-mlg.sch.id') {
+        const allowedEmails = ['hadi@smktelkom-mlg.sch.id', 'chusni@smktelkom-mlg.sch.id'];
+        if (allowedEmails.includes(decoded?.email)) {
           onLogin(decoded.email, decoded.picture);
           navigate('/');
         } else {
