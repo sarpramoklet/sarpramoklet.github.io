@@ -85,9 +85,28 @@ const Finance = () => {
     setShowModal(true);
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm('Hapus laporan keuangan ini?')) {
-      setTransactions(transactions.filter(t => t.id !== id));
+  const handleDelete = async (id: string) => {
+    if (!confirm('Hapus laporan keuangan ini dari database?')) return;
+    
+    setLoading(true);
+    try {
+      await fetch(API_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ 
+          action: 'DELETE_FINANCE_RECORD', 
+          sheetName: 'Finance',
+          id 
+        })
+      });
+      
+      // Delay refresh for DB consistency
+      setTimeout(fetchTransactions, 1000);
+    } catch (error) {
+      console.error("Error deleting finance record:", error);
+      alert("Gagal menghapus data.");
+      setLoading(false);
     }
   };
 
@@ -98,7 +117,13 @@ const Finance = () => {
       action: 'FINANCE_RECORD',
       sheetName: 'Finance',
       id,
-      ...formData
+      ...formData,
+      // Dual case for safety
+      Tanggal: formData.date,
+      Keterangan: formData.title,
+      Kategori: formData.category,
+      Amount: formData.amount,
+      Tipe: formData.type
     };
 
     try {
@@ -109,11 +134,12 @@ const Finance = () => {
         body: JSON.stringify(newRecord)
       });
 
-      // Update local state temporarily for speed or just refetch
+      // Update local state immediately for UX
+      const localTrx = { id, ...formData };
       if (editingTrx) {
-        setTransactions(transactions.map(t => t.id === id ? { ...t, ...formData } : t).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()));
+        setTransactions(prev => prev.map(t => t.id === id ? localTrx : t).sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime()));
       } else {
-        setTransactions([...transactions, { ...formData, id }].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()));
+        setTransactions(prev => [...prev, localTrx].sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime()));
       }
 
       setShowModal(false);
@@ -316,7 +342,7 @@ const Finance = () => {
       )}
 
       {showModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 1000, padding: '1rem', paddingTop: '4rem', overflowY: 'auto' }}>
           <div className="glass-panel" style={{ width: '100%', maxWidth: '500px', border: '1px solid var(--accent-blue-ghost)' }}>
             <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h2 style={{ fontSize: '1.25rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
