@@ -20,7 +20,7 @@ const Finance = () => {
   const fetchTransactions = async () => {
     setLoading(true);
     try {
-      const resp = await fetch(API_URL);
+      const resp = await fetch(`${API_URL}?sheetName=Finance`);
       const data = await resp.json();
 
       if (data && Array.isArray(data)) {
@@ -96,6 +96,7 @@ const Finance = () => {
     const id = editingTrx ? editingTrx.id : `TRX-${Math.floor(100 + Math.random() * 900)}`;
     const newRecord = {
       action: 'FINANCE_RECORD',
+      sheetName: 'Finance',
       id,
       ...formData
     };
