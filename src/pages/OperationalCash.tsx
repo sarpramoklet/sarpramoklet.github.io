@@ -144,16 +144,17 @@ const OperationalCash = () => {
         mode: "no-cors",
         headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({ 
-          action: 'DELETE_FINANCE_RECORD', 
+          action: 'DELETE_RECORD', 
           sheetName: 'Kas_TU',
-          id 
+          id: id,
+          ID: id
         })
       });
       
       // Update local state immediately
       setTransactions(prev => prev.filter(t => t.id !== id));
       // Refresh for consistency
-      setTimeout(fetchData, 1500);
+      setTimeout(fetchData, 2000);
     } catch (error) {
       console.error("Error deleting cash entry:", error);
       alert("Gagal menghapus data.");
@@ -174,6 +175,7 @@ const OperationalCash = () => {
       action: 'FINANCE_RECORD',
       sheetName: 'Kas_TU',
       id,
+      ID: id,
       // Sending both cases for safety
       Tanggal: formData.tanggal,
       Keterangan: formData.keterangan,

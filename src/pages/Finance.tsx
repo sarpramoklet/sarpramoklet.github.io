@@ -95,9 +95,10 @@ const Finance = () => {
         mode: "no-cors",
         headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({ 
-          action: 'DELETE_FINANCE_RECORD', 
+          action: 'DELETE_RECORD', // Common action name for deletion
           sheetName: 'Finance',
-          id 
+          id: id,
+          ID: id
         })
       });
       
@@ -105,7 +106,7 @@ const Finance = () => {
       setTransactions(prev => prev.filter(t => t.id !== id));
       
       // Delay refresh for DB consistency
-      setTimeout(fetchTransactions, 1500);
+      setTimeout(fetchTransactions, 2000);
     } catch (error) {
       console.error("Error deleting finance record:", error);
       alert("Gagal menghapus data.");
