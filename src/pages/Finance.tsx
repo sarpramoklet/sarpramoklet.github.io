@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Wallet, TrendingUp, TrendingDown, Plus, LayoutDashboard, History, PiggyBank, Edit3, Trash2, X, Save, Search, Filter, Loader2 } from 'lucide-react';
 
-const API_URL = "https://script.google.com/macros/s/AKfycbyyXOLhUEs7IaRtlAgq-S6On6KuUuaAGSkw-sG6IPLmFH1-YHPRT2ZvsNRcRbcUypHljg/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzjzoObkhyXuVA3czMoMutwqW3MjuD4oJ9xYsMotlOC30z0c2dPaE525DhxKM2J9vsCIw/exec";
 
 const Finance = () => {
   const [activeTab, setActiveTab] = useState('history'); // Default to history as requested for better view
@@ -22,11 +22,23 @@ const Finance = () => {
     try {
       const resp = await fetch(API_URL);
       const data = await resp.json();
-      // Filter only finance data or let backend handle it
-      // For now we assume the spreadsheet has a way to distinguish
+      
       if (data && Array.isArray(data)) {
-        // If data from API has 'title' and 'amount', it's likely finance
-        const financeData = data.filter((item: any) => item.type === 'income' || item.type === 'expense');
+        // Map keys to ensure lowercase property names regardless of Sheet headers
+        const mappedData = data.map((item: any) => ({
+          id: item.id || item.ID || '',
+          date: item.date || item.Tanggal || '',
+          title: item.title || item.Keterangan || '',
+          category: item.category || item.Kategori || '',
+          amount: item.amount || item.Amount || 0,
+          type: item.type || item.Tipe || ''
+        }));
+
+        // Filter only finance data
+        const financeData = mappedData.filter((item: any) => 
+          item.type === 'income' || item.type === 'expense'
+        );
+        
         setTransactions(financeData.sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime()));
       }
     } catch (error) {
@@ -95,14 +107,14 @@ const Finance = () => {
         headers: { "Content-Type": "text/plain" },
         body: JSON.stringify(newRecord)
       });
-      
+
       // Update local state temporarily for speed or just refetch
       if (editingTrx) {
         setTransactions(transactions.map(t => t.id === id ? { ...t, ...formData } : t).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()));
       } else {
         setTransactions([...transactions, { ...formData, id }].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()));
       }
-      
+
       setShowModal(false);
     } catch (error) {
       console.error("Error saving finance record:", error);
@@ -126,8 +138,8 @@ const Finance = () => {
   const totalExpense = transactions.filter(t => t.type === 'expense').reduce((acc, curr) => acc + Number(curr.amount), 0);
   const finalBalance = totalIncome - totalExpense;
 
-  const filteredTransactions = transactionsWithBalance.filter(t => 
-    t.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+  const filteredTransactions = transactionsWithBalance.filter(t =>
+    t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     t.date.includes(searchTerm)
   ).reverse(); // Latest on top in table view
 
@@ -173,38 +185,38 @@ const Finance = () => {
       </div>
 
       <div className="glass-panel" style={{ padding: '0.5rem', marginBottom: '1.5rem', display: 'flex', gap: '0.5rem', background: 'rgba(255,255,255,0.03)' }}>
-         <button 
-           onClick={() => setActiveTab('history')}
-           style={{ 
-             flex: 1, padding: '0.75rem', borderRadius: '8px', border: 'none', 
-             background: activeTab === 'history' ? 'var(--accent-blue)' : 'transparent',
-             color: activeTab === 'history' ? 'white' : 'var(--text-secondary)',
-             fontSize: '0.85rem', fontWeight: 600, transition: 'all 0.3s ease', cursor: 'pointer',
-             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem'
-           }}
-         >
-           <History size={16} /> Riwayat Arus Kas
-         </button>
-         <button 
-           onClick={() => setActiveTab('summary')}
-           style={{ 
-             flex: 1, padding: '0.75rem', borderRadius: '8px', border: 'none', 
-             background: activeTab === 'summary' ? 'var(--accent-blue)' : 'transparent',
-             color: activeTab === 'summary' ? 'white' : 'var(--text-secondary)',
-             fontSize: '0.85rem', fontWeight: 600, transition: 'all 0.3s ease', cursor: 'pointer',
-             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem'
-           }}
-         >
-           <LayoutDashboard size={16} /> Analisis Per Unit
-         </button>
+        <button
+          onClick={() => setActiveTab('history')}
+          style={{
+            flex: 1, padding: '0.75rem', borderRadius: '8px', border: 'none',
+            background: activeTab === 'history' ? 'var(--accent-blue)' : 'transparent',
+            color: activeTab === 'history' ? 'white' : 'var(--text-secondary)',
+            fontSize: '0.85rem', fontWeight: 600, transition: 'all 0.3s ease', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem'
+          }}
+        >
+          <History size={16} /> Riwayat Arus Kas
+        </button>
+        <button
+          onClick={() => setActiveTab('summary')}
+          style={{
+            flex: 1, padding: '0.75rem', borderRadius: '8px', border: 'none',
+            background: activeTab === 'summary' ? 'var(--accent-blue)' : 'transparent',
+            color: activeTab === 'summary' ? 'white' : 'var(--text-secondary)',
+            fontSize: '0.85rem', fontWeight: 600, transition: 'all 0.3s ease', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem'
+          }}
+        >
+          <LayoutDashboard size={16} /> Analisis Per Unit
+        </button>
       </div>
 
       <div className="glass-panel flex-row-responsive delay-100" style={{ padding: '1rem 1.5rem', marginBottom: '1.5rem' }}>
         <div style={{ position: 'relative', flex: 1 }}>
           <Search size={16} style={{ position: 'absolute', top: '10px', left: '12px', color: 'var(--text-muted)' }} />
-          <input 
-            type="text" 
-            placeholder="Cari transaksi atau tanggal..." 
+          <input
+            type="text"
+            placeholder="Cari transaksi atau tanggal..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="input-responsive"
@@ -223,9 +235,9 @@ const Finance = () => {
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               {[
-                { name: 'Administrasi & Honor', amount: transactions.filter(t => t.category === 'Administrasi' && t.type === 'expense').reduce((a,c) => a+Number(c.amount), 0), color: 'var(--accent-blue)' },
-                { name: 'Laboratorium (Tefa/Siswa)', amount: transactions.filter(t => t.category === 'Laboratorium' && t.type === 'expense').reduce((a,c) => a+Number(c.amount), 0), color: 'var(--accent-violet)' },
-                { name: 'Sarpras & Operasional', amount: transactions.filter(t => t.category === 'Sarpras' && t.type === 'expense').reduce((a,c) => a+Number(c.amount), 0), color: 'var(--accent-emerald)' },
+                { name: 'Administrasi & Honor', amount: transactions.filter(t => t.category === 'Administrasi' && t.type === 'expense').reduce((a, c) => a + Number(c.amount), 0), color: 'var(--accent-blue)' },
+                { name: 'Laboratorium (Tefa/Siswa)', amount: transactions.filter(t => t.category === 'Laboratorium' && t.type === 'expense').reduce((a, c) => a + Number(c.amount), 0), color: 'var(--accent-violet)' },
+                { name: 'Sarpras & Operasional', amount: transactions.filter(t => t.category === 'Sarpras' && t.type === 'expense').reduce((a, c) => a + Number(c.amount), 0), color: 'var(--accent-emerald)' },
               ].map((uni, i) => (
                 <div key={i}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
@@ -314,37 +326,37 @@ const Finance = () => {
                 <X size={24} />
               </button>
             </div>
-            
+
             <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(255,255,255,0.05)', padding: '0.25rem', borderRadius: '8px' }}>
-                 <button 
-                   onClick={() => setFormData({...formData, type: 'expense'})}
-                   className={`btn ${formData.type === 'expense' ? 'btn-danger' : ''}`}
-                   style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: 'none', background: formData.type === 'expense' ? 'var(--accent-rose)' : 'transparent', color: 'white', cursor: 'pointer', fontSize: '0.85rem' }}
-                 >Kredit (Keluar)</button>
-                 <button 
-                   onClick={() => setFormData({...formData, type: 'income'})}
-                   style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: 'none', background: formData.type === 'income' ? 'var(--accent-emerald)' : 'transparent', color: 'white', cursor: 'pointer', fontSize: '0.85rem' }}
-                 >Debit (Masuk)</button>
+                <button
+                  onClick={() => setFormData({ ...formData, type: 'expense' })}
+                  className={`btn ${formData.type === 'expense' ? 'btn-danger' : ''}`}
+                  style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: 'none', background: formData.type === 'expense' ? 'var(--accent-rose)' : 'transparent', color: 'white', cursor: 'pointer', fontSize: '0.85rem' }}
+                >Kredit (Keluar)</button>
+                <button
+                  onClick={() => setFormData({ ...formData, type: 'income' })}
+                  style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: 'none', background: formData.type === 'income' ? 'var(--accent-emerald)' : 'transparent', color: 'white', cursor: 'pointer', fontSize: '0.85rem' }}
+                >Debit (Masuk)</button>
               </div>
 
               <div>
                 <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Keterangan Transaksi</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={formData.title}
-                  onChange={(e) => setFormData({...formData, title: e.target.value})}
-                  placeholder="Contoh: Hasil jual rongsokan" 
-                  style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-subtle)', borderRadius: '8px', padding: '0.75rem', color: 'white', outline: 'none' }} 
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  placeholder="Contoh: Hasil jual rongsokan"
+                  style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-subtle)', borderRadius: '8px', padding: '0.75rem', color: 'white', outline: 'none' }}
                 />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Kategori</label>
-                  <select 
+                  <select
                     value={formData.category}
-                    onChange={(e) => setFormData({...formData, category: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                     style={{ width: '100%', background: '#1a1a1a', border: '1px solid var(--border-subtle)', borderRadius: '8px', padding: '0.75rem', color: 'white', outline: 'none' }}
                   >
                     <option>Administrasi</option>
@@ -356,32 +368,32 @@ const Finance = () => {
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Tanggal</label>
-                  <input 
-                    type="date" 
+                  <input
+                    type="date"
                     value={formData.date}
-                    onChange={(e) => setFormData({...formData, date: e.target.value})}
-                    style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-subtle)', borderRadius: '8px', padding: '0.75rem', color: 'white', outline: 'none' }} 
+                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                    style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-subtle)', borderRadius: '8px', padding: '0.75rem', color: 'white', outline: 'none' }}
                   />
                 </div>
               </div>
 
               <div>
                 <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Nominal (Rp)</label>
-                <input 
-                  type="number" 
+                <input
+                  type="number"
                   value={formData.amount}
-                  onChange={(e) => setFormData({...formData, amount: e.target.value})}
-                  placeholder="0" 
-                  style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-subtle)', borderRadius: '8px', padding: '0.75rem', color: 'white', outline: 'none' }} 
+                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                  placeholder="0"
+                  style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-subtle)', borderRadius: '8px', padding: '0.75rem', color: 'white', outline: 'none' }}
                 />
               </div>
 
               <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
                 <button onClick={() => setShowModal(false)} className="btn btn-outline" style={{ flex: 1 }}>Batal</button>
-                <button 
+                <button
                   onClick={handleSave}
                   disabled={isSubmitting}
-                  className="btn btn-primary" 
+                  className="btn btn-primary"
                   style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
                 >
                   {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
