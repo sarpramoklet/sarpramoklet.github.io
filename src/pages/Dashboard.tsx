@@ -3,7 +3,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsToolti
 import { Activity, Clock10, CheckSquare, TriangleAlert, ArrowUpRight, ArrowDownRight, UserCircle2, TrendingUp, Wallet, Loader2 } from 'lucide-react';
 import { getCurrentUser, ROLES } from '../data/organization';
 
-const FINANCE_API_URL = "https://script.google.com/macros/s/AKfycbzjzoObkhyXuVA3czMoMutwqW3MjuD4oJ9xYsMotlOC30z0c2dPaE525DhxKM2J9vsCIw/exec";
+const FINANCE_API_URL = "https://script.google.com/macros/s/AKfycbwzimTeSIIEpjUMVfI4EEc90ZDEixIeMBM9WFBQKPulYHYGF2CqhwjHgQe0ZMB7SfNSGw/exec";
 
 const areaData = [
   { name: 'Jan', IT: 400, Lab: 240, Sarpras: 240 },
@@ -38,32 +38,60 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   const isAuthorizedFinance = isPimpinan || currentUser.roleAplikasi === ROLES.PIC_ADMIN;
   
   const [financeLoading, setFinanceLoading] = useState(true);
-  const [financeData, setFinanceData] = useState({ totalIncome: 0, totalExpense: 0, balance: 0 });
+  const [internalFinance, setInternalFinance] = useState({ balance: 0, expense: 0, categories: [] as any[] });
+  const [tuFinance, setTuFinance] = useState({ balance: 0, expense: 0 });
 
   useEffect(() => {
-    const fetchFinance = async () => {
+    const fetchFinanceData = async () => {
+      setFinanceLoading(true);
       try {
-        const resp = await fetch(FINANCE_API_URL);
-        const data = await resp.json();
-        if (data && Array.isArray(data)) {
-          const mapped = data.map((item: any) => ({
-            id: item.id || item.ID || '',
-            date: item.date || item.Tanggal || '',
-            amount: item.amount || item.Amount || 0,
-            type: item.type || item.Tipe || ''
+        // Fetch Internal Sarpra Finance
+        const respInternal = await fetch(`${FINANCE_API_URL}?sheetName=Finance`);
+        const dataInternal = await respInternal.json();
+        
+        if (dataInternal && Array.isArray(dataInternal)) {
+          const mapped = dataInternal.map((item: any) => ({
+            amount: Number(item.amount || item.Amount || 0),
+            type: item.type || item.Tipe || '',
+            category: item.category || item.Kategori || 'Lainnya'
           }));
-          const income = mapped.filter((item: any) => item.type === 'income').reduce((acc, curr) => acc + Number(curr.amount), 0);
-          const expense = mapped.filter((item: any) => item.type === 'expense').reduce((acc, curr) => acc + Number(curr.amount), 0);
-          setFinanceData({ totalIncome: income, totalExpense: expense, balance: income - expense });
+          const income = mapped.filter(i => i.type === 'income').reduce((a, b) => a + b.amount, 0);
+          const expense = mapped.filter(i => i.type === 'expense').reduce((a, b) => a + b.amount, 0);
+          
+          const cats: any = {};
+          mapped.filter(i => i.type === 'expense').forEach(i => {
+            cats[i.category] = (cats[i.category] || 0) + i.amount;
+          });
+          const categoryList = Object.keys(cats).map(k => ({ name: k, value: cats[k] })).sort((a, b) => b.value - a.value);
+
+          setInternalFinance({ balance: income - expense, expense, categories: categoryList });
+        }
+
+        // Fetch Kas TU
+        const respTU = await fetch(`${FINANCE_API_URL}?sheetName=Kas_TU`);
+        const dataTU = await respTU.json();
+        
+        if (dataTU && Array.isArray(dataTU)) {
+          let balance = 0;
+          let totalExpense = 0;
+          dataTU.forEach((item: any) => {
+            const deb = Number(item.debit || item.Debit || 0);
+            const kre = Number(item.kredit || item.Kredit || 0);
+            balance += (deb - kre);
+            totalExpense += kre;
+          });
+          setTuFinance({ balance, expense: totalExpense });
         }
       } catch (error) {
-        console.error("Dashboard finance fetch error:", error);
+        console.error("Dashboard monitor fetch error:", error);
       } finally {
         setFinanceLoading(false);
       }
     };
-    fetchFinance();
-  }, [isPimpinan]);
+    
+    if (isAuthorizedFinance) fetchFinanceData();
+    else setFinanceLoading(false);
+  }, [isAuthorizedFinance]);
 
   const formatIDR = (val: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
@@ -221,29 +249,67 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       </div>
 
       {isAuthorizedFinance && (
-        <div className="glass-panel delay-300" style={{ marginBottom: '1.5rem', padding: '1.25rem', background: 'linear-gradient(135deg, var(--accent-violet-ghost), transparent)' }}>
-           <div className="flex-row-responsive" style={{ gap: '1.25rem' }}>
-             <div style={{ flex: 1 }}>
-               <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: '0 0 0.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                 <Wallet size={18} color="var(--accent-violet)" /> Kas Operasional {financeLoading && <Loader2 size={14} className="animate-spin" />}
-               </h3>
-               <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Status saldo dikelola Tata Kelola</p>
+        <div className="stats-grid" style={{ marginBottom: '1.5rem', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
+          {/* Internal Sarpra Cash Monitor */}
+          <div className="glass-panel stat-card" style={{ padding: '1.25rem', background: 'linear-gradient(135deg, var(--accent-blue-ghost), transparent)', borderLeft: '4px solid var(--accent-blue)' }}>
+             <div className="flex-row-responsive" style={{ gap: '1rem', alignItems: 'flex-start' }}>
+               <div style={{ flex: 1 }}>
+                 <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: '0 0 0.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                   <Wallet size={18} color="var(--accent-blue)" /> Kas Internal Sarpra {financeLoading && <Loader2 size={14} className="animate-spin" />}
+                 </h3>
+                 <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Monitoring dana operasional internal</p>
+               </div>
+               <div style={{ textAlign: 'right' }}>
+                 <div style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                   {financeLoading ? '---' : formatIDR(internalFinance.balance)}
+                 </div>
+                 <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Saldo Sarpra</div>
+               </div>
              </div>
-             <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'space-between' }}>
-                <div style={{ textAlign: 'right' }}>
-                   <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                     {financeLoading ? '---' : formatIDR(financeData.balance)}
-                   </div>
-                   <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Saldo</div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                   <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--accent-rose)' }}>
-                     {financeLoading ? '---' : formatIDR(financeData.totalExpense)}
-                   </div>
-                   <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Pengeluaran</div>
-                </div>
+             {internalFinance.categories.length > 0 && (
+               <div style={{ marginTop: '1rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem' }}>
+                 <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Analisa Pengeluaran Internal:</p>
+                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                   {internalFinance.categories.slice(0, 3).map((c, idx) => (
+                     <div key={idx}>
+                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', marginBottom: '0.25rem' }}>
+                         <span style={{ color: 'var(--text-muted)' }}>{c.name}</span>
+                         <span style={{ fontWeight: 600 }}>{formatIDR(c.value)}</span>
+                       </div>
+                       <div className="progress-bar-bg" style={{ height: '4px' }}>
+                         <div className="progress-bar-fill" style={{ width: `${(c.value / internalFinance.expense) * 100}%`, background: 'var(--accent-blue)' }}></div>
+                       </div>
+                     </div>
+                   ))}
+                 </div>
+               </div>
+             )}
+          </div>
+
+          {/* TU Cash Monitor */}
+          <div className="glass-panel stat-card" style={{ padding: '1.25rem', background: 'linear-gradient(135deg, var(--accent-rose-ghost), transparent)', borderLeft: '4px solid var(--accent-rose)' }}>
+             <div className="flex-row-responsive" style={{ gap: '1rem', alignItems: 'flex-start' }}>
+               <div style={{ flex: 1 }}>
+                 <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: '0 0 0.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                   <TrendingUp size={18} color="var(--accent-rose)" /> Kas Operasional TU {financeLoading && <Loader2 size={14} className="animate-spin" />}
+                 </h3>
+                 <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Dana operasional dari Bendahara</p>
+               </div>
+               <div style={{ textAlign: 'right' }}>
+                 <div style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                   {financeLoading ? '---' : formatIDR(tuFinance.balance)}
+                 </div>
+                 <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Saldo TU</div>
+               </div>
              </div>
-           </div>
+             <div style={{ marginTop: '1.25rem', padding: '0.75rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+               <div>
+                  <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Akumulasi Kredit (Keluar)</div>
+                  <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--accent-rose)' }}>{financeLoading ? '---' : formatIDR(tuFinance.expense)}</div>
+               </div>
+               <ArrowDownRight size={20} color="var(--accent-rose)" />
+             </div>
+          </div>
         </div>
       )}
 
