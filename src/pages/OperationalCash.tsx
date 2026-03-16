@@ -149,15 +149,16 @@ const OperationalCash = () => {
     const id = trx.id;
     setLoading(true);
     try {
-      await fetch(API_URL, {
+      // Sending action both in query and body for maximum compatibility with GAS
+      await fetch(`${API_URL}?action=DELETE_FINANCE_RECORD&sheetName=Kas_TU&id=${id}`, {
         method: "POST",
         mode: "no-cors",
         headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({ 
-          action: 'delete', 
-          method: 'DELETE',
+          action: 'DELETE_FINANCE_RECORD', 
           sheetName: 'Kas_TU',
-          id: id
+          id: id,
+          ID: id
         })
       });
       
