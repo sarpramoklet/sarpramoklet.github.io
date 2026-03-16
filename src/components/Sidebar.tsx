@@ -46,8 +46,37 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
           </button>
         </div>
 
-        <div style={{ padding: '0 1rem', marginBottom: '1rem' }}>
-          <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em', padding: '0 0.5rem', marginBottom: '0.5rem', fontWeight: 600 }}>
+        <div style={{ padding: '0 1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
+          {isLoggedIn ? (
+            <button 
+              className="btn btn-outline" 
+              onClick={() => {
+                localStorage.removeItem('userEmail');
+                localStorage.removeItem('userPicture');
+                if (setIsLoggedIn) setIsLoggedIn(false);
+                if (setUserPicture) setUserPicture('');
+                navigate('/');
+              }}
+              style={{ width: '100%', fontSize: '0.85rem', padding: '0.6rem', justifyContent: 'center', borderColor: 'var(--accent-rose)', color: 'var(--accent-rose)', borderRadius: '12px' }}
+            >
+              <LogOut size={16} /> Keluar (Sign Out)
+            </button>
+          ) : (
+            <button 
+              className="btn btn-primary" 
+              onClick={() => {
+                navigate('/login');
+                handleClose();
+              }}
+              style={{ width: '100%', fontSize: '0.85rem', padding: '0.6rem', justifyContent: 'center', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0, 209, 255, 0.2)' }}
+            >
+              <LogIn size={16} /> Login Sistem (Sign In)
+            </button>
+          )}
+
+          <div style={{ height: '1px', background: 'var(--border-subtle)', margin: '0.5rem 0' }}></div>
+          
+          <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em', padding: '0 0.5rem', fontWeight: 600 }}>
             Menu Utama
           </div>
         </div>
@@ -114,60 +143,32 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
           })}
         </nav>
 
-        <div style={{ padding: '1.5rem', borderTop: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', overflow: 'hidden' }}>
-              <div style={{ padding: isLoggedIn && userPicture ? '0' : '6px', background: 'var(--bg-card)', borderRadius: '50%', border: '1px solid var(--border-subtle)', flexShrink: 0, width: '46px', height: '46px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {isLoggedIn && userPicture ? (
-                  <img src={userPicture} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  <UserCircle2 size={32} color={isLoggedIn ? "var(--accent-blue)" : "var(--text-secondary)"} />
-                )}
-              </div>
-              <div style={{ overflow: 'hidden' }}>
-                <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {isLoggedIn ? getCurrentUser().nama : 'Akses Publik'}
-                </p>
-                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {isLoggedIn ? getCurrentUser().jabatan : 'Tamu'}
-                </p>
-              </div>
+        <div style={{ padding: '1.25rem', borderTop: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.02)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', overflow: 'hidden' }}>
+            <div style={{ padding: isLoggedIn && userPicture ? '0' : '6px', background: 'var(--bg-card)', borderRadius: '50%', border: '1px solid var(--border-subtle)', flexShrink: 0, width: '40px', height: '40px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {isLoggedIn && userPicture ? (
+                <img src={userPicture} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <UserCircle2 size={24} color={isLoggedIn ? "var(--accent-blue)" : "var(--text-secondary)"} />
+              )}
             </div>
-            {setIsLightMode && (
-              <button 
-                className="theme-toggle-btn"
-                onClick={() => setIsLightMode(!isLightMode)}
-                title={isLightMode ? "Ganti ke Tema Gelap" : "Ganti ke Tema Terang"}
-              >
-                {isLightMode ? <Moon size={20} /> : <Sun size={20} />}
-              </button>
-            )}
+            <div style={{ overflow: 'hidden' }}>
+              <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {isLoggedIn ? getCurrentUser().nama : 'Akses Publik'}
+              </p>
+              <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {isLoggedIn ? getCurrentUser().jabatan : 'Tamu'}
+              </p>
+            </div>
           </div>
-          
-          {isLoggedIn ? (
+          {setIsLightMode && (
             <button 
-              className="btn btn-outline" 
-              onClick={() => {
-                localStorage.removeItem('userEmail');
-                localStorage.removeItem('userPicture');
-                if (setIsLoggedIn) setIsLoggedIn(false);
-                if (setUserPicture) setUserPicture('');
-                navigate('/');
-              }}
-              style={{ width: '100%', fontSize: '0.85rem', padding: '0.5rem', justifyContent: 'center', borderColor: 'var(--accent-rose)', color: 'var(--accent-rose)' }}
+              className="theme-toggle-btn"
+              onClick={() => setIsLightMode(!isLightMode)}
+              style={{ padding: '8px' }}
+              title={isLightMode ? "Ganti ke Tema Gelap" : "Ganti ke Tema Terang"}
             >
-              <LogOut size={16} /> Keluar (Sign Out)
-            </button>
-          ) : (
-            <button 
-              className="btn btn-primary" 
-              onClick={() => {
-                navigate('/login');
-                handleClose();
-              }}
-              style={{ width: '100%', fontSize: '0.85rem', padding: '0.5rem', justifyContent: 'center' }}
-            >
-              <LogIn size={16} /> Login Sistem
+              {isLightMode ? <Moon size={18} /> : <Sun size={18} />}
             </button>
           )}
         </div>
