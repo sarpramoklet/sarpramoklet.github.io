@@ -91,17 +91,15 @@ const Finance = () => {
     const id = trx.id;
     setLoading(true);
     try {
-      // Trying FINANCE_DELETE to match the naming convention of FINANCE_RECORD
-      await fetch(`${API_URL}?action=FINANCE_DELETE&sheetName=Finance`, {
+      await fetch(API_URL, {
         method: "POST",
         mode: "no-cors",
         headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({ 
-          action: 'FINANCE_DELETE', 
+          action: 'DELETE_RECORD', 
           sheetName: 'Finance',
           id: id,
-          ID: id,
-          rowId: id
+          ID: id
         })
       });
       

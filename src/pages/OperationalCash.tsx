@@ -149,17 +149,15 @@ const OperationalCash = () => {
     const id = trx.id;
     setLoading(true);
     try {
-      // Trying FINANCE_DELETE to match FINANCE_RECORD pattern
-      await fetch(`${API_URL}?action=FINANCE_DELETE&sheetName=Kas_TU`, {
+      await fetch(API_URL, {
         method: "POST",
         mode: "no-cors",
         headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({ 
-          action: 'FINANCE_DELETE', 
+          action: 'DELETE_RECORD', 
           sheetName: 'Kas_TU',
           id: id,
-          ID: id,
-          rowId: id
+          ID: id
         })
       });
       
