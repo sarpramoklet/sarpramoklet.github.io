@@ -36,7 +36,7 @@ const Finance = () => {
 
         // Filter only finance data
         const financeData = mappedData.filter((item: any) =>
-          item.type === 'income' || item.type === 'expense'
+          (item.title || item.Keterangan) && (item.type === 'income' || item.type === 'expense')
         );
 
         setTransactions(financeData.sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime()));
@@ -96,11 +96,10 @@ const Finance = () => {
         mode: "no-cors",
         headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({ 
-          action: 'DELETE_FINANCE_RECORD', 
+          action: 'delete', // Trying lowercase 'delete'
+          method: 'DELETE',
           sheetName: 'Finance',
-          sheet: 'Finance',
-          id: id,
-          ID: id
+          id: id
         })
       });
       

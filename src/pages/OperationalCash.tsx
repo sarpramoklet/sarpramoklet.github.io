@@ -105,7 +105,7 @@ const OperationalCash = () => {
             kredit: Number(item.kredit || item.Kredit || 0),
             saldo: Number(item.saldo || item.Saldo || 0)
           };
-        }).filter((item: any) => item.tanggal && (item.debit > 0 || item.kredit > 0 || item.keterangan || item.hasRealId));
+        }).filter((item: any) => (item.tanggal && item.keterangan) || item.debit > 0 || item.kredit > 0);
         setTransactions(calculateBalances(mapped));
       } else {
         setTransactions(SEED_DATA);
@@ -154,11 +154,10 @@ const OperationalCash = () => {
         mode: "no-cors",
         headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({ 
-          action: 'DELETE_FINANCE_RECORD', 
+          action: 'delete', 
+          method: 'DELETE',
           sheetName: 'Kas_TU',
-          sheet: 'Kas_TU',
-          id: id,
-          ID: id
+          id: id
         })
       });
       
