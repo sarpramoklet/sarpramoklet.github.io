@@ -153,32 +153,59 @@ const Utilities = () => {
       )}
 
       {activeTab === 'grafik' && (
-        <div className="glass-panel delay-100 animate-fade-in" style={{ padding: '1.25rem' }}>
-          <div style={{ marginBottom: '1.25rem' }}>
-            <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: 0 }}>Grafik Beban Utilitas Total</h3>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0 0' }}>Akumulasi beban operasional per bulan</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div className="glass-panel delay-100 animate-fade-in" style={{ padding: '1.25rem' }}>
+            <div style={{ marginBottom: '1.25rem' }}>
+              <h3 style={{ fontSize: '1rem', color: 'var(--accent-amber)', margin: 0 }}>Tren Pengeluaran PLN (Listrik)</h3>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0 0' }}>Fluktuasi biaya listrik bulanan</p>
+            </div>
+            <div style={{ height: '250px', width: '100%' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
+                  <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={11} />
+                  <YAxis 
+                    stroke="var(--text-muted)" 
+                    fontSize={11}
+                    tickFormatter={(value) => `Rp${(value / 1000000).toFixed(0)}jt`}
+                  />
+                  <RechartsTooltip 
+                    formatter={(value: any) => formatRupiah(value as number)}
+                    contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-focus)', borderRadius: '8px', fontSize: '12px' }}
+                  />
+                  <Bar dataKey="PLN" fill="var(--accent-amber)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
-          <div style={{ height: '300px', width: '100%' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
-                <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={11} />
-                <YAxis 
-                  stroke="var(--text-muted)" 
-                  fontSize={11}
-                  tickFormatter={(value) => `Rp${(value / 1000000).toFixed(0)}jt`}
-                />
-                <RechartsTooltip 
-                  formatter={(value: any) => formatRupiah(value as number)}
-                  contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-focus)', borderRadius: '8px', fontSize: '12px' }}
-                />
-                <Bar dataKey="PLN" stackId="a" fill="var(--accent-amber)" />
-                <Bar dataKey="PDAM" stackId="a" fill="var(--accent-cyan)" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+
+          <div className="glass-panel delay-200 animate-fade-in" style={{ padding: '1.25rem' }}>
+            <div style={{ marginBottom: '1.25rem' }}>
+              <h3 style={{ fontSize: '1rem', color: 'var(--accent-cyan)', margin: 0 }}>Tren Pengeluaran PDAM (Air)</h3>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0 0' }}>Fluktuasi biaya pemakaian air bulanan</p>
+            </div>
+            <div style={{ height: '250px', width: '100%' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
+                  <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={11} />
+                  <YAxis 
+                    stroke="var(--text-muted)" 
+                    fontSize={11}
+                    tickFormatter={(value) => `Rp${(value / 1000000).toFixed(1)}jt`}
+                  />
+                  <RechartsTooltip 
+                    formatter={(value: any) => formatRupiah(value as number)}
+                    contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-focus)', borderRadius: '8px', fontSize: '12px' }}
+                  />
+                  <Bar dataKey="PDAM" fill="var(--accent-cyan)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
       )}
+
 
 
       {/* Modal Input Nota Baru */}
