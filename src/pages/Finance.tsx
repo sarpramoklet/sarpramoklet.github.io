@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Wallet, TrendingUp, TrendingDown, Plus, LayoutDashboard, History, PiggyBank, Edit3, Trash2, X, Save, Search, Filter, Loader2 } from 'lucide-react';
 
-const API_URL = "https://script.google.com/macros/s/AKfycbzjzoObkhyXuVA3czMoMutwqW3MjuD4oJ9xYsMotlOC30z0c2dPaE525DhxKM2J9vsCIw/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbz_ilOKXYtAngoP1NGMhz6bj8uE2k505xaO0uysQ5RF4zV_x6_zLbSwU7_LamJClpvDZw/exec";
 
 const Finance = () => {
   const [activeTab, setActiveTab] = useState('history'); // Default to history as requested for better view
@@ -22,7 +22,7 @@ const Finance = () => {
     try {
       const resp = await fetch(API_URL);
       const data = await resp.json();
-      
+
       if (data && Array.isArray(data)) {
         // Map keys to ensure lowercase property names regardless of Sheet headers
         const mappedData = data.map((item: any) => ({
@@ -35,10 +35,10 @@ const Finance = () => {
         }));
 
         // Filter only finance data
-        const financeData = mappedData.filter((item: any) => 
+        const financeData = mappedData.filter((item: any) =>
           item.type === 'income' || item.type === 'expense'
         );
-        
+
         setTransactions(financeData.sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime()));
       }
     } catch (error) {
