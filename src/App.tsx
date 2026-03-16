@@ -12,6 +12,7 @@ import Assets from './pages/Assets';
 import DummyPage from './pages/DummyPage';
 import Personnel from './pages/Personnel';
 import Finance from './pages/Finance';
+import OperationalCash from './pages/OperationalCash';
 import Assignment from './pages/Assignment';
 import Performance from './pages/Performance';
 import Utilities from './pages/Utilities';
@@ -122,6 +123,7 @@ function App() {
               <Route path="/assets" element={<ProtectedRoute isLoggedIn={isLoggedIn}><Assets /></ProtectedRoute>} />
               <Route path="/personnel" element={<ProtectedRoute isLoggedIn={isLoggedIn}><Personnel /></ProtectedRoute>} />
               <Route path="/finance" element={<ProtectedRoute isLoggedIn={isLoggedIn}><Finance /></ProtectedRoute>} />
+              <Route path="/operational-cash" element={<ProtectedRoute isLoggedIn={isLoggedIn}><OperationalCash /></ProtectedRoute>} />
               <Route path="/logs" element={<ProtectedRoute isLoggedIn={isLoggedIn}><AccessLogs /></ProtectedRoute>} />
               <Route path="/assignment" element={<ProtectedRoute isLoggedIn={isLoggedIn}><Assignment /></ProtectedRoute>} />
               <Route path="/projects" element={<ProtectedRoute isLoggedIn={isLoggedIn}><DummyPage title="Proyek & Pengembangan" /></ProtectedRoute>} />

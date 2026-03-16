@@ -91,7 +91,7 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
             
             // Amalia (Tata Kelola / Keuangan)
             if (user.unit === 'Tata Kelola') {
-               const allowed = [...alwaysVisible, 'Tata Kelola Keuangan', 'Personel', 'SOP & Dokumen'];
+               const allowed = [...alwaysVisible, 'Tata Kelola Keuangan', 'Kas Operasional TU', 'Personel', 'SOP & Dokumen'];
                return allowed.includes(item.name);
             }
             
