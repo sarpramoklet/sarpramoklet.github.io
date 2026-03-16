@@ -54,10 +54,17 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
 
         <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem', overflowY: 'auto' }}>
           {NAVIGATION.filter(item => {
+            const user = getCurrentUser();
+            
+            // For Amalia (Tata Kelola), exclude unit-specific public landing pages
+            if (user.unit === 'Tata Kelola') {
+               const excludedPublic = ['IT Services', 'Laboratorium', 'Sarpras'];
+               if (excludedPublic.includes(item.name)) return false;
+            }
+
             if (!item.authRequired) return true;
             if (!isLoggedIn) return false;
             
-            const user = getCurrentUser();
             // Hadi (Semua Unit) has full access
             if (user.unit === 'Semua Unit') return true;
             
@@ -82,9 +89,10 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
                return allowed.includes(item.name);
             }
             
-            // Amalia (Tata Kelola / Keuangan) - Same access as Waka
+            // Amalia (Tata Kelola / Keuangan)
             if (user.unit === 'Tata Kelola') {
-               return true;
+               const allowed = [...alwaysVisible, 'Tata Kelola Keuangan', 'Personel', 'SOP & Dokumen'];
+               return allowed.includes(item.name);
             }
             
             return alwaysVisible.includes(item.name);

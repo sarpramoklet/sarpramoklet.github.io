@@ -248,7 +248,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       )}
 
 
-      {isAuthorizedFinance && (
+      {isPimpinan && (
         <div className="glass-panel delay-300" style={{ marginBottom: '1.5rem' }}>
           <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
