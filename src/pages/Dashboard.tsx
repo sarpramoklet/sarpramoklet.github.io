@@ -3,7 +3,8 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsToolti
 import { Activity, Clock10, CheckSquare, TriangleAlert, ArrowUpRight, ArrowDownRight, UserCircle2, TrendingUp, Wallet, Loader2, History, Monitor } from 'lucide-react';
 import { getCurrentUser, ROLES } from '../data/organization';
 
-const API_URL = "https://script.google.com/macros/s/AKfycbzjzoObkhyXuVA3czMoMutwqW3MjuD4oJ9xYsMotlOC30z0c2dPaE525DhxKM2J9vsCIw/exec";
+const FINANCE_API_URL = "https://script.google.com/macros/s/AKfycbzjzoObkhyXuVA3czMoMutwqW3MjuD4oJ9xYsMotlOC30z0c2dPaE525DhxKM2J9vsCIw/exec";
+const LOG_API_URL = "https://script.google.com/macros/s/AKfycbyyXOLhUEs7IaRtlAgq-S6On6KuUuaAGSkw-sG6IPLmFH1-YHPRT2ZvsNRcRbcUypHljg/exec";
 
 const areaData = [
   { name: 'Jan', IT: 400, Lab: 240, Sarpras: 240 },
@@ -45,7 +46,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   useEffect(() => {
     const fetchFinance = async () => {
       try {
-        const resp = await fetch(API_URL);
+        const resp = await fetch(FINANCE_API_URL);
         const data = await resp.json();
         if (data && Array.isArray(data)) {
           const mapped = data.map((item: any) => ({
@@ -68,10 +69,13 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       if (!isPimpinan) return;
       setLogsLoading(true);
       try {
-        const resp = await fetch(API_URL);
+        const resp = await fetch(LOG_API_URL);
         const data = await resp.json();
         if (data && Array.isArray(data)) {
-          const logs = data.filter((item: any) => (item.type || item.Tipe) === 'LOG_ACCESS');
+          // Filter by action 'LOG_ACCESS' which is sent by logger.ts
+          const logs = data.filter((item: any) => 
+            (item.action === 'LOG_ACCESS') || (item.type === 'LOG_ACCESS') || (item.Tipe === 'LOG_ACCESS')
+          );
           setAccessLogs(logs.reverse().slice(0, 10)); // Top 10 latest
         }
       } catch (error) {
