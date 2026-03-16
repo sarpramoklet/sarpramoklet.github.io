@@ -16,6 +16,8 @@ import Assignment from './pages/Assignment';
 import Performance from './pages/Performance';
 import Utilities from './pages/Utilities';
 import Login from './pages/Login';
+import { getCurrentUser } from './data/organization';
+import { logAccess } from './utils/logger';
 
 // Scroll to top component when route changes
 const ScrollToTop = () => {
@@ -52,6 +54,13 @@ function App() {
   const [isLightMode, setIsLightMode] = useState(() => {
     return localStorage.getItem('theme') === 'light';
   });
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      const user = getCurrentUser();
+      logAccess(user);
+    }
+  }, [isLoggedIn]);
 
   useEffect(() => {
     if (isLightMode) {
