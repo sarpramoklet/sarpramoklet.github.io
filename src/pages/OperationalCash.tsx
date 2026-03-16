@@ -1,8 +1,13 @@
-import { useState, useEffect } from 'react';
-import { Coins, Plus, Search, Filter, Loader2, Download, Trash2, Edit3, Save, X, ArrowUpCircle, ArrowDownCircle, Wallet } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { 
+  Coins, Plus, Search, Filter, Loader2, Download, Trash2, Edit3, 
+  Save, X, ArrowUpCircle, ArrowDownCircle, Wallet, TrendingUp,
+  Calendar, Info
+} from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import { getCurrentUser, ROLES } from '../data/organization';
 
-const API_URL = "https://script.google.com/macros/s/AKfycbzjzoObkhyXuVA3czMoMutwqW3MjuD4oJ9xYsMotlOC30z0c2dPaE525DhxKM2J9vsCIw/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyyXOLhUEs7IaRtlAgq-S6On6KuUuaAGSkw-sG6IPLmFH1-YHPRT2ZvsNRcRbcUypHljg/exec";
 
 interface Transaction {
   id: string;
@@ -18,45 +23,45 @@ const SEED_DATA: Transaction[] = [
   { id: '2', tanggal: '23/12/2025', keterangan: 'Pembayaran biaya service printer EPSON dan CANON', debit: 0, kredit: 185000, saldo: 8865000 },
   { id: '3', tanggal: '9-Jan', keterangan: 'Pembayaran upah perbaikan kaca jendela ruang 23', debit: 0, kredit: 900000, saldo: 7965000 },
   { id: '4', tanggal: '9-Jan', keterangan: 'Pembayaran upah perbaikan pipa di kantin', debit: 0, kredit: 600000, saldo: 7365000 },
-  { id: '5', tanggal: '10-Jan', keterangan: 'Biaya Cloud Dedicated Server untuk Web Sekolah, LMS, SIAKAD, PPDB dan Bank Soal Bulan Januari 2026', debit: 0, kredit: 6315901, saldo: 1049099 },
+  { id: '5', tanggal: '10-Jan', keterangan: 'Biaya Cloud Dedicated Server (Januari 2026)', debit: 0, kredit: 6315901, saldo: 1049099 },
   { id: '6', tanggal: '10-Jan', keterangan: 'Pembayaran biaya cuci mobil sekolah Innova', debit: 0, kredit: 50000, saldo: 999099 },
   { id: '7', tanggal: '13-Jan', keterangan: 'Pembelian paku beton untuk pemasangan artefak', debit: 0, kredit: 29000, saldo: 970099 },
   { id: '8', tanggal: '14-Jan', keterangan: 'Pembelian pengharum mobil sekolah', debit: 0, kredit: 105300, saldo: 864799 },
-  { id: '9', tanggal: '15-Jan', keterangan: 'Pembelian standing brosur untuk Lab 2 dan buku besar untuk catatan di pos satpam', debit: 0, kredit: 87000, saldo: 777799 },
-  { id: '10', tanggal: '15-Jan', keterangan: 'Pembayaran biaya pengiriman dokumen PKWT Satpam ke PT. Trengginas Jaya', debit: 0, kredit: 20000, saldo: 757799 },
-  { id: '11', tanggal: '19-Jan', keterangan: 'Operasional Desember dari Bu Anum', debit: 7788200, kredit: 0, saldo: 8545999 },
-  { id: '12', tanggal: '21-Jan', keterangan: 'Sisa Operasional dari Bu Rosel', debit: 1083800, kredit: 0, saldo: 9629799 },
-  { id: '13', tanggal: '22-Jan', keterangan: 'Pembelian tisu dan rak kamar mandi kepala sekolah', debit: 0, kredit: 205800, saldo: 9423999 },
-  { id: '14', tanggal: '22-Jan', keterangan: 'Pembelian stop kontak dan lampu LED', debit: 0, kredit: 558000, saldo: 8865999 },
-  { id: '15', tanggal: '22-Jan', keterangan: 'Pembelian pengharum ruangan untuk Lab', debit: 0, kredit: 58000, saldo: 8807999 },
+  { id: '9', tanggal: '15-Jan', keterangan: 'Pembelian standing brosur Lab 2 & Buku Besar', debit: 0, kredit: 87000, saldo: 777799 },
+  { id: '10', tanggal: '15-Jan', keterangan: 'Pengiriman dokumen PKWT Satpam', debit: 0, kredit: 20000, saldo: 757799 },
+  { id: '11', tanggal: '19-Jan', keterangan: 'Operasional Desember (dari Bu Anum)', debit: 7788200, kredit: 0, saldo: 8545999 },
+  { id: '12', tanggal: '21-Jan', keterangan: 'Sisa Operasional (dari Bu Rosel)', debit: 1083800, kredit: 0, saldo: 9629799 },
+  { id: '13', tanggal: '22-Jan', keterangan: 'Pembelian tisu & rak kamar mandi Kepsek', debit: 0, kredit: 205800, saldo: 9423999 },
+  { id: '14', tanggal: '22-Jan', keterangan: 'Pembelian stop kontak & lampu LED', debit: 0, kredit: 558000, saldo: 8865999 },
+  { id: '15', tanggal: '22-Jan', keterangan: 'Pembelian pengharum ruangan Lab', debit: 0, kredit: 58000, saldo: 8807999 },
   { id: '16', tanggal: '26-Jan', keterangan: 'Pembayaran upah perbaikan paving', debit: 0, kredit: 180000, saldo: 8627999 },
   { id: '17', tanggal: '26-Jan', keterangan: 'Pembayaran upah perbaikan kantin', debit: 0, kredit: 205000, saldo: 8422999 },
-  { id: '18', tanggal: '27-Jan', keterangan: 'Pembelian tempat sampah untuk kamar mandi kepala sekolah', debit: 0, kredit: 20000, saldo: 8402999 },
-  { id: '19', tanggal: '28-Jan', keterangan: 'Pembayaran upah perawatan gorong gorong (Pak Yudi)', debit: 0, kredit: 500000, saldo: 7902999 },
-  { id: '20', tanggal: '27-Jan', keterangan: 'Pembelian senar gitar dan senar bass', debit: 0, kredit: 510000, saldo: 7392999 },
-  { id: '21', tanggal: '28-Jan', keterangan: 'Pembelian bahan perbaikan kran dan kunci', debit: 0, kredit: 294000, saldo: 7098999 },
-  { id: '22', tanggal: '4-Feb', keterangan: 'Pembelian pengharum ruangan untuk Lab', debit: 0, kredit: 63600, saldo: 7035399 },
-  { id: '23', tanggal: '6-Feb', keterangan: 'Pembelian 3D Printer Filament untuk keperluan praktikum', debit: 0, kredit: 137000, saldo: 6898399 },
-  { id: '24', tanggal: '11-Feb', keterangan: 'Biaya cetak tata tertib laboratorium', debit: 0, kredit: 35000, saldo: 6863399 },
-  { id: '25', tanggal: '12-Feb', keterangan: 'Operasional Januari dari Bu Anum', debit: 10864000, kredit: 0, saldo: 17727399 },
-  { id: '26', tanggal: '13-Feb', keterangan: 'Biaya Cloud Dedicated Server untuk Web Sekolah', debit: 0, kredit: 6316226, saldo: 11411173 },
-  { id: '27', tanggal: '18-Feb', keterangan: 'Pembayaran bahan dan upah perbaikan kabel aula', debit: 0, kredit: 537325, saldo: 10873848 },
-  { id: '28', tanggal: '23-Feb', keterangan: 'Upah dan perbaikan panel listrik pos satpam', debit: 0, kredit: 710000, saldo: 10163848 },
-  { id: '29', tanggal: '23-Feb', keterangan: 'Pembelian paket data 2 orbit untuk kebutuhan Expo Expose', debit: 0, kredit: 47000, saldo: 10116848 },
-  { id: '30', tanggal: '26-Feb', keterangan: 'Pembelian bahan dan upah perbaikan kunci', debit: 0, kredit: 120000, saldo: 9996848 },
-  { id: '31', tanggal: '27-Feb', keterangan: 'Pembayaran bahan dan upah perbaikan bocoran lab', debit: 0, kredit: 1350326, saldo: 8646522 },
-  { id: '32', tanggal: '27-Feb', keterangan: 'Pembayaran upah perawatan gorong gorong (Pak Yudi)', debit: 0, kredit: 500000, saldo: 8146522 },
-  { id: '33', tanggal: '27-Feb', keterangan: 'Pembelian pakan ikan dan bensin', debit: 0, kredit: 125000, saldo: 8021522 },
-  { id: '34', tanggal: '2-Mar', keterangan: 'Pembelian 3D Printer Filament untuk keperluan praktikum', debit: 0, kredit: 216400, saldo: 7805122 },
+  { id: '18', tanggal: '27-Jan', keterangan: 'Pembelian tempat sampah kamar mandi Kepsek', debit: 0, kredit: 20000, saldo: 8402999 },
+  { id: '19', tanggal: '28-Jan', keterangan: 'Upah perawatan gorong gorong (Pak Yudi)', debit: 0, kredit: 500000, saldo: 7902999 },
+  { id: '20', tanggal: '27-Jan', keterangan: 'Pembelian senar gitar & senar bass', debit: 0, kredit: 510000, saldo: 7392999 },
+  { id: '21', tanggal: '28-Jan', keterangan: 'Pembelian bahan perbaikan kran & kunci', debit: 0, kredit: 294000, saldo: 7098999 },
+  { id: '22', tanggal: '4-Feb', keterangan: 'Pembelian pengharum ruangan Lab', debit: 0, kredit: 63600, saldo: 7035399 },
+  { id: '23', tanggal: '6-Feb', keterangan: 'Filaement 3D Printer Praktikum', debit: 0, kredit: 137000, saldo: 6898399 },
+  { id: '24', tanggal: '11-Feb', keterangan: 'Cetak tata tertib laboratorium', debit: 0, kredit: 35000, saldo: 6863399 },
+  { id: '25', tanggal: '12-Feb', keterangan: 'Operasional Januari (dari Bu Anum)', debit: 10864000, kredit: 0, saldo: 17727399 },
+  { id: '26', tanggal: '13-Feb', keterangan: 'Cloud Dedicated Server Web Sekolah', debit: 0, kredit: 6316226, saldo: 11411173 },
+  { id: '27', tanggal: '18-Feb', keterangan: 'Bahan & upah perbaikan kabel aula', debit: 0, kredit: 537325, saldo: 10873848 },
+  { id: '28', tanggal: '23-Feb', keterangan: 'Upah & perbaikan panel listrik pos satpam', debit: 0, kredit: 710000, saldo: 10163848 },
+  { id: '29', tanggal: '23-Feb', keterangan: 'Paket data orbit Expo Expose', debit: 0, kredit: 47000, saldo: 10116848 },
+  { id: '30', tanggal: '26-Feb', keterangan: 'Bahan & upah perbaikan kunci', debit: 0, kredit: 120000, saldo: 9996848 },
+  { id: '31', tanggal: '27-Feb', keterangan: 'Bahan & upah perbaikan bocoran lab', debit: 0, kredit: 1350326, saldo: 8646522 },
+  { id: '32', tanggal: '27-Feb', keterangan: 'Upah perawatan gorong gorong (Pak Yudi)', debit: 0, kredit: 500000, saldo: 8146522 },
+  { id: '33', tanggal: '27-Feb', keterangan: 'Pembelian pakan ikan & bensin', debit: 0, kredit: 125000, saldo: 8021522 },
+  { id: '34', tanggal: '2-Mar', keterangan: 'Filaement 3D Printer Praktikum', debit: 0, kredit: 216400, saldo: 7805122 },
   { id: '35', tanggal: '4-Mar', keterangan: 'Pembelian pengharum mobil sekolah', debit: 0, kredit: 150094, saldo: 7655028 },
-  { id: '36', tanggal: '5-Mar', keterangan: 'Operasional Februari dari Bu Anum', debit: 7845500, kredit: 0, saldo: 15500528 },
-  { id: '37', tanggal: '6-Mar', keterangan: 'Biaya Cloud Dedicated Server untuk Web Sekolah Bulan Maret 2026', debit: 0, kredit: 6318401, saldo: 9182127 },
-  { id: '38', tanggal: '9-Mar', keterangan: 'Pengembalian uang daftar wa business', debit: 123210, kredit: 0, saldo: 9305337 },
-  { id: '39', tanggal: '10-Mar', keterangan: 'Pembelian kabel ties ukuran besar 4,8 * 300 mm', debit: 0, kredit: 47515, saldo: 9257822 },
+  { id: '36', tanggal: '5-Mar', keterangan: 'Operasional Februari (dari Bu Anum)', debit: 7845500, kredit: 0, saldo: 15500528 },
+  { id: '37', tanggal: '6-Mar', keterangan: 'Cloud Dedicated Server (Maret 2026)', debit: 0, kredit: 6318401, saldo: 9182127 },
+  { id: '38', tanggal: '9-Mar', keterangan: 'Pengembalian uang daftar WA Business', debit: 123210, kredit: 0, saldo: 9305337 },
+  { id: '39', tanggal: '10-Mar', keterangan: 'Kabel ties besar 4,8 * 300 mm', debit: 0, kredit: 47515, saldo: 9257822 },
   { id: '40', tanggal: '11-Mar', keterangan: 'Pembayaran biaya pengiriman dokumen', debit: 0, kredit: 21000, saldo: 9236822 },
-  { id: '41', tanggal: '12-Mar', keterangan: 'Pembayaran biaya pengiriman dokumen ke Direktorat SMK', debit: 0, kredit: 17000, saldo: 9219822 },
-  { id: '42', tanggal: '13-Mar', keterangan: 'Pembelian bahan dan upah pekerjaan perbaikan pintu sarpra', debit: 0, kredit: 1347000, saldo: 7872822 },
-  { id: '43', tanggal: '13-Mar', keterangan: 'Pembayaran upah perbaikan lantai depan TU', debit: 0, kredit: 50000, saldo: 7822822 },
+  { id: '41', tanggal: '12-Mar', keterangan: 'Pengiriman dokumen ke Direktorat SMK', debit: 0, kredit: 17000, saldo: 9219822 },
+  { id: '42', tanggal: '13-Mar', keterangan: 'Bahan & upah perbaikan pintu sarpra', debit: 0, kredit: 1347000, saldo: 7872822 },
+  { id: '43', tanggal: '13-Mar', keterangan: 'Upah perbaikan lantai depan TU', debit: 0, kredit: 50000, saldo: 7822822 },
 ];
 
 const OperationalCash = () => {
@@ -73,7 +78,7 @@ const OperationalCash = () => {
   const [formData, setFormData] = useState({
     tanggal: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }),
     keterangan: '',
-    type: 'kredit', // 'debit' or 'kredit'
+    type: 'kredit',
     nominal: ''
   });
 
@@ -87,7 +92,16 @@ const OperationalCash = () => {
       const resp = await fetch(`${API_URL}?sheetName=Kas_TU&sheet=Kas_TU`);
       const data = await resp.json();
       if (data && Array.isArray(data) && data.length > 0) {
-        setTransactions(data);
+        // Map fields if they coming from Sheet with Uppercase headers
+        const mapped = data.map((item: any, idx) => ({
+          id: item.id || item.ID || `sheet-${idx}`,
+          tanggal: item.tanggal || item.Tanggal || '',
+          keterangan: item.keterangan || item.Keterangan || '',
+          debit: Number(item.debit || item.Debit || 0),
+          kredit: Number(item.kredit || item.Kredit || 0),
+          saldo: Number(item.saldo || item.Saldo || 0)
+        }));
+        setTransactions(calculateBalances(mapped));
       } else {
         setTransactions(SEED_DATA);
       }
@@ -99,8 +113,9 @@ const OperationalCash = () => {
     }
   };
 
-  const calculateBalances = (data: any[]) => {
+  const calculateBalances = (data: Transaction[]) => {
     let currentBalance = 0;
+    // Sort by chronological order first if possible, here assuming the array order is chronological
     return data.map(item => {
       currentBalance = currentBalance + (Number(item.debit) || 0) - (Number(item.kredit) || 0);
       return { ...item, saldo: currentBalance };
@@ -129,7 +144,6 @@ const OperationalCash = () => {
         body: JSON.stringify(newEntry)
       });
       
-      // Update local state for immediate feedback
       const updated = [...transactions, newEntry as any];
       setTransactions(calculateBalances(updated));
       setIsModalOpen(false);
@@ -147,15 +161,6 @@ const OperationalCash = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm("Hapus data ini?")) return;
-    
-    // In a real scenario, we'd send a DELETE request. 
-    // For now, we update local state
-    const filtered = transactions.filter(t => t.id !== id);
-    setTransactions(calculateBalances(filtered));
-  };
-
   const formatRupiah = (num: number) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
@@ -164,129 +169,207 @@ const OperationalCash = () => {
     }).format(num);
   };
 
-  const filteredTransactions = transactions.filter(t => 
-    t.keterangan.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    t.tanggal.toLowerCase().includes(searchTerm.toLowerCase())
-  ).reverse();
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter(t => 
+      t.keterangan.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.tanggal.toLowerCase().includes(searchTerm.toLowerCase())
+    ).reverse();
+  }, [transactions, searchTerm]);
 
-  const totalDebit = transactions.reduce((acc, curr) => acc + (curr.debit || 0), 0);
-  const totalKredit = transactions.reduce((acc, curr) => acc + (curr.kredit || 0), 0);
-  const currentSaldo = totalDebit - totalKredit;
+  const stats = useMemo(() => {
+    const totalDebit = transactions.reduce((acc, curr) => acc + (curr.debit || 0), 0);
+    const totalKredit = transactions.reduce((acc, curr) => acc + (curr.kredit || 0), 0);
+    return {
+      totalDebit,
+      totalKredit,
+      saldo: totalDebit - totalKredit
+    };
+  }, [transactions]);
+
+  // Mini Chart Data (latest 15 saldo points)
+  const chartData = useMemo(() => {
+    return transactions.slice(-15).map(t => ({
+      name: t.tanggal,
+      saldo: t.saldo
+    }));
+  }, [transactions]);
 
   return (
     <div className="animate-fade-in" style={{ paddingBottom: '3rem' }}>
-      <div className="flex-row-responsive" style={{ marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <div style={{ padding: '10px', background: 'var(--accent-amber-ghost)', borderRadius: '12px', color: 'var(--accent-amber)' }}>
-            <Coins size={28} />
+      {/* Header Section */}
+      <div className="flex-row-responsive" style={{ marginBottom: '2.5rem', alignItems: 'flex-start' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ 
+            padding: '12px', 
+            background: 'linear-gradient(135deg, var(--accent-amber), #f59e0b)', 
+            borderRadius: '16px', 
+            color: 'white',
+            boxShadow: '0 8px 16px rgba(245, 158, 11, 0.2)'
+          }}>
+            <Coins size={32} />
           </div>
           <div>
-            <h1 className="page-title gradient-text" style={{ margin: 0 }}>Kas Operasional TU</h1>
-            <p className="page-subtitle" style={{ margin: 0 }}>Pencatatan dana taktis dan operasional Tata Kelola</p>
+            <h1 className="page-title gradient-text" style={{ margin: 0, fontSize: '1.8rem' }}>Kas Operasional TU</h1>
+            <p className="page-subtitle" style={{ margin: 0, opacity: 0.8 }}>Manajemen Dana Taktis & Operasional Tata Kelola</p>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
-           <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>
-            <Plus size={18} /> <span className="mobile-hide">Tambah Transaksi</span><span className="mobile-show" style={{ display: 'none' }}>Tambah</span>
+        <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+           <button className="btn btn-primary shadow-lg" onClick={() => setIsModalOpen(true)} style={{ padding: '0.75rem 1.5rem' }}>
+            <Plus size={20} /> Tambah Transaksi
           </button>
         </div>
       </div>
 
-      <div className="stats-grid">
-        <div className="glass-panel stat-card delay-100">
-          <div className="stat-header">
-            <span className="stat-title">Saldo Saat Ini</span>
-            <div className="stat-icon-wrapper" style={{ background: 'var(--accent-emerald-ghost)', color: 'var(--accent-emerald)' }}>
-              <Wallet size={20} />
+      {/* Main Grid: Stats & Mini Chart */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+        {/* Statistics Cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.25rem' }}>
+          <div className="glass-panel stat-card" style={{ background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05))', borderColor: 'rgba(16, 185, 129, 0.2)' }}>
+            <div className="stat-header">
+              <span className="stat-title" style={{ color: 'var(--accent-emerald)' }}>Saldo Tersedia</span>
+              <div className="stat-icon-wrapper" style={{ background: 'var(--accent-emerald)', color: 'white' }}>
+                <Wallet size={18} />
+              </div>
+            </div>
+            <div className="stat-value" style={{ color: 'var(--text-primary)', fontSize: '2rem' }}>{formatRupiah(stats.saldo)}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--accent-emerald)' }}>
+              <TrendingUp size={14} /> <span>Dana siap digunakan</span>
             </div>
           </div>
-          <div className="stat-value" style={{ color: 'var(--accent-emerald)' }}>{formatRupiah(currentSaldo)}</div>
-          <div className="stat-trend trend-up">Ready to Use</div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+            <div className="glass-panel stat-card">
+              <div className="stat-header">
+                <span className="stat-title">Pemasukan</span>
+                <ArrowUpCircle size={18} color="var(--accent-blue)" />
+              </div>
+              <div className="stat-value" style={{ fontSize: '1.2rem' }}>{formatRupiah(stats.totalDebit)}</div>
+            </div>
+            <div className="glass-panel stat-card">
+              <div className="stat-header">
+                <span className="stat-title">Pengeluaran</span>
+                <ArrowDownCircle size={18} color="var(--accent-rose)" />
+              </div>
+              <div className="stat-value" style={{ fontSize: '1.2rem', color: 'var(--accent-rose)' }}>{formatRupiah(stats.totalKredit)}</div>
+            </div>
+          </div>
         </div>
 
-        <div className="glass-panel stat-card delay-200">
-          <div className="stat-header">
-            <span className="stat-title">Total Pemasukan (Debit)</span>
-            <div className="stat-icon-wrapper" style={{ background: 'var(--accent-blue-ghost)', color: 'var(--accent-blue)' }}>
-              <ArrowUpCircle size={20} />
-            </div>
+        {/* Mini Chart Panel */}
+        <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h3 style={{ fontSize: '0.9rem', margin: 0, fontWeight: 600, color: 'var(--text-secondary)' }}>Tren Saldo (15 Terakhir)</h3>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Real-time sync</span>
           </div>
-          <div className="stat-value" style={{ fontSize: '1.5rem' }}>{formatRupiah(totalDebit)}</div>
-          <div className="stat-trend trend-up">Akumulasi</div>
-        </div>
-        
-        <div className="glass-panel stat-card delay-300">
-          <div className="stat-header">
-            <span className="stat-title">Total Pengeluaran (Kredit)</span>
-            <div className="stat-icon-wrapper" style={{ background: 'var(--accent-rose-ghost)', color: 'var(--accent-rose)' }}>
-              <ArrowDownCircle size={20} />
-            </div>
+          <div style={{ flex: 1, minHeight: '150px' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData}>
+                <defs>
+                  <linearGradient id="colorSaldo" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--accent-amber)" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="var(--accent-amber)" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-subtle)" />
+                <XAxis dataKey="name" hide />
+                <YAxis hide domain={['auto', 'auto']} />
+                <RechartsTooltip 
+                  formatter={(value: any) => formatRupiah(value as number)}
+                  contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-focus)', borderRadius: '8px' }}
+                />
+                <Area type="monotone" dataKey="saldo" stroke="var(--accent-amber)" fillOpacity={1} fill="url(#colorSaldo)" strokeWidth={2} />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
-          <div className="stat-value" style={{ fontSize: '1.5rem', color: 'var(--accent-rose)' }}>{formatRupiah(totalKredit)}</div>
-          <div className="stat-trend trend-down">Biaya Terpakai</div>
         </div>
       </div>
 
-      <div className="glass-panel delay-300 flex-row-responsive" style={{ padding: '1.25rem', marginBottom: '1.5rem', gap: '1.5rem', alignItems: 'center' }}>
+      {/* Info Banner */}
+      <div className="glass-panel shadow-sm" style={{ padding: '0.8rem 1.25rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'rgba(59, 130, 246, 0.05)', borderColor: 'rgba(59, 130, 246, 0.2)' }}>
+        <Info size={18} color="var(--accent-blue)" />
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
+          Sistem ini terhubung langsung dengan Google Spreadsheet <strong>DB_Sarpramoklet</strong>. Pastikan terdapat sheet bernama <code>Kas_TU</code> untuk sinkronisasi otomatis.
+        </p>
+      </div>
+
+      {/* Toolbar & Search */}
+      <div className="glass-panel flex-row-responsive" style={{ padding: '1.25rem', marginBottom: '1.5rem', gap: '1.5rem', alignItems: 'center' }}>
         <div style={{ position: 'relative', flex: 1 }}>
           <Search size={18} style={{ position: 'absolute', top: '11px', left: '12px', color: 'var(--text-muted)' }} />
           <input 
             type="text" 
-            placeholder="Cari transaksi atau tanggal..." 
+            placeholder="Cari transaksi atau tanggal tertentu..." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="input-responsive"
             style={{ width: '100%', paddingLeft: '2.5rem' }}
           />
         </div>
-        <button className="btn btn-outline" style={{ minWidth: 'fit-content' }}>
-          <Filter size={18} /> Filter Periode
-        </button>
-        <button className="btn btn-outline" style={{ minWidth: 'fit-content' }}>
-          <Download size={18} /> Export PDF
-        </button>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <button className="btn btn-outline" style={{ borderRadius: '10px' }}><Filter size={18} /> Filter</button>
+          <button className="btn btn-outline" style={{ borderRadius: '10px' }}><Download size={18} /> Export</button>
+        </div>
       </div>
 
-      <div className="glass-panel delay-400 table-container">
-        <table>
+      {/* Transactions Table */}
+      <div className="glass-panel table-container shadow-xl">
+        <table style={{ borderCollapse: 'separate', borderSpacing: '0' }}>
           <thead>
-            <tr>
+            <tr style={{ background: 'rgba(255,255,255,0.03)' }}>
+              <th style={{ padding: '1.25rem' }}>Status</th>
               <th>Tanggal</th>
-              <th>Keterangan Transaksi</th>
-              <th style={{ textAlign: 'right' }}>Debit (Masuk)</th>
-              <th style={{ textAlign: 'right' }}>Kredit (Keluar)</th>
-              <th style={{ textAlign: 'right' }}>Saldo</th>
+              <th>Deskripsi Transaksi</th>
+              <th style={{ textAlign: 'right' }}>Debit</th>
+              <th style={{ textAlign: 'right' }}>Kredit</th>
+              <th style={{ textAlign: 'right', paddingRight: '1.5rem' }}>Running Saldo</th>
               {isAuthorized && <th style={{ textAlign: 'center' }}>Aksi</th>}
             </tr>
           </thead>
           <tbody>
             {loading && transactions.length === 0 ? (
               <tr>
-                <td colSpan={6} style={{ textAlign: 'center', padding: '3rem' }}>
-                  <Loader2 size={32} className="animate-spin" style={{ margin: '0 auto 1rem', color: 'var(--accent-blue)' }} />
-                  <p>Memuat buku kas...</p>
+                <td colSpan={7} style={{ textAlign: 'center', padding: '5rem' }}>
+                  <Loader2 size={40} className="animate-spin" style={{ margin: '0 auto 1.5rem', color: 'var(--accent-blue)' }} />
+                  <p style={{ fontWeight: 500, color: 'var(--text-secondary)' }}>Sinkronisasi Database...</p>
+                </td>
+              </tr>
+            ) : filteredTransactions.length === 0 ? (
+              <tr>
+                <td colSpan={7} style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>
+                  Tidak ada transaksi yang cocok dengan pencarian Anda.
                 </td>
               </tr>
             ) : filteredTransactions.map((trx) => (
-              <tr key={trx.id} className="ticket-row">
-                <td style={{ whiteSpace: 'nowrap', fontWeight: 500, color: 'var(--text-secondary)' }}>{trx.tanggal}</td>
-                <td>
-                  <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{trx.keterangan}</div>
+              <tr key={trx.id} className="ticket-row border-b" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                <td style={{ padding: '1.25rem', width: '50px' }}>
+                  {trx.debit > 0 ? (
+                    <div style={{ background: 'var(--accent-emerald-ghost)', color: 'var(--accent-emerald)', padding: '6px', borderRadius: '8px', display: 'flex' }}><ArrowUpCircle size={18} /></div>
+                  ) : (
+                    <div style={{ background: 'var(--accent-rose-ghost)', color: 'var(--accent-rose)', padding: '6px', borderRadius: '8px', display: 'flex' }}><ArrowDownCircle size={18} /></div>
+                  )}
                 </td>
-                <td style={{ textAlign: 'right', color: trx.debit > 0 ? 'var(--accent-emerald)' : 'var(--text-muted)', fontWeight: trx.debit > 0 ? 600 : 400 }}>
+                <td style={{ whiteSpace: 'nowrap', fontWeight: 600, color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                     <Calendar size={14} style={{ opacity: 0.5 }} /> {trx.tanggal}
+                   </div>
+                </td>
+                <td style={{ maxWidth: '400px' }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text-primary)', lineHeight: '1.4' }}>{trx.keterangan}</div>
+                </td>
+                <td style={{ textAlign: 'right', color: trx.debit > 0 ? 'var(--accent-emerald)' : 'var(--text-muted)', fontWeight: trx.debit > 0 ? 700 : 400 }}>
                   {trx.debit > 0 ? formatRupiah(trx.debit) : '-'}
                 </td>
-                <td style={{ textAlign: 'right', color: trx.kredit > 0 ? 'var(--accent-rose)' : 'var(--text-muted)', fontWeight: trx.kredit > 0 ? 600 : 400 }}>
+                <td style={{ textAlign: 'right', color: trx.kredit > 0 ? 'var(--accent-rose)' : 'var(--text-muted)', fontWeight: trx.kredit > 0 ? 700 : 400 }}>
                   {trx.kredit > 0 ? formatRupiah(trx.kredit) : '-'}
                 </td>
-                <td style={{ textAlign: 'right', fontWeight: 700, background: 'rgba(255,255,255,0.02)' }}>
+                <td style={{ textAlign: 'right', fontWeight: 800, paddingRight: '1.5rem', color: 'var(--accent-amber)' }}>
                   {formatRupiah(trx.saldo)}
                 </td>
                 {isAuthorized && (
                   <td style={{ textAlign: 'center' }}>
-                    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
-                      <button className="btn-icon" title="Edit"><Edit3 size={14} /></button>
-                      <button className="btn-icon" style={{ color: 'var(--accent-rose)' }} onClick={() => handleDelete(trx.id)} title="Hapus"><Trash2 size={14} /></button>
+                    <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+                      <button className="btn-icon" style={{ padding: '8px', background: 'rgba(255,255,255,0.05)' }}><Edit3 size={15} /></button>
+                      <button className="btn-icon" style={{ padding: '8px', color: 'var(--accent-rose)', background: 'rgba(244, 63, 94, 0.05)' }}><Trash2 size={15} /></button>
                     </div>
                   </td>
                 )}
@@ -296,76 +379,101 @@ const OperationalCash = () => {
         </table>
       </div>
 
-      {/* Modal Add Entry */}
+      {/* Dynamic Modal */}
       {isModalOpen && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)',
-          display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100
+          background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)',
+          display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000,
+          padding: '1rem'
         }}>
-          <div className="glass-panel animate-fade-in" style={{ width: '450px', padding: '2rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-              <h2 style={{ fontSize: '1.25rem', margin: 0, color: 'var(--text-primary)' }}>Catat Transaksi Baru</h2>
-              <button onClick={() => setIsModalOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+          <div className="glass-panel animate-scale-in shadow-2xl" style={{ width: '480px', padding: '2.5rem', border: '1px solid var(--border-focus)', borderRadius: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                 <div style={{ padding: '8px', background: 'var(--accent-blue-ghost)', color: 'var(--accent-blue)', borderRadius: '10px' }}>
+                   <Plus size={24} />
+                 </div>
+                 <h2 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0 }}>Catat Kas Baru</h2>
+              </div>
+              <button 
+                onClick={() => setIsModalOpen(false)} 
+                style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '8px', borderRadius: '50%', display: 'flex' }}
+              >
                 <X size={20} />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <div style={{ display: 'flex', gap: '1rem' }}>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Tanggal</label>
-                  <input 
-                    type="text" 
-                    value={formData.tanggal}
-                    onChange={(e) => setFormData({...formData, tanggal: e.target.value})}
-                    className="input-responsive"
-                    placeholder="Contoh: 14-Mar"
-                    required
-                  />
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.6rem' }}>Tanggal</label>
+                  <div style={{ position: 'relative' }}>
+                    <Calendar size={16} style={{ position: 'absolute', left: '12px', top: '12px', opacity: 0.5 }} />
+                    <input 
+                      type="text" 
+                      value={formData.tanggal}
+                      onChange={(e) => setFormData({...formData, tanggal: e.target.value})}
+                      className="input-responsive"
+                      style={{ paddingLeft: '2.5rem' }}
+                      placeholder="Contoh: 14-Mar"
+                      required
+                    />
+                  </div>
                 </div>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Tipe</label>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.6rem' }}>Tipe Kas</label>
                   <select 
                     value={formData.type}
                     onChange={(e) => setFormData({...formData, type: e.target.value})}
                     className="input-responsive"
                     style={{ background: 'var(--bg-secondary)', color: 'white' }}
                   >
-                    <option value="debit">Pemasukan (Debit)</option>
                     <option value="kredit">Pengeluaran (Kredit)</option>
+                    <option value="debit">Pemasukan (Debit)</option>
                   </select>
                 </div>
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Keterangan</label>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.6rem' }}>Keterangan Transaksi</label>
                 <textarea 
                   value={formData.keterangan}
                   onChange={(e) => setFormData({...formData, keterangan: e.target.value})}
                   className="input-responsive"
                   rows={3}
-                  placeholder="Deskripsi transaksi..."
+                  placeholder="Contoh: Pembelian tinta printer & ATK unit IT..."
                   required
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Nominal (Rp)</label>
-                <input 
-                  type="number" 
-                  value={formData.nominal}
-                  onChange={(e) => setFormData({...formData, nominal: e.target.value})}
-                  className="input-responsive"
-                  placeholder="0"
-                  required
-                />
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.6rem' }}>Nominal (Rp)</label>
+                <div style={{ position: 'relative' }}>
+                  <span style={{ position: 'absolute', left: '12px', top: '10px', fontWeight: 700, color: 'var(--accent-amber)' }}>Rp</span>
+                  <input 
+                    type="number" 
+                    value={formData.nominal}
+                    onChange={(e) => setFormData({...formData, nominal: e.target.value})}
+                    className="input-responsive"
+                    style={{ paddingLeft: '2.5rem', fontSize: '1.2rem', fontWeight: 700 }}
+                    placeholder="0"
+                    required
+                  />
+                </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={() => setIsModalOpen(false)}>Batal</button>
-                <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={isSubmitting}>
-                  {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <><Save size={18}/> Simpan</>}
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+                <button type="button" className="btn btn-outline" style={{ flex: 1, padding: '1rem' }} onClick={() => setIsModalOpen(false)}>Batal</button>
+                <button type="submit" className="btn btn-primary shadow-xl" style={{ flex: 1, padding: '1rem' }} disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center' }}>
+                      <Loader2 size={20} className="animate-spin" /> Menghitung...
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center' }}>
+                      <Save size={20}/> Simpan Rekaman
+                    </div>
+                  )}
                 </button>
               </div>
             </form>
