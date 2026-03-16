@@ -63,12 +63,22 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
             
             // Chusni (Koordinator Laboratorium)
             if (user.unit === 'Laboratorium') {
-               // Lab specific access: exclude utilities and assets and tickets for other units?
-               // Actually, tickets/personnel/assignment/projects can be for everyone to view their own unit's data.
-               // Let's restrict typical Sarpras stuff from Lab
-               if (item.name === 'Tagihan Utilitas' || item.name === 'Aset & Inventaris' || item.name === 'Sarpras') {
-                 return false;
-               }
+               const forbidden = ['Tagihan Utilitas', 'Aset & Inventaris', 'Sarpras', 'IT Services'];
+               if (forbidden.includes(item.name)) return false;
+               return true;
+            }
+
+            // Whyna (Koordinator IT)
+            if (user.unit === 'IT') {
+               const forbidden = ['Tagihan Utilitas', 'Aset & Inventaris', 'Sarpras', 'Laboratorium'];
+               if (forbidden.includes(item.name)) return false;
+               return true;
+            }
+
+            // Ekon (Koordinator Sarpras)
+            if (user.unit === 'Sarpras') {
+               const forbidden = ['IT Services', 'Laboratorium'];
+               if (forbidden.includes(item.name)) return false;
                return true;
             }
             

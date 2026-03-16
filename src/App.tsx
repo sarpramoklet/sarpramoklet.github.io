@@ -42,7 +42,8 @@ function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     const email = localStorage.getItem('userEmail');
-    return email === 'hadi@smktelkom-mlg.sch.id' || email === 'chusni@smktelkom-mlg.sch.id';
+    const allowed = ['hadi@smktelkom-mlg.sch.id', 'chusni@smktelkom-mlg.sch.id', 'whyna@smktelkom-mlg.sch.id', 'ekon@smktelkom-mlg.sch.id'];
+    return allowed.includes(email || '');
   });
   const [userPicture, setUserPicture] = useState(() => {
     return localStorage.getItem('userPicture') || '';
