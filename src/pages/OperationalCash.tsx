@@ -94,14 +94,18 @@ const OperationalCash = () => {
       const data = await resp.json();
       if (data && Array.isArray(data) && data.length > 0) {
         // Map fields if they coming from Sheet with Uppercase headers
-        const mapped = data.map((item: any, idx) => ({
-          id: item.id || item.ID || `sheet-${idx}`,
-          tanggal: item.tanggal || item.Tanggal || '',
-          keterangan: item.keterangan || item.Keterangan || '',
-          debit: Number(item.debit || item.Debit || 0),
-          kredit: Number(item.kredit || item.Kredit || 0),
-          saldo: Number(item.saldo || item.Saldo || 0)
-        })).filter((item: any) => item.tanggal && (item.debit > 0 || item.kredit > 0 || item.keterangan));
+        const mapped = data.map((item: any, idx) => {
+          const rawId = item.id || item.ID;
+          return {
+            id: rawId || `v-${idx}-${Date.now()}`,
+            hasRealId: !!rawId,
+            tanggal: item.tanggal || item.Tanggal || '',
+            keterangan: item.keterangan || item.Keterangan || '',
+            debit: Number(item.debit || item.Debit || 0),
+            kredit: Number(item.kredit || item.Kredit || 0),
+            saldo: Number(item.saldo || item.Saldo || 0)
+          };
+        }).filter((item: any) => item.tanggal && (item.debit > 0 || item.kredit > 0 || item.keterangan || item.hasRealId));
         setTransactions(calculateBalances(mapped));
       } else {
         setTransactions(SEED_DATA);
@@ -134,7 +138,12 @@ const OperationalCash = () => {
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (trx: Transaction) => {
+  const handleDelete = async (trx: any) => {
+    if (!trx.hasRealId && !trx.id.toString().startsWith('TU-')) {
+      alert("Peringatan: Transaksi ini tidak memiliki ID unik di database. Silakan edit dan simpan transaksi ini sekali lagi agar mendapatkan ID permanen sebelum dihapus.");
+      return;
+    }
+
     if (!confirm(`Hapus riwayat transaksi "${trx.keterangan}" dari database?`)) return;
     
     const id = trx.id;
@@ -145,7 +154,7 @@ const OperationalCash = () => {
         mode: "no-cors",
         headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({ 
-          action: 'DELETE_RECORD', 
+          action: 'DELETE_FINANCE_RECORD', 
           sheetName: 'Kas_TU',
           sheet: 'Kas_TU',
           id: id,
@@ -159,7 +168,7 @@ const OperationalCash = () => {
       setTimeout(fetchData, 2000);
     } catch (error) {
       console.error("Error deleting cash entry:", error);
-      alert("Gagal menghapus data.");
+      alert("Gagal menghubungi server database.");
       setLoading(false);
     }
   };

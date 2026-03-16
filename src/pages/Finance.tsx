@@ -96,35 +96,33 @@ const Finance = () => {
         mode: "no-cors",
         headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({ 
-          action: 'DELETE_RECORD', // Primary search key for GAS
+          action: 'DELETE_FINANCE_RECORD', 
           sheetName: 'Finance',
-          sheet: 'Finance', // Fallback for some GAS versions
+          sheet: 'Finance',
           id: id,
           ID: id
         })
       });
       
-      // Update local state immediately for UX
       setTransactions(prev => prev.filter(t => t.id !== id));
-      
-      // Delay refresh for DB consistency
       setTimeout(fetchTransactions, 2000);
     } catch (error) {
       console.error("Error deleting finance record:", error);
-      alert("Gagal menghapus data. Cek koneksi.");
+      alert("Gagal menghapus data. Hubungi admin.");
       setLoading(false);
     }
   };
 
   const handleSave = async () => {
     setIsSubmitting(true);
-    const id = editingTrx ? editingTrx.id : `TRX-${Math.floor(100 + Math.random() * 900)}`;
+    const id = editingTrx ? editingTrx.id : `TRX-${Date.now()}`;
     const newRecord = {
       action: 'FINANCE_RECORD',
       sheetName: 'Finance',
+      sheet: 'Finance',
       id,
+      ID: id,
       ...formData,
-      // Dual case for safety
       Tanggal: formData.date,
       Keterangan: formData.title,
       Kategori: formData.category,
