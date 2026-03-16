@@ -63,23 +63,31 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
             
             // Chusni (Koordinator Laboratorium)
             if (user.unit === 'Laboratorium') {
-               const forbidden = ['Aset & Inventaris', 'Sarpras', 'IT Services'];
+               const forbidden = ['Aset & Inventaris', 'Sarpras', 'IT Services', 'Tata Kelola Keuangan'];
                if (forbidden.includes(item.name)) return false;
                return true;
             }
 
             // Whyna (Koordinator IT)
             if (user.unit === 'IT') {
-               const forbidden = ['Aset & Inventaris', 'Sarpras', 'Laboratorium'];
+               const forbidden = ['Aset & Inventaris', 'Sarpras', 'Laboratorium', 'Tata Kelola Keuangan'];
                if (forbidden.includes(item.name)) return false;
                return true;
             }
 
             // Ekon (Koordinator Sarpras)
             if (user.unit === 'Sarpras') {
-               const forbidden = ['IT Services', 'Laboratorium'];
+               const forbidden = ['IT Services', 'Laboratorium', 'Tata Kelola Keuangan'];
                if (forbidden.includes(item.name)) return false;
                return true;
+            }
+            
+            // Amalia (Tata Kelola / Keuangan)
+            if (user.unit === 'Tata Kelola') {
+               const allowed = ['Dashboard', 'Tata Kelola Keuangan', 'SOP & Dokumen', 'Notifikasi', 'Personel', 'Penugasan'];
+               if (allowed.includes(item.name)) return true;
+               // If item is not in allowed, return false (hide IT/Lab/Sarpras technical stuff)
+               return false;
             }
             
             return true;

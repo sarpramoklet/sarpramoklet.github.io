@@ -23,7 +23,8 @@ const Login = ({ onLogin }: LoginProps) => {
           'hadi@smktelkom-mlg.sch.id', 
           'chusni@smktelkom-mlg.sch.id',
           'whyna@smktelkom-mlg.sch.id',
-          'ekon.a.poernomo@smktelkom-mlg.sch.id'
+          'ekon.a.poernomo@smktelkom-mlg.sch.id',
+          'amalia@smktelkom-mlg.sch.id'
         ];
         if (allowedEmails.includes(decoded?.email)) {
           onLogin(decoded.email, decoded.picture);

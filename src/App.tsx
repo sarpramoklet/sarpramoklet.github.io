@@ -11,6 +11,7 @@ import SarprasPage from './pages/SarprasPage';
 import Assets from './pages/Assets';
 import DummyPage from './pages/DummyPage';
 import Personnel from './pages/Personnel';
+import Finance from './pages/Finance';
 import Assignment from './pages/Assignment';
 import Performance from './pages/Performance';
 import Utilities from './pages/Utilities';
@@ -42,7 +43,7 @@ function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     const email = localStorage.getItem('userEmail');
-    const allowed = ['hadi@smktelkom-mlg.sch.id', 'chusni@smktelkom-mlg.sch.id', 'whyna@smktelkom-mlg.sch.id', 'ekon.a.poernomo@smktelkom-mlg.sch.id'];
+    const allowed = ['hadi@smktelkom-mlg.sch.id', 'chusni@smktelkom-mlg.sch.id', 'whyna@smktelkom-mlg.sch.id', 'ekon.a.poernomo@smktelkom-mlg.sch.id', 'amalia@smktelkom-mlg.sch.id'];
     return allowed.includes(email || '');
   });
   const [userPicture, setUserPicture] = useState(() => {
@@ -110,6 +111,7 @@ function App() {
               <Route path="/utilities" element={<ProtectedRoute isLoggedIn={isLoggedIn}><Utilities /></ProtectedRoute>} />
               <Route path="/assets" element={<ProtectedRoute isLoggedIn={isLoggedIn}><Assets /></ProtectedRoute>} />
               <Route path="/personnel" element={<ProtectedRoute isLoggedIn={isLoggedIn}><Personnel /></ProtectedRoute>} />
+              <Route path="/finance" element={<ProtectedRoute isLoggedIn={isLoggedIn}><Finance /></ProtectedRoute>} />
               <Route path="/assignment" element={<ProtectedRoute isLoggedIn={isLoggedIn}><Assignment /></ProtectedRoute>} />
               <Route path="/projects" element={<ProtectedRoute isLoggedIn={isLoggedIn}><DummyPage title="Proyek & Pengembangan" /></ProtectedRoute>} />
               <Route path="/sop" element={<ProtectedRoute isLoggedIn={isLoggedIn}><DummyPage title="SOP & Dokumen" /></ProtectedRoute>} />

@@ -1,5 +1,5 @@
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Activity, Clock10, CheckSquare, TriangleAlert, Server, Component, Building, ArrowUpRight, ArrowDownRight, UserCircle2, TrendingUp } from 'lucide-react';
+import { Activity, Clock10, CheckSquare, TriangleAlert, Server, Component, Building, ArrowUpRight, ArrowDownRight, UserCircle2, TrendingUp, Wallet } from 'lucide-react';
 import { getCurrentUser, ROLES } from '../data/organization';
 
 const areaData = [
@@ -201,6 +201,29 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           </div>
         </div>
       </div>
+
+      {isPimpinan && (
+        <div className="glass-panel delay-300" style={{ marginBottom: '1.5rem', padding: '1.5rem', background: 'linear-gradient(135deg, var(--accent-violet-ghost), transparent)' }}>
+           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+             <div>
+               <h3 style={{ fontSize: '1.1rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                 <Wallet size={20} color="var(--accent-violet)" /> Ringkasan Keuangan Operasional
+               </h3>
+               <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Status kas dan saldo yang dikelola oleh Tata Kelola (Amalia)</p>
+             </div>
+             <div style={{ display: 'flex', gap: '2rem' }}>
+                <div style={{ textAlign: 'right' }}>
+                   <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>Rp 49.260.000</div>
+                   <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>SALDO SAAT INI</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                   <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--accent-rose)' }}>Rp 8.240.000</div>
+                   <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>PENGELUARAN BULAN INI</div>
+                </div>
+             </div>
+           </div>
+        </div>
+      )}
 
       {isPimpinan && (
         <div className="glass-panel delay-300" style={{ marginBottom: '1.5rem' }}>

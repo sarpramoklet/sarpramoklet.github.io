@@ -1,4 +1,4 @@
-import { LayoutDashboard, Ticket, Server, Component, Building, Package, BookOpen, Bell, Presentation, Users, Briefcase, TrendingUp, BarChart3, Zap } from 'lucide-react';
+import { LayoutDashboard, Ticket, Server, Component, Building, Package, BookOpen, Bell, Presentation, Users, Briefcase, TrendingUp, BarChart3, Zap, Wallet } from 'lucide-react';
 
 export const NAVIGATION = [
   { path: '/', name: 'Dashboard', icon: LayoutDashboard, authRequired: false },
@@ -11,6 +11,7 @@ export const NAVIGATION = [
   { path: '/utilities', name: 'Tagihan Utilitas', icon: Zap, authRequired: true },
   { path: '/assets', name: 'Aset & Inventaris', icon: Package, authRequired: true },
   { path: '/personnel', name: 'Personel', icon: Users, authRequired: true },
+  { path: '/finance', name: 'Tata Kelola Keuangan', icon: Wallet, authRequired: true },
   { path: '/assignment', name: 'Penugasan', icon: Briefcase, authRequired: true },
   { path: '/projects', name: 'Proyek & Pengembangan', icon: BarChart3, authRequired: true },
   { path: '/sop', name: 'SOP & Dokumen', icon: BookOpen, authRequired: true },
