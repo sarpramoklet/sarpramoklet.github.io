@@ -1,24 +1,53 @@
-import { USERS } from '../data/organization';
-import { Briefcase, Search, Filter, AlertTriangle, CheckSquare, UserCheck2 } from 'lucide-react';
-
-const mockAssignments = USERS.filter(u => u.atasanLangsung !== null).map((user) => {
-  return {
-    ...user,
-    aktif: Math.floor(Math.random() * 5) + 1,
-    selesai: Math.floor(Math.random() * 20) + 5,
-    overdue: Math.floor(Math.random() * 3),
-    loadKerja: Math.floor(Math.random() * 60) + 40 // 40-100%
-  };
-});
+import { USERS, getCurrentUser, ROLES } from '../data/organization';
+import { Briefcase, Search, AlertTriangle, CheckSquare, UserCheck2, Plus } from 'lucide-react';
+import { useState } from 'react';
 
 const Assignment = () => {
+  const currentUser = getCurrentUser();
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const isKaur = currentUser.roleAplikasi.includes('Koordinator');
+  const isPimpinan = currentUser.roleAplikasi === ROLES.PIMPINAN;
+
+  const filteredAssignments = USERS.filter(u => {
+    // Basic filter: not an executive/pimpinan themselves typically, or show subordinates
+    if (u.atasanLangsung === null && !isPimpinan) return false;
+    
+    // Hadi (Pimpinan) sees everyone
+    if (isPimpinan) {
+      return u.nama.toLowerCase().includes(searchTerm.toLowerCase()) || 
+             u.unit.toLowerCase().includes(searchTerm.toLowerCase());
+    }
+
+    // Kaurs see their unit
+    if (u.unit === currentUser.unit) {
+      return u.nama.toLowerCase().includes(searchTerm.toLowerCase());
+    }
+
+    return false;
+  }).map((user) => {
+    // Add mock data for the UI
+    return {
+      ...user,
+      aktif: Math.floor(Math.random() * 5) + 1,
+      selesai: Math.floor(Math.random() * 20) + 5,
+      overdue: Math.floor(Math.random() * 3),
+      loadKerja: Math.floor(Math.random() * 60) + 40 // 40-100%
+    };
+  });
+
   return (
     <div className="animate-fade-in" style={{ paddingBottom: '3rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <div>
-          <h1 className="page-title gradient-text">Penugasan & Beban Kerja</h1>
+          <h1 className="page-title gradient-text">Penugasan & Beban Kerja {currentUser.unit !== 'Semua Unit' ? `- Unit ${currentUser.unit}` : ''}</h1>
           <p className="page-subtitle" style={{ margin: 0 }}>Pantau distribusi pekerjaan, load dan overtime personil</p>
         </div>
+        {isKaur && (
+          <button className="btn btn-primary">
+            <Plus size={18} /> Beri Tugas Baru
+          </button>
+        )}
       </div>
 
       <div className="glass-panel delay-100" style={{ padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
@@ -27,7 +56,9 @@ const Assignment = () => {
             <Search size={16} style={{ position: 'absolute', top: '10px', left: '12px', color: 'var(--text-muted)' }} />
             <input 
               type="text" 
-              placeholder="Cari PIC..." 
+              placeholder="Cari Nama PIC..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               style={{ 
                 background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-subtle)', 
                 color: 'var(--text-primary)', padding: '0.5rem 1rem 0.5rem 2.2rem', 
@@ -35,14 +66,14 @@ const Assignment = () => {
               }} 
             />
           </div>
-          <button className="btn btn-outline" style={{ padding: '0.4rem 0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Filter size={16} /> Filter Unit
-          </button>
+        </div>
+        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+          Memantau {filteredAssignments.length} Anggota Tim
         </div>
       </div>
 
       <div className="dashboard-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
-        {mockAssignments.map((assignment, idx) => (
+        {filteredAssignments.map((assignment, idx) => (
           <div key={assignment.id} className={`glass-panel delay-${(idx % 5) * 100}`} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
