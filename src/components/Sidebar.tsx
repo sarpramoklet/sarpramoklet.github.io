@@ -30,20 +30,26 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
       ></div>
       
       <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
-        <div style={{ padding: '2rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <div style={{ padding: '8px', background: 'linear-gradient(135deg, var(--accent-cyan), var(--accent-blue))', borderRadius: '12px', color: 'white' }}>
-              <Activity size={24} />
+        <div style={{ padding: '2rem 1.5rem 1rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ padding: '8px', background: 'linear-gradient(135deg, var(--accent-cyan), var(--accent-blue))', borderRadius: '12px', color: 'white' }}>
+                <Activity size={24} />
+              </div>
+              <div>
+                <h2 style={{ fontSize: '1.25rem', fontFamily: 'var(--font-display)', margin: 0 }} className="gradient-text">Sarpramoklet</h2>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Command Center</span>
+              </div>
             </div>
-            <div>
-              <h2 style={{ fontSize: '1.25rem', fontFamily: 'var(--font-display)', margin: 0 }} className="gradient-text">Sarpramoklet</h2>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Command Center</span>
-            </div>
+            
+            <button className="mobile-close-btn" onClick={handleClose}>
+               <X size={24} />
+            </button>
           </div>
           
-          <button className="mobile-close-btn" onClick={handleClose}>
-             <X size={24} />
-          </button>
+          <div style={{ padding: '0.5rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid var(--border-subtle)', textAlign: 'center' }}>
+            <img src="./logo_telkom.png" alt="Logo Telkom" style={{ width: '100%', height: 'auto', maxHeight: '40px', objectFit: 'contain' }} />
+          </div>
         </div>
 
         <div style={{ padding: '0 1rem 1rem 1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -187,7 +193,8 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
         </nav>
 
         <div style={{ padding: '1rem', borderTop: '1px solid var(--border-subtle)', textAlign: 'center' }}>
-          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Sarpramoklet v2.0 &copy; 2026</span>
+          <p style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em', marginBottom: '0.25rem' }}>ATTITUDE IS EVERYTHING</p>
+          <span style={{ fontSize: '0.55rem', color: 'var(--text-muted)', opacity: 0.7 }}>Sarpramoklet v2.0 &copy; 2026</span>
         </div>
       </aside>
     </>

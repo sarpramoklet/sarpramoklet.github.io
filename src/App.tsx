@@ -94,10 +94,13 @@ function App() {
           <div className="bg-glow"></div>
           
           <div className="mobile-header">
-            <button className="mobile-menu-btn" onClick={() => setIsSidebarOpen(true)}>
-              <Menu size={24} />
-            </button>
-            <h1 className="mobile-title gradient-text">Sarpramoklet</h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <button className="mobile-menu-btn" onClick={() => setIsSidebarOpen(true)}>
+                <Menu size={24} />
+              </button>
+              <h1 className="mobile-title gradient-text" style={{ margin: 0 }}>Sarpramoklet</h1>
+            </div>
+            <img src="./logo_telkom.png" alt="Logo Telkom" style={{ height: '24px', objectFit: 'contain', marginLeft: 'auto' }} />
           </div>
           
           <div className="content-container">
@@ -132,10 +135,18 @@ function App() {
               <Route path="/sop" element={<ProtectedRoute isLoggedIn={isLoggedIn}><DummyPage title="SOP & Dokumen" /></ProtectedRoute>} />
               <Route path="/notifications" element={<ProtectedRoute isLoggedIn={isLoggedIn}><DummyPage title="Notifikasi Pribadi" /></ProtectedRoute>} />
               <Route path="/maintenance" element={<ProtectedRoute isLoggedIn={isLoggedIn}><DummyPage title="Jadwal Maintenance" /></ProtectedRoute>} />
-              <Route path="/rooms" element={<ProtectedRoute isLoggedIn={isLoggedIn}><DummyPage title="Gedung & Ruang" /></ProtectedRoute>} />
-              
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+
+            {/* Global Footer */}
+            <footer style={{ marginTop: '4rem', padding: '2rem 0', borderTop: '1px solid var(--border-subtle)', textAlign: 'center' }}>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', letterSpacing: '0.1em', fontWeight: 600, textTransform: 'uppercase' }}>
+                ATTITUDE IS EVERYTHING
+              </p>
+              <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.5rem', opacity: 0.5 }}>
+                Sarpramoklet v2.0 &copy; 2026 • SMK Telkom Malang
+              </p>
+            </footer>
           </div>
         </main>
       </div>
