@@ -91,16 +91,17 @@ const Finance = () => {
     const id = trx.id;
     setLoading(true);
     try {
-      // Sending action both in query and body for maximum compatibility with GAS
-      await fetch(`${API_URL}?action=DELETE_FINANCE_RECORD&sheetName=Finance&id=${id}`, {
+      // Trying to use a very explicit DELETE action and multiple ID keys
+      await fetch(API_URL, {
         method: "POST",
         mode: "no-cors",
         headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({ 
-          action: 'DELETE_FINANCE_RECORD',
+          action: 'DELETE', 
           sheetName: 'Finance',
           id: id,
-          ID: id
+          ID: id,
+          rowId: id
         })
       });
       
