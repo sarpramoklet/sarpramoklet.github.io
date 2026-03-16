@@ -46,7 +46,39 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
           </button>
         </div>
 
-        <div style={{ padding: '0 1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
+        <div style={{ padding: '0 1rem 1rem 1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {/* User Profile Info */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem', background: 'rgba(255,255,255,0.03)', borderRadius: '16px', border: '1px solid var(--border-subtle)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', overflow: 'hidden' }}>
+              <div style={{ padding: isLoggedIn && userPicture ? '0' : '6px', background: 'var(--bg-card)', borderRadius: '50%', border: '1px solid var(--border-subtle)', flexShrink: 0, width: '36px', height: '36px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {isLoggedIn && userPicture ? (
+                  <img src={userPicture} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <UserCircle2 size={20} color={isLoggedIn ? "var(--accent-blue)" : "var(--text-secondary)"} />
+                )}
+              </div>
+              <div style={{ overflow: 'hidden' }}>
+                <p style={{ margin: 0, fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {isLoggedIn ? getCurrentUser().nama.split(',')[0] : 'Akses Publik'}
+                </p>
+                <p style={{ margin: 0, fontSize: '0.65rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {isLoggedIn ? getCurrentUser().jabatan : 'Tamu'}
+                </p>
+              </div>
+            </div>
+            {setIsLightMode && (
+              <button 
+                className="theme-toggle-btn"
+                onClick={() => setIsLightMode(!isLightMode)}
+                style={{ padding: '6px', border: 'none', background: 'transparent' }}
+                title={isLightMode ? "Ganti ke Tema Gelap" : "Ganti ke Tema Terang"}
+              >
+                {isLightMode ? <Moon size={16} /> : <Sun size={16} />}
+              </button>
+            )}
+          </div>
+
+          {/* Auth Buttons */}
           {isLoggedIn ? (
             <button 
               className="btn btn-outline" 
@@ -57,9 +89,9 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
                 if (setUserPicture) setUserPicture('');
                 navigate('/');
               }}
-              style={{ width: '100%', fontSize: '0.85rem', padding: '0.6rem', justifyContent: 'center', borderColor: 'var(--accent-rose)', color: 'var(--accent-rose)', borderRadius: '12px' }}
+              style={{ width: '100%', fontSize: '0.8rem', padding: '0.5rem', justifyContent: 'center', borderColor: 'var(--accent-rose)', color: 'var(--accent-rose)', borderRadius: '10px' }}
             >
-              <LogOut size={16} /> Keluar (Sign Out)
+              <LogOut size={14} /> Keluar (Sign Out)
             </button>
           ) : (
             <button 
@@ -68,15 +100,15 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
                 navigate('/login');
                 handleClose();
               }}
-              style={{ width: '100%', fontSize: '0.85rem', padding: '0.6rem', justifyContent: 'center', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0, 209, 255, 0.2)' }}
+              style={{ width: '100%', fontSize: '0.8rem', padding: '0.5rem', justifyContent: 'center', borderRadius: '10px' }}
             >
-              <LogIn size={16} /> Login Sistem (Sign In)
+              <LogIn size={14} /> Sign In
             </button>
           )}
 
-          <div style={{ height: '1px', background: 'var(--border-subtle)', margin: '0.5rem 0' }}></div>
+          <div style={{ height: '1px', background: 'var(--border-subtle)', margin: '0.25rem 0' }}></div>
           
-          <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em', padding: '0 0.5rem', fontWeight: 600 }}>
+          <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em', padding: '0 0.5rem', fontWeight: 600 }}>
             Menu Utama
           </div>
         </div>
@@ -154,34 +186,8 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
           })}
         </nav>
 
-        <div style={{ padding: '1.25rem', borderTop: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.02)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', overflow: 'hidden' }}>
-            <div style={{ padding: isLoggedIn && userPicture ? '0' : '6px', background: 'var(--bg-card)', borderRadius: '50%', border: '1px solid var(--border-subtle)', flexShrink: 0, width: '40px', height: '40px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {isLoggedIn && userPicture ? (
-                <img src={userPicture} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : (
-                <UserCircle2 size={24} color={isLoggedIn ? "var(--accent-blue)" : "var(--text-secondary)"} />
-              )}
-            </div>
-            <div style={{ overflow: 'hidden' }}>
-              <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {isLoggedIn ? getCurrentUser().nama : 'Akses Publik'}
-              </p>
-              <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {isLoggedIn ? getCurrentUser().jabatan : 'Tamu'}
-              </p>
-            </div>
-          </div>
-          {setIsLightMode && (
-            <button 
-              className="theme-toggle-btn"
-              onClick={() => setIsLightMode(!isLightMode)}
-              style={{ padding: '8px' }}
-              title={isLightMode ? "Ganti ke Tema Gelap" : "Ganti ke Tema Terang"}
-            >
-              {isLightMode ? <Moon size={18} /> : <Sun size={18} />}
-            </button>
-          )}
+        <div style={{ padding: '1rem', borderTop: '1px solid var(--border-subtle)', textAlign: 'center' }}>
+          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Sarpramoklet v2.0 &copy; 2026</span>
         </div>
       </aside>
     </>
