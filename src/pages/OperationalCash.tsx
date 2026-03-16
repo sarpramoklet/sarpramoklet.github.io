@@ -418,8 +418,8 @@ const OperationalCash = () => {
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)',
-          display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000,
-          padding: '1rem'
+          display: 'flex', justifyContent: 'center', alignItems: 'flex-start', zIndex: 1000,
+          padding: '1rem', paddingTop: '4rem', overflowY: 'auto'
         }}>
           <div className="glass-panel animate-scale-in shadow-2xl" style={{ width: '480px', padding: '2.5rem', border: '1px solid var(--border-focus)', borderRadius: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
