@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Users, TrendingUp, AlertTriangle, CheckSquare, Clock10, AlertCircle, LayoutGrid, Target } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 
 const trendData = [
   { name: 'Okt', Masuk: 120, Selesai: 110 },
@@ -24,23 +24,26 @@ const MeetingDashboard = () => {
 
   return (
     <div className="animate-fade-in" style={{ paddingBottom: '3rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+      <div className="flex-row-responsive" style={{ marginBottom: '2rem' }}>
         <div>
           <h1 className="page-title gradient-text">Executive Meeting Dashboard</h1>
           <p className="page-subtitle" style={{ margin: 0 }}>Sajian Data Berbasis Keputusan untuk Rapat Bulanan</p>
         </div>
-        <div style={{ display: 'flex', background: 'var(--bg-card)', padding: '0.25rem', borderRadius: '12px', border: '1px solid var(--border-subtle)' }}>
+        <div style={{ display: 'flex', background: 'var(--bg-card)', padding: '0.25rem', borderRadius: '12px', border: '1px solid var(--border-subtle)', flexWrap: 'wrap', gap: '0.25rem' }}>
           <button 
             onClick={() => setActiveTab('internal')}
             style={{ 
-              padding: '0.6rem 1.5rem', 
+              flex: '1 1 auto',
+              padding: '0.6rem 1.25rem', 
               borderRadius: '8px',
               border: 'none',
               background: activeTab === 'internal' ? 'var(--accent-blue-ghost)' : 'transparent',
               color: activeTab === 'internal' ? 'var(--accent-blue)' : 'var(--text-secondary)',
               fontWeight: activeTab === 'internal' ? 600 : 500,
               cursor: 'pointer',
-              transition: 'all 0.3s ease'
+              transition: 'all 0.3s ease',
+              whiteSpace: 'nowrap',
+              fontSize: '0.85rem'
             }}
           >
             1. Rapat Internal Tim
@@ -48,14 +51,17 @@ const MeetingDashboard = () => {
           <button 
             onClick={() => setActiveTab('eksternal')}
             style={{ 
-              padding: '0.6rem 1.5rem', 
+              flex: '1 1 auto',
+              padding: '0.6rem 1.25rem', 
               borderRadius: '8px',
               border: 'none',
               background: activeTab === 'eksternal' ? 'var(--accent-violet-ghost)' : 'transparent',
               color: activeTab === 'eksternal' ? 'var(--accent-violet)' : 'var(--text-secondary)',
               fontWeight: activeTab === 'eksternal' ? 600 : 500,
               cursor: 'pointer',
-              transition: 'all 0.3s ease'
+              transition: 'all 0.3s ease',
+              whiteSpace: 'nowrap',
+              fontSize: '0.85rem'
             }}
           >
             2. Rapat Antar Unit
@@ -63,52 +69,51 @@ const MeetingDashboard = () => {
         </div>
       </div>
 
-      {/* RINGKASAN UTAMA (MUNCUL DI KEDUANYA DENGAN KONTEKS BERBEDA) */}
-      <h3 style={{ marginBottom: '1rem', color: 'var(--text-primary)' }}>A. Ringkasan Utama Bulan Ini</h3>
-      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(6, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
+      {/* RINGKASAN UTAMA */}
+      <h3 style={{ marginBottom: '1rem', color: 'var(--text-primary)', fontSize: '1rem' }}>A. Ringkasan Utama Bulan Ini</h3>
+      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem', marginBottom: '2rem' }}>
         <div className="glass-panel stat-card" style={{ padding: '1rem' }}>
-          <div className="stat-header"><span className="stat-title">Masuk</span><Users size={16} color="var(--accent-blue)" /></div>
-          <div className="stat-value" style={{ fontSize: '1.8rem' }}>142</div>
+          <div className="stat-header"><span className="stat-title" style={{ fontSize: '0.65rem' }}>Pekerjaan Masuk</span><Users size={14} color="var(--accent-blue)" /></div>
+          <div className="stat-value" style={{ fontSize: '1.5rem' }}>142</div>
         </div>
         <div className="glass-panel stat-card" style={{ padding: '1rem' }}>
-          <div className="stat-header"><span className="stat-title">Selesai</span><CheckSquare size={16} color="var(--accent-emerald)" /></div>
-          <div className="stat-value" style={{ fontSize: '1.8rem' }}>120</div>
+          <div className="stat-header"><span className="stat-title" style={{ fontSize: '0.65rem' }}>Pekerjaan Selesai</span><CheckSquare size={14} color="var(--accent-emerald)" /></div>
+          <div className="stat-value" style={{ fontSize: '1.5rem' }}>120</div>
         </div>
         <div className="glass-panel stat-card" style={{ padding: '1rem' }}>
-          <div className="stat-header"><span className="stat-title">Overdue</span><AlertTriangle size={16} color="var(--accent-rose)" /></div>
-          <div className="stat-value" style={{ fontSize: '1.8rem', color: 'var(--accent-rose)' }}>18</div>
+          <div className="stat-header"><span className="stat-title" style={{ fontSize: '0.65rem' }}>Tiket Overdue</span><AlertTriangle size={14} color="var(--accent-rose)" /></div>
+          <div className="stat-value" style={{ fontSize: '1.5rem', color: 'var(--accent-rose)' }}>18</div>
         </div>
         <div className="glass-panel stat-card" style={{ padding: '1rem' }}>
-          <div className="stat-header"><span className="stat-title">Waktu Respon</span><Clock10 size={16} color="var(--accent-amber)" /></div>
-          <div className="stat-value" style={{ fontSize: '1.8rem' }}>14<span style={{ fontSize: '0.8rem' }}>m</span></div>
+          <div className="stat-header"><span className="stat-title" style={{ fontSize: '0.65rem' }}>Respon (Avg)</span><Clock10 size={14} color="var(--accent-amber)" /></div>
+          <div className="stat-value" style={{ fontSize: '1.5rem' }}>14<span style={{ fontSize: '0.8rem' }}>m</span></div>
         </div>
         <div className="glass-panel stat-card" style={{ padding: '1rem' }}>
-          <div className="stat-header"><span className="stat-title">Penyelesaian</span><Target size={16} color="var(--accent-cyan)" /></div>
-          <div className="stat-value" style={{ fontSize: '1.8rem' }}>3.2<span style={{ fontSize: '0.8rem' }}>j</span></div>
+          <div className="stat-header"><span className="stat-title" style={{ fontSize: '0.65rem' }}>Durasi Kerja</span><Target size={14} color="var(--accent-cyan)" /></div>
+          <div className="stat-value" style={{ fontSize: '1.5rem' }}>3.2<span style={{ fontSize: '0.8rem' }}>j</span></div>
         </div>
         <div className="glass-panel stat-card" style={{ padding: '1rem' }}>
-          <div className="stat-header"><span className="stat-title">Capaian KPI</span><TrendingUp size={16} color="var(--accent-violet)" /></div>
-          <div className="stat-value" style={{ fontSize: '1.8rem' }}>84.5%</div>
+          <div className="stat-header"><span className="stat-title" style={{ fontSize: '0.65rem' }}>Capaian KPI</span><TrendingUp size={14} color="var(--accent-violet)" /></div>
+          <div className="stat-value" style={{ fontSize: '1.5rem' }}>84.5%</div>
         </div>
       </div>
 
       {activeTab === 'internal' && (
         <div className="animate-fade-in">
-          <div className="dashboard-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+          <div className="dashboard-grid">
             {/* GRAFIK TREN */}
-            <div className="glass-panel chart-container">
+            <div className="glass-panel chart-container" style={{ minHeight: '300px' }}>
               <div className="chart-header">
-                <h3 style={{ fontSize: '1rem' }}>B. Kinerja Per Subproses</h3>
+                <h3 style={{ fontSize: '0.9rem' }}>B. Kinerja Per Subproses</h3>
               </div>
               <div style={{ flex: 1, minHeight: 0 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={subProcessData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }} layout="vertical">
+                  <BarChart data={subProcessData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" horizontal={false} />
-                    <XAxis type="number" stroke="var(--text-muted)" fontSize={12} />
-                    <YAxis dataKey="name" type="category" width={120} stroke="var(--text-muted)" fontSize={11} />
+                    <XAxis type="number" stroke="var(--text-muted)" fontSize={10} />
+                    <YAxis dataKey="name" type="category" width={80} stroke="var(--text-muted)" fontSize={10} />
                     <Tooltip contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-focus)', borderRadius: '8px' }} />
-                    <Legend />
-                    <Bar dataKey="total" name="Total Tugas" fill="var(--accent-blue-ghost)" stroke="var(--accent-blue)" />
+                    <Bar dataKey="total" name="Total" fill="var(--accent-blue-ghost)" stroke="var(--accent-blue)" />
                     <Bar dataKey="selesai" name="Selesai" fill="var(--accent-emerald)" />
                     <Bar dataKey="overdue" name="Overdue" fill="var(--accent-rose)" />
                   </BarChart>
@@ -116,13 +121,13 @@ const MeetingDashboard = () => {
               </div>
             </div>
 
-            <div className="glass-panel chart-container">
+            <div className="glass-panel chart-container" style={{ minHeight: '300px' }}>
               <div className="chart-header">
-                <h3 style={{ fontSize: '1rem' }}>Tren Tiket Masuk vs Selesai (Per Bulan)</h3>
+                <h3 style={{ fontSize: '0.9rem' }}>Tren Tiket Masuk vs Selesai</h3>
               </div>
               <div style={{ flex: 1, minHeight: 0 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={trendData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                  <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorMasuk" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
@@ -133,8 +138,8 @@ const MeetingDashboard = () => {
                         <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
-                    <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={12} />
-                    <YAxis stroke="var(--text-muted)" fontSize={12} />
+                    <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={10} />
+                    <YAxis stroke="var(--text-muted)" fontSize={10} />
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
                     <Tooltip contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-focus)', borderRadius: '8px' }} />
                     <Area type="monotone" dataKey="Masuk" stroke="#3b82f6" fillOpacity={1} fill="url(#colorMasuk)" />
@@ -145,76 +150,75 @@ const MeetingDashboard = () => {
             </div>
           </div>
 
-          <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '2rem' }}>
+          <div className="glass-panel" style={{ padding: '1.25rem', marginBottom: '1.5rem' }}>
             <h3 style={{ fontSize: '1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <AlertCircle size={18} color="var(--accent-rose)" /> C. Daftar Pekerjaan Kritis (Eskalasi)
+              <AlertCircle size={18} color="var(--accent-rose)" /> C. Pekerjaan Kritis (Eskalasi)
             </h3>
             <div className="table-container">
               <table>
                 <thead>
                   <tr>
-                    <th>Nama Pekerjaan / Isu</th>
-                    <th>Subproses</th>
-                    <th>Status</th>
-                    <th>Kendala</th>
-                    <th>Keputusan yang Dibutuhkan</th>
+                    <th>Isu / Subproses</th>
+                    <th className="mobile-hide">Status</th>
+                    <th className="mobile-hide">Kendala</th>
+                    <th>Rekomendasi Keputusan</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
-                    <td style={{ fontWeight: 600 }}>Pengadaan 20 PC Lab Tertunda</td>
-                    <td>Lab &gt; Pengadaan</td>
-                    <td><span className="badge badge-danger">Lewat SLA (14 Hari)</span></td>
-                    <td>Anggaran belum turun dari Yayasan</td>
-                    <td style={{ color: 'var(--accent-amber)' }}>Approve eskalasi ke Keuangan Pusat</td>
+                    <td>
+                      <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>Pengadaan 20 PC Lab</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Lab &gt; Pengadaan</div>
+                      <div className="mobile-show" style={{ marginTop: '0.4rem' }}>
+                         <span className="badge badge-danger">Lewat SLA</span>
+                      </div>
+                    </td>
+                    <td className="mobile-hide"><span className="badge badge-danger">Lewat SLA</span></td>
+                    <td className="mobile-hide" style={{ fontSize: '0.85rem' }}>Anggaran belum turun</td>
+                    <td style={{ color: 'var(--accent-amber)', fontSize: '0.85rem' }}>Approve eskalasi ke Pusat</td>
                   </tr>
                   <tr>
-                    <td style={{ fontWeight: 600 }}>Tembok Lorong Kelas X Rembes Berulang</td>
-                    <td>Sarpras &gt; Gedung</td>
-                    <td><span className="badge badge-warning">Isu Berulang (3x)</span></td>
-                    <td>Talang air utama cacat struktur</td>
-                    <td style={{ color: 'var(--accent-amber)' }}>Persetujuan renovasi talang total (Bukan tambal)</td>
+                    <td>
+                      <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>Tembok Lorong Kelas X Rembes</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Sarpras &gt; Gedung</div>
+                      <div className="mobile-show" style={{ marginTop: '0.4rem' }}>
+                         <span className="badge badge-warning">Isu Berulang</span>
+                      </div>
+                    </td>
+                    <td className="mobile-hide"><span className="badge badge-warning">Isu Berulang</span></td>
+                    <td className="mobile-hide" style={{ fontSize: '0.85rem' }}>Talang air cacat struktur</td>
+                    <td style={{ color: 'var(--accent-amber)', fontSize: '0.85rem' }}>Persetujuan renovasi total</td>
                   </tr>
                 </tbody>
               </table>
             </div>
           </div>
 
-          <div className="dashboard-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
-            <div className="glass-panel" style={{ padding: '1.5rem' }}>
-              <h3 style={{ fontSize: '1rem', marginBottom: '1rem' }}>D. Evaluasi Akar Masalah & Top 5 Isu</h3>
-              <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                <li style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.5rem' }}>
-                  <span>1. AC Lab Sering Mati mendadak</span>
-                  <span className="badge badge-warning">Masalah Vendor / Sistemik</span>
+          <div className="dashboard-grid">
+            <div className="glass-panel" style={{ padding: '1.25rem' }}>
+              <h3 style={{ fontSize: '1rem', marginBottom: '1rem' }}>D. Akar Masalah & Top Isu</h3>
+              <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <li style={{ borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.75rem' }}>
+                  <div style={{ fontSize: '0.9rem', marginBottom: '0.4rem' }}>1. AC Lab Sering Mati</div>
+                  <span className="badge badge-warning">Masalah Vendor</span>
                 </li>
-                <li style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.5rem' }}>
-                  <span>2. Delay Respon Helpdesk &gt; 30 Menit</span>
-                  <span className="badge badge-danger">Masalah SDM (Kurang Personil)</span>
-                </li>
-                <li style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.5rem' }}>
-                  <span>3. Jadwal Pakai Ruang Aula Bentrok</span>
-                  <span className="badge badge-info">Masalah Alur Kerja / Koordinasi</span>
+                <li style={{ borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.75rem' }}>
+                  <div style={{ fontSize: '0.9rem', marginBottom: '0.4rem' }}>2. Delay Respon Helpdesk</div>
+                  <span className="badge badge-danger">Kurang Personil</span>
                 </li>
               </ul>
             </div>
             
-            <div className="glass-panel" style={{ padding: '1.5rem', borderLeft: '4px solid var(--accent-emerald)' }}>
-              <h3 style={{ fontSize: '1rem', marginBottom: '1rem' }}>E. & F. Rencana & Komitmen Bulan Depan</h3>
+            <div className="glass-panel" style={{ padding: '1.25rem', borderLeft: '4px solid var(--accent-emerald)' }}>
+              <h3 style={{ fontSize: '1rem', marginBottom: '1rem' }}>E. & F. Rencana Bulan Depan</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px' }}>
-                  <h4 style={{ fontSize: '0.9rem', marginBottom: '0.25rem' }}>1. Eksekusi Pengadaan Tandon Air Utara</h4>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', gap: '1rem' }}>
-                    <span>PIC: Tim Sarpras</span>
-                    <span>Target: 15 Apr 2026</span>
-                  </div>
+                <div style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px' }}>
+                  <h4 style={{ fontSize: '0.85rem', marginBottom: '0.4rem' }}>1. Eksekusi Pengadaan Tandon Air</h4>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Target: 15 Apr 2026</div>
                 </div>
-                <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px' }}>
-                  <h4 style={{ fontSize: '0.9rem', marginBottom: '0.25rem' }}>2. Migrasi Database Siakad ke Server B</h4>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', gap: '1rem' }}>
-                    <span>PIC: Tim Infrastruktur IT</span>
-                    <span>Target: 20 Apr 2026</span>
-                  </div>
+                <div style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px' }}>
+                  <h4 style={{ fontSize: '0.85rem', marginBottom: '0.4rem' }}>2. Migrasi Database Siakad</h4>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Target: 20 Apr 2026</div>
                 </div>
               </div>
             </div>
@@ -225,113 +229,118 @@ const MeetingDashboard = () => {
       {activeTab === 'eksternal' && (
         <div className="animate-fade-in">
           
-          <div className="dashboard-grid" style={{ gridTemplateColumns: '1.5fr 1fr' }}>
-            <div className="glass-panel" style={{ padding: '1.5rem' }}>
+          <div className="dashboard-grid">
+            <div className="glass-panel" style={{ padding: '1.25rem' }}>
               <h3 style={{ fontSize: '1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <LayoutGrid size={18} color="var(--accent-blue)" /> B. Peta Layanan Lintas Unit & Ketergantungan
+                <LayoutGrid size={18} color="var(--accent-blue)" /> B. Peta Layanan Lintas Unit
               </h3>
               <div className="table-container">
                 <table>
                   <thead>
                     <tr>
-                      <th>Kebutuhan / Proyek</th>
-                      <th>Unit Terlibat</th>
-                      <th>Hambatan Koordinasi</th>
+                      <th>Proyek / Unit</th>
+                      <th className="mobile-hide">Hambatan</th>
                       <th>Tindak Lanjut</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
-                      <td style={{ fontWeight: 500 }}>Ujian CBT Semester Genap</td>
-                      <td><span className="badge badge-info">IT + Lab + Kurikulum</span></td>
-                      <td>Kapasitas bandwidth Lab 3 belum di-upgrade</td>
-                      <td>IT mengeksekusi upgrade H-7 ujian</td>
+                      <td>
+                        <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>Ujian CBT Genap</div>
+                        <div style={{ marginTop: '0.4rem' }}>
+                           <span className="badge badge-info" style={{ fontSize: '0.65rem' }}>IT • Lab • Kurikulum</span>
+                        </div>
+                      </td>
+                      <td className="mobile-hide" style={{ fontSize: '0.85rem' }}>Bandwidth Lab 3 upgrade</td>
+                      <td style={{ fontSize: '0.85rem' }}>IT upgrade H-7 ujian</td>
                     </tr>
                     <tr>
-                      <td style={{ fontWeight: 500 }}>Pameran Karya Inovasi (TEFA)</td>
-                      <td><span className="badge badge-warning">Sarpras + Lab + Humas</span></td>
-                      <td>Instalasi listrik booth belum clear</td>
-                      <td>Sarpras menarik kabel ekstensi dari panel utama</td>
+                      <td>
+                        <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>Pameran TEFA</div>
+                        <div style={{ marginTop: '0.4rem' }}>
+                           <span className="badge badge-warning" style={{ fontSize: '0.65rem' }}>Sarpra • Lab • Humas</span>
+                        </div>
+                      </td>
+                      <td className="mobile-hide" style={{ fontSize: '0.85rem' }}>Listrik booth belum clear</td>
+                      <td style={{ fontSize: '0.85rem' }}>Tarik kabel dari panel</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
             </div>
 
-            <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
-              <h3 style={{ fontSize: '1rem', marginBottom: '1rem' }}>C. Matriks Prioritas (Bulan Depan)</h3>
+            <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column' }}>
+              <h3 style={{ fontSize: '1rem', marginBottom: '1rem' }}>C. Matriks Prioritas</h3>
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: '0.5rem', flex: 1 }}>
-                <div style={{ background: 'var(--accent-rose-ghost)', padding: '1rem', border: '1px solid rgba(244,63,94,0.3)', borderRadius: '8px' }}>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--accent-rose)', marginBottom: '0.5rem' }}>DO FIRST (Tinggi Dampak, Tinggi Urgensi)</div>
-                  <ul style={{ fontSize: '0.85rem', paddingLeft: '1rem', margin: 0 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', flex: 1 }}>
+                <div style={{ background: 'var(--accent-rose-ghost)', padding: '0.75rem', border: '1px solid rgba(244,63,94,0.3)', borderRadius: '8px' }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--accent-rose)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>DO FIRST</div>
+                  <ul style={{ fontSize: '0.8rem', paddingLeft: '1.1rem', margin: 0 }}>
                     <li>Perbaikan Server Database Utama</li>
                     <li>Genset Backup Mati</li>
                   </ul>
                 </div>
-                <div style={{ background: 'var(--accent-blue-ghost)', padding: '1rem', border: '1px solid rgba(59,130,246,0.3)', borderRadius: '8px' }}>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--accent-blue)', marginBottom: '0.5rem' }}>SCHEDULE (Tinggi Dampak, Rendah Urgensi)</div>
-                  <ul style={{ fontSize: '0.85rem', paddingLeft: '1rem', margin: 0 }}>
+                <div style={{ background: 'var(--accent-blue-ghost)', padding: '0.75rem', border: '1px solid rgba(59,130,246,0.3)', borderRadius: '8px' }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--accent-blue)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>SCHEDULE</div>
+                  <ul style={{ fontSize: '0.8rem', paddingLeft: '1.1rem', margin: 0 }}>
                     <li>Pengadaan Router Kelas Baru</li>
                     <li>SOP Keamanan Siber</li>
                   </ul>
                 </div>
-                <div style={{ background: 'var(--accent-amber-ghost)', padding: '1rem', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '8px' }}>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--accent-amber)', marginBottom: '0.5rem' }}>DELEGATE (Rendah Dampak, Tinggi Urgensi)</div>
-                  <ul style={{ fontSize: '0.85rem', paddingLeft: '1rem', margin: 0 }}>
-                    <li>Setting Proyektor Rapat Yayasan</li>
-                    <li>Restock Tinta Printer Guru</li>
+                <div style={{ background: 'var(--accent-amber-ghost)', padding: '0.75rem', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '8px' }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--accent-amber)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>DELEGATE</div>
+                  <ul style={{ fontSize: '0.8rem', paddingLeft: '1.1rem', margin: 0 }}>
+                    <li>Setting Proyektor Yayasan</li>
                   </ul>
-                </div>
-                <div style={{ background: 'rgba(255,255,255,0.05)', padding: '1rem', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
-                   <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>ELIMINATE (Rendah Dampak, Rendah Urgensi)</div>
-                   <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Ticket minor tanpa kejelasan pengaju</span>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="glass-panel" style={{ padding: '1.5rem' }}>
-            <h3 style={{ fontSize: '1rem', marginBottom: '1rem' }}>D. Capaian Program Strategis Lintas Fungsi</h3>
+          <div className="glass-panel" style={{ padding: '1.25rem' }}>
+            <h3 style={{ fontSize: '1rem', marginBottom: '1rem' }}>D. Capaian Program Strategis</h3>
             <div className="table-container">
               <table>
                 <thead>
                   <tr>
-                    <th>Nama Program</th>
-                    <th>Target Bulan Ini</th>
-                    <th>Realisasi %</th>
-                    <th>Deviasi / Hambatan</th>
-                    <th>Keputusan yang Diperlukan</th>
+                    <th>Program / Target</th>
+                    <th>Realisasi</th>
+                    <th className="mobile-hide">Hambatan</th>
+                    <th>Keputusan</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
-                    <td style={{ fontWeight: 600 }}>Tarik Fiber Optic Antar Gedung</td>
-                    <td>Selesai Instalasi Fisik</td>
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span>80%</span>
-                        <div style={{ flex: 1, height: '6px', background: 'var(--bg-primary)', borderRadius: '3px' }}>
-                          <div style={{ width: '80%', height: '100%', background: 'var(--accent-cyan)', borderRadius: '3px' }}></div>
+                      <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>FO Antar Gedung</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Target: Instalasi Fisik</div>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '80px' }}>
+                        <span style={{ fontSize: '0.8rem' }}>80%</span>
+                        <div style={{ flex: 1, height: '4px', background: 'var(--bg-primary)', borderRadius: '2px' }}>
+                          <div style={{ width: '80%', height: '100%', background: 'var(--accent-cyan)', borderRadius: '2px' }}></div>
                         </div>
                       </div>
                     </td>
-                    <td style={{ color: 'var(--accent-amber)' }}>Rute kabel tertutup renovasi aula</td>
-                    <td>Ubah rute kabel via lorong B (Perlu anggaran extra 2jt)</td>
+                    <td className="mobile-hide" style={{ fontSize: '0.85rem' }}>Rute kabel tertutup renovasi</td>
+                    <td style={{ fontSize: '0.85rem', color: 'var(--accent-amber)' }}>Ubah rute via lorong B</td>
                   </tr>
                   <tr>
-                    <td style={{ fontWeight: 600 }}>Sertifikasi ISO Lab Kejuruan</td>
-                    <td>Submit Dokumen Tahap 1</td>
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span>100%</span>
-                        <div style={{ flex: 1, height: '6px', background: 'var(--bg-primary)', borderRadius: '3px' }}>
-                          <div style={{ width: '100%', height: '100%', background: 'var(--accent-emerald)', borderRadius: '3px' }}></div>
+                      <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>ISO Lab Kejuruan</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Target: Submit Dokumen</div>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '80px' }}>
+                        <span style={{ fontSize: '0.8rem' }}>100%</span>
+                        <div style={{ flex: 1, height: '4px', background: 'var(--bg-primary)', borderRadius: '2px' }}>
+                          <div style={{ width: '100%', height: '100%', background: 'var(--accent-emerald)', borderRadius: '2px' }}></div>
                         </div>
                       </div>
                     </td>
-                    <td style={{ color: 'var(--accent-emerald)' }}>Tidak ada hambatan</td>
-                    <td>Lanjut ke persiapan evaluasi asesor luar</td>
+                    <td className="mobile-hide" style={{ fontSize: '0.85rem' }}>Lancar</td>
+                    <td style={{ fontSize: '0.85rem', color: 'var(--accent-emerald)' }}>Lanjut evaluasi</td>
                   </tr>
                 </tbody>
               </table>
