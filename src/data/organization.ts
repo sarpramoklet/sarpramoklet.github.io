@@ -225,6 +225,6 @@ export const getCurrentUser = (): User => {
   const email = localStorage.getItem('userEmail');
   if (email === 'chusni@smktelkom-mlg.sch.id') return USERS.find(u => u.id === 'U003') || USERS[0];
   if (email === 'whyna@smktelkom-mlg.sch.id') return USERS.find(u => u.id === 'U002') || USERS[0];
-  if (email === 'ekon@smktelkom-mlg.sch.id') return USERS.find(u => u.id === 'U004') || USERS[0];
+  if (email === 'ekon.a.poernomo@smktelkom-mlg.sch.id') return USERS.find(u => u.id === 'U004') || USERS[0];
   return USERS[0]; // Default / Hadi
 };
