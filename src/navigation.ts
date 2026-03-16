@@ -1,4 +1,4 @@
-import { LayoutDashboard, Ticket, Server, Component, Building, Package, BookOpen, Bell, Presentation, Users, Briefcase, TrendingUp, BarChart3, Zap, Wallet, History as HistoryIcon, Coins } from 'lucide-react';
+import { LayoutDashboard, Ticket, Server, Component, Building, Package, BookOpen, Bell, Presentation, Users, Briefcase, TrendingUp, BarChart3, Zap, Wallet, History as HistoryIcon, Coins, Wind } from 'lucide-react';
 
 export const NAVIGATION = [
   { path: '/', name: 'Dashboard', icon: LayoutDashboard, authRequired: false },
@@ -13,6 +13,7 @@ export const NAVIGATION = [
   { path: '/personnel', name: 'Personel', icon: Users, authRequired: true },
   { path: '/finance', name: 'Tata Kelola Keuangan', icon: Wallet, authRequired: true },
   { path: '/operational-cash', name: 'Kas Operasional TU', icon: Coins, authRequired: true },
+  { path: '/ac-cash', name: 'Kas Perawatan AC', icon: Wind, authRequired: true },
   { path: '/logs', name: 'Log Akses', icon: HistoryIcon, authRequired: true },
   { path: '/assignment', name: 'Penugasan', icon: Briefcase, authRequired: true },
   { path: '/projects', name: 'Proyek & Pengembangan', icon: BarChart3, authRequired: true },
