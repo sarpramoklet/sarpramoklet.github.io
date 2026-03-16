@@ -81,7 +81,18 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
           </div>
         </div>
 
-        <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem', overflowY: 'auto' }}>
+        <nav 
+          style={{ 
+            flex: 1, 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: '0.25rem', 
+            overflowY: 'auto', 
+            paddingBottom: '2.5rem',
+            WebkitOverflowScrolling: 'touch',
+            scrollbarWidth: 'thin'
+          }}
+        >
           {NAVIGATION.filter(item => {
             const user = getCurrentUser();
             
