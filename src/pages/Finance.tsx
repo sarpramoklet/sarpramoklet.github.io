@@ -1,43 +1,41 @@
-import { useState } from 'react';
-import { Wallet, TrendingUp, TrendingDown, Plus, LayoutDashboard, History, PiggyBank, Edit3, Trash2, X, Save, Search, Filter } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Wallet, TrendingUp, TrendingDown, Plus, LayoutDashboard, History, PiggyBank, Edit3, Trash2, X, Save, Search, Filter, Loader2 } from 'lucide-react';
+
+const API_URL = "https://script.google.com/macros/s/AKfycbyyXOLhUEs7IaRtlAgq-S6On6KuUuaAGSkw-sG6IPLmFH1-YHPRT2ZvsNRcRbcUypHljg/exec";
 
 const Finance = () => {
   const [activeTab, setActiveTab] = useState('history'); // Default to history as requested for better view
+  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [editingTrx, setEditingTrx] = useState<any>(null);
-  
-  const [transactions, setTransactions] = useState([
-    { id: 'TRX-001', title: 'Penghapusan PC 21 Des 2024', category: 'Administrasi', amount: '3161400', type: 'income', date: '2026-01-09' },
-    { id: 'TRX-002', title: 'Hasil jual rongsokan 25 Juni 2025', category: 'Lainnya', amount: '2015000', type: 'income', date: '2026-01-09' },
-    { id: 'TRX-003', title: 'Trafo 19 Sept 2024', category: 'Sarpras', amount: '2500000', type: 'income', date: '2026-01-09' },
-    { id: 'TRX-004', title: 'Hasil jual besi kedua 6 Maret 2025', category: 'Lainnya', amount: '3972000', type: 'income', date: '2026-01-09' },
-    { id: 'TRX-005', title: 'Hasil jual rongsokan 22 Juni 2025', category: 'Lainnya', amount: '1200000', type: 'income', date: '2026-01-09' },
-    { id: 'TRX-006', title: 'Cashback & Pemusnahan', category: 'Administrasi', amount: '4883055', type: 'income', date: '2026-01-09' },
-    { id: 'TRX-007', title: 'Cashback danang', category: 'Administrasi', amount: '2300000', type: 'income', date: '2026-01-09' },
-    { id: 'TRX-008', title: 'Hasil sewa streaming', category: 'IT Support', amount: '100000', type: 'income', date: '2026-01-21' },
-    { id: 'TRX-009', title: 'Sisa rombeng 4 feb 2025', category: 'Lainnya', amount: '1533000', type: 'income', date: '2026-01-21' },
-    { id: 'TRX-010', title: 'Lembur Pak Yoko', category: 'Administrasi', amount: '75000', type: 'expense', date: '2026-01-22' },
-    { id: 'TRX-011', title: 'Parkir ke AZKO', category: 'Lainnya', amount: '2000', type: 'expense', date: '2026-01-22' },
-    { id: 'TRX-012', title: 'Makan malam siswa Tefa', category: 'Laboratorium', amount: '27000', type: 'expense', date: '2026-01-23' },
-    { id: 'TRX-013', title: 'Makan malam siswa Tefa', category: 'Laboratorium', amount: '39500', type: 'expense', date: '2026-01-26' },
-    { id: 'TRX-014', title: 'Honor Pak Rudi CS Jan 2026', category: 'Administrasi', amount: '120000', type: 'expense', date: '2026-01-27' },
-    { id: 'TRX-015', title: 'Snack siswa Tefa', category: 'Laboratorium', amount: '105000', type: 'expense', date: '2026-01-27' },
-    { id: 'TRX-016', title: 'Snack siswa Tefa', category: 'Laboratorium', amount: '95000', type: 'expense', date: '2026-01-29' },
-    { id: 'TRX-017', title: 'Snack siswa Tefa', category: 'Laboratorium', amount: '96000', type: 'expense', date: '2026-01-29' },
-    { id: 'TRX-018', title: 'Makan lembur bapak/ibu sarpra', category: 'Sarpras', amount: '48000', type: 'expense', date: '2026-01-29' },
-    { id: 'TRX-019', title: 'Makan lembur bapak/ibu sarpra', category: 'Sarpras', amount: '50000', type: 'expense', date: '2026-01-30' },
-    { id: 'TRX-020', title: 'Makan lembur bapak/ibu sarpra', category: 'Sarpras', amount: '28000', type: 'expense', date: '2026-01-31' },
-    { id: 'TRX-021', title: 'Snack siswa Tefa', category: 'Laboratorium', amount: '116000', type: 'expense', date: '2026-02-02' },
-    { id: 'TRX-022', title: 'Lembur Pak Yoko', category: 'Administrasi', amount: '25000', type: 'expense', date: '2026-02-02' },
-    { id: 'TRX-023', title: 'Snack siswa Tefa', category: 'Laboratorium', amount: '100000', type: 'expense', date: '2026-02-02' },
-    { id: 'TRX-024', title: 'Snack siswa Tefa', category: 'Laboratorium', amount: '100000', type: 'expense', date: '2026-02-03' },
-    { id: 'TRX-025', title: 'Ganti service motor OB Pak Adi', category: 'Sarpras', amount: '150000', type: 'expense', date: '2026-02-06' },
-    { id: 'TRX-026', title: 'Snack lembur bapak/ibu sarpra', category: 'Sarpras', amount: '175000', type: 'expense', date: '2026-02-11' },
-    { id: 'TRX-027', title: 'Rapat koordinasi dan buka bersama', category: 'Administrasi', amount: '1299000', type: 'expense', date: '2026-03-02' },
-    { id: 'TRX-028', title: 'Lembur Pak Suko', category: 'Administrasi', amount: '50000', type: 'expense', date: '2026-03-04' },
-    { id: 'TRX-029', title: 'THR PAK YUDI', category: 'Administrasi', amount: '300000', type: 'expense', date: '2026-03-16' },
-  ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()));
+  const [transactions, setTransactions] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchTransactions();
+  }, []);
+
+  const fetchTransactions = async () => {
+    setLoading(true);
+    try {
+      const resp = await fetch(API_URL);
+      const data = await resp.json();
+      // Filter only finance data or let backend handle it
+      // For now we assume the spreadsheet has a way to distinguish
+      if (data && Array.isArray(data)) {
+        // If data from API has 'title' and 'amount', it's likely finance
+        const financeData = data.filter((item: any) => item.type === 'income' || item.type === 'expense');
+        setTransactions(financeData.sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime()));
+      }
+    } catch (error) {
+      console.error("Error fetching finance data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   const [formData, setFormData] = useState({
     title: '',
@@ -81,18 +79,39 @@ const Finance = () => {
     }
   };
 
-  const handleSave = () => {
-    if (editingTrx) {
-      setTransactions(transactions.map(t => t.id === editingTrx.id ? { ...t, ...formData } : t).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()));
-    } else {
-      const newTrx = {
-        ...formData,
-        id: `TRX-${Math.floor(100 + Math.random() * 900)}`,
-      };
-      setTransactions([...transactions, newTrx].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()));
+  const handleSave = async () => {
+    setIsSubmitting(true);
+    const id = editingTrx ? editingTrx.id : `TRX-${Math.floor(100 + Math.random() * 900)}`;
+    const newRecord = {
+      action: 'FINANCE_RECORD',
+      id,
+      ...formData
+    };
+
+    try {
+      await fetch(API_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify(newRecord)
+      });
+      
+      // Update local state temporarily for speed or just refetch
+      if (editingTrx) {
+        setTransactions(transactions.map(t => t.id === id ? { ...t, ...formData } : t).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()));
+      } else {
+        setTransactions([...transactions, { ...formData, id }].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()));
+      }
+      
+      setShowModal(false);
+    } catch (error) {
+      console.error("Error saving finance record:", error);
+      alert("Gagal menyimpan data ke database. Cek koneksi.");
+    } finally {
+      setIsSubmitting(false);
     }
-    setShowModal(false);
   };
+
 
   // Calculate Running Balance
   let currentBalance = 0;
@@ -223,51 +242,64 @@ const Finance = () => {
         </div>
       ) : (
         <div className="glass-panel table-container">
-          <table>
-            <thead>
-              <tr style={{ background: 'rgba(255,255,255,0.02)' }}>
-                <th style={{ width: '100px' }}>TANGGAL</th>
-                <th>KETERANGAN</th>
-                <th style={{ textAlign: 'right' }}>DEBIT (MASUK)</th>
-                <th style={{ textAlign: 'right' }}>KREDIT (KELUAR)</th>
-                <th style={{ textAlign: 'right', background: 'rgba(0,0,0,0.1)' }}>SALDO</th>
-                <th style={{ width: '80px', textAlign: 'center' }}>AKSI</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredTransactions.map((trx) => (
-                <tr className="ticket-row" key={trx.id}>
-                  <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                    {new Date(trx.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
-                  </td>
-                  <td>
-                    <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{trx.title}</div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{trx.category} • {trx.id}</div>
-                  </td>
-                  <td style={{ textAlign: 'right', color: 'var(--accent-emerald)', fontWeight: 600 }}>
-                    {trx.type === 'income' ? formatIDR(trx.amount) : ''}
-                  </td>
-                  <td style={{ textAlign: 'right', color: 'var(--accent-rose)', fontWeight: 600 }}>
-                    {trx.type === 'expense' ? formatIDR(trx.amount) : ''}
-                  </td>
-                  <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--text-primary)', background: 'rgba(255,255,255,0.02)' }}>
-                    {formatIDR(trx.runningBalance)}
-                  </td>
-                  <td style={{ textAlign: 'center' }}>
-                    <div style={{ display: 'flex', gap: '0.25rem', justifyContent: 'center' }}>
-                      <button className="btn-icon" onClick={() => handleEdit(trx)} style={{ color: 'var(--accent-blue)', padding: '4px' }}>
-                        <Edit3 size={14} />
-                      </button>
-                      <button className="btn-icon" onClick={() => handleDelete(trx.id)} style={{ color: 'var(--accent-rose)', padding: '4px' }}>
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </td>
+          {loading ? (
+            <div style={{ padding: '3rem', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: '1rem', color: 'var(--text-secondary)' }}>
+              <Loader2 className="animate-spin" /> Memuat data kas...
+            </div>
+          ) : (
+            <table>
+              <thead>
+                <tr style={{ background: 'rgba(255,255,255,0.02)' }}>
+                  <th style={{ width: '100px' }}>TANGGAL</th>
+                  <th>KETERANGAN</th>
+                  <th style={{ textAlign: 'right' }}>DEBIT (MASUK)</th>
+                  <th style={{ textAlign: 'right' }}>KREDIT (KELUAR)</th>
+                  <th style={{ textAlign: 'right', background: 'rgba(0,0,0,0.1)' }}>SALDO</th>
+                  <th style={{ width: '80px', textAlign: 'center' }}>AKSI</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filteredTransactions.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>Belum ada transaksi tercatat.</td>
+                  </tr>
+                ) : (
+                  filteredTransactions.map((trx) => (
+                    <tr className="ticket-row" key={trx.id}>
+                      <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                        {new Date(trx.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                      </td>
+                      <td>
+                        <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{trx.title}</div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{trx.category} • {trx.id}</div>
+                      </td>
+                      <td style={{ textAlign: 'right', color: 'var(--accent-emerald)', fontWeight: 600 }}>
+                        {trx.type === 'income' ? formatIDR(trx.amount) : ''}
+                      </td>
+                      <td style={{ textAlign: 'right', color: 'var(--accent-rose)', fontWeight: 600 }}>
+                        {trx.type === 'expense' ? formatIDR(trx.amount) : ''}
+                      </td>
+                      <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--text-primary)', background: 'rgba(255,255,255,0.02)' }}>
+                        {formatIDR(trx.runningBalance)}
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        <div style={{ display: 'flex', gap: '0.25rem', justifyContent: 'center' }}>
+                          <button className="btn-icon" onClick={() => handleEdit(trx)} style={{ color: 'var(--accent-blue)', padding: '4px' }}>
+                            <Edit3 size={14} />
+                          </button>
+                          <button className="btn-icon" onClick={() => handleDelete(trx.id)} style={{ color: 'var(--accent-rose)', padding: '4px' }}>
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
+
       )}
 
       {showModal && (
@@ -348,12 +380,15 @@ const Finance = () => {
                 <button onClick={() => setShowModal(false)} className="btn btn-outline" style={{ flex: 1 }}>Batal</button>
                 <button 
                   onClick={handleSave}
+                  disabled={isSubmitting}
                   className="btn btn-primary" 
                   style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
                 >
-                  <Save size={18} /> Simpan Data
+                  {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                  {isSubmitting ? 'Menyimpan...' : 'Simpan Data'}
                 </button>
               </div>
+
             </div>
           </div>
         </div>
