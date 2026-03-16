@@ -10,9 +10,10 @@ export const logAccess = async (user: User) => {
                  user.roleAplikasi === ROLES.KOORDINATOR_SARPRAS;
   
   const isBendahara = user.roleAplikasi === ROLES.PIC_ADMIN;
+  const isWaka = user.roleAplikasi === ROLES.PIMPINAN;
 
   // Log only if it's one of the target roles
-  if (!isKaur && !isBendahara) return;
+  if (!isKaur && !isBendahara && !isWaka) return;
 
   const logData = {
     action: 'LOG_ACCESS',
