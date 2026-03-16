@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import { Plus, ReceiptText, FileText, BarChart3 } from 'lucide-react';
 
 const formatRupiah = (number: number) => {
@@ -108,29 +108,29 @@ const Utilities = () => {
 
       {activeTab === 'rekap' && (
         <div className="glass-panel delay-100 animate-fade-in">
-          <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <BarChart3 size={24} color="var(--accent-blue)" />
             <div>
-              <h3 style={{ fontSize: '1.1rem', color: 'var(--text-primary)', margin: 0 }}>Perbandingan Tagihan PLN & PDAM</h3>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0 0' }}>Rekap perbandingan biaya utilitas 4 bulan terakhir (Des 2025 - Mar 2026)</p>
+              <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: 0 }}>Perbandingan Tagihan PLN & PDAM</h3>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0 0' }}>Rekap biaya utilitas 4 bulan terakhir</p>
             </div>
           </div>
           <div className="table-container">
             <table>
               <thead>
                 <tr style={{ background: 'rgba(244, 63, 94, 0.1)' }}>
-                  <th style={{ color: 'var(--accent-rose)' }}>PELANGGAN</th>
-                  {months.map(m => (
-                    <th key={m} style={{ textAlign: 'center', color: 'var(--accent-rose)' }}>{m.toUpperCase()}</th>
+                  <th style={{ color: 'var(--accent-rose)', fontSize: '0.75rem' }}>PELANGGAN</th>
+                  {months.map((m, idx) => (
+                    <th key={m} className={idx === 0 ? 'mobile-hide' : ''} style={{ textAlign: 'center', color: 'var(--accent-rose)', fontSize: '0.75rem' }}>{m.toUpperCase()}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {utlitiesData.map((data, rowIdx) => (
                   <tr className="ticket-row" key={data.id} style={{ background: rowIdx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
-                    <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{data.pelanggan}</td>
-                    {months.map(m => (
-                      <td key={m} style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
+                    <td style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.85rem' }}>{data.pelanggan}</td>
+                    {months.map((m, idx) => (
+                      <td key={m} className={idx === 0 ? 'mobile-hide' : ''} style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
                         {formatRupiah(data.history[m as keyof typeof data.history])}
                       </td>
                     ))}
@@ -139,9 +139,9 @@ const Utilities = () => {
                 
                 {/* Total Row */}
                 <tr style={{ background: 'rgba(255,255,255,0.05)', borderTop: '2px solid var(--border-focus)' }}>
-                  <td style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '1rem' }}>Total</td>
-                  {months.map(m => (
-                    <td key={m} style={{ textAlign: 'center', fontWeight: 700, color: 'var(--accent-rose)', fontSize: '1rem' }}>
+                  <td style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem' }}>Total</td>
+                  {months.map((m, idx) => (
+                    <td key={m} className={idx === 0 ? 'mobile-hide' : ''} style={{ textAlign: 'center', fontWeight: 700, color: 'var(--accent-rose)', fontSize: '0.9rem' }}>
                       {formatRupiah(calculateTotal(m))}
                     </td>
                   ))}
@@ -153,25 +153,25 @@ const Utilities = () => {
       )}
 
       {activeTab === 'grafik' && (
-        <div className="glass-panel delay-100 animate-fade-in" style={{ padding: '1.5rem' }}>
-          <div style={{ marginBottom: '1.5rem' }}>
-            <h3 style={{ fontSize: '1.1rem', color: 'var(--text-primary)', margin: 0 }}>Grafik Beban Utilitas Total</h3>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0 0' }}>Akumulasi beban operasional dari PLN dan PDAM per bulan</p>
+        <div className="glass-panel delay-100 animate-fade-in" style={{ padding: '1.25rem' }}>
+          <div style={{ marginBottom: '1.25rem' }}>
+            <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: 0 }}>Grafik Beban Utilitas Total</h3>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0 0' }}>Akumulasi beban operasional per bulan</p>
           </div>
-          <div style={{ height: '400px', width: '100%' }}>
+          <div style={{ height: '300px', width: '100%' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 20, right: 30, left: 40, bottom: 5 }}>
+              <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
-                <XAxis dataKey="name" stroke="var(--text-muted)" />
+                <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={11} />
                 <YAxis 
                   stroke="var(--text-muted)" 
-                  tickFormatter={(value) => `Rp${(value / 1000000).toFixed(0)}M`}
+                  fontSize={11}
+                  tickFormatter={(value) => `Rp${(value / 1000000).toFixed(0)}jt`}
                 />
                 <RechartsTooltip 
                   formatter={(value: any) => formatRupiah(value as number)}
-                  contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-focus)', borderRadius: '8px' }}
+                  contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-focus)', borderRadius: '8px', fontSize: '12px' }}
                 />
-                <Legend />
                 <Bar dataKey="PLN" stackId="a" fill="var(--accent-amber)" />
                 <Bar dataKey="PDAM" stackId="a" fill="var(--accent-cyan)" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -179,6 +179,7 @@ const Utilities = () => {
           </div>
         </div>
       )}
+
 
       {/* Modal Input Nota Baru */}
       {isModalOpen && (

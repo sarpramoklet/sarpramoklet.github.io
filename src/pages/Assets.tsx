@@ -63,44 +63,44 @@ const Assets = () => {
       </div>
 
       <div className="glass-panel delay-300 table-container">
-        <div className="flex-row-responsive" style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border-subtle)' }}>
+        <div className="flex-row-responsive" style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-subtle)', gap: '1rem' }}>
           <h3 style={{ fontSize: '1rem', margin: 0 }}>Register Aset Utama</h3>
-          <div style={{ display: 'flex', gap: '0.5rem', width: '100%', maxWidth: '300px', justifyContent: 'flex-end' }}>
-            <button className="btn btn-outline" style={{ flex: 1, padding: '0.3rem 0.6rem', fontSize: '0.8rem', justifyContent: 'center' }}><Filter size={14} /> <span className="mobile-hide">Filter</span></button>
-            <button className="btn btn-outline" style={{ flex: 1, padding: '0.3rem 0.6rem', fontSize: '0.8rem', justifyContent: 'center' }}><Search size={14} /> <span className="mobile-hide">Cari</span></button>
+          <div style={{ display: 'flex', gap: '0.5rem', width: 'auto', flex: 1, justifyContent: 'flex-end' }}>
+            <button className="btn btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}><Filter size={14} /> <span className="mobile-hide">Filter</span></button>
+            <button className="btn btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}><Search size={14} /> <span className="mobile-hide">Cari</span></button>
           </div>
         </div>
         <table>
           <thead>
             <tr>
-              <th>Kode Aset</th>
-              <th>Nama Perangkat</th>
+              <th>Perangkat / Kode</th>
               <th>Kategori</th>
-              <th>Lokasi</th>
-              <th>Umur</th>
-              <th>Kondisi Fisik</th>
-              <th>Maintenance Terakhir</th>
+              <th className="mobile-hide">Lokasi</th>
+              <th>Kondisi</th>
+              <th className="mobile-hide">Maintenance</th>
             </tr>
           </thead>
           <tbody>
             {mockAssets.map((asset, index) => (
               <tr className="ticket-row" key={index}>
-                <td style={{ fontWeight: 600, color: 'var(--accent-cyan)' }}>{asset.code}</td>
-                <td>{asset.name}</td>
-                <td><span className="badge badge-info">{asset.category}</span></td>
-                <td>{asset.location}</td>
-                <td style={{ color: 'var(--text-secondary)' }}>{asset.age}</td>
                 <td>
-                  <span className={`badge ${asset.condition === 'Baik' ? 'badge-success' : asset.condition.includes('Kalibrasi') ? 'badge-warning' : 'badge-danger'}`}>
+                  <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{asset.name}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--accent-cyan)' }}>{asset.code} <span className="mobile-show" style={{ color: 'var(--text-muted)' }}>• {asset.location}</span></div>
+                </td>
+                <td><span className="badge badge-info" style={{ fontSize: '0.65rem' }}>{asset.category}</span></td>
+                <td className="mobile-hide" style={{ fontSize: '0.85rem' }}>{asset.location}</td>
+                <td>
+                  <span className={`badge ${asset.condition === 'Baik' ? 'badge-success' : asset.condition.includes('Kalibrasi') ? 'badge-warning' : 'badge-danger'}`} style={{ fontSize: '0.65rem' }}>
                     {asset.condition}
                   </span>
                 </td>
-                <td style={{ color: 'var(--text-muted)' }}>{asset.lastMaintenance}</td>
+                <td className="mobile-hide" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{asset.lastMaintenance}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
     </div>
   );
 };
