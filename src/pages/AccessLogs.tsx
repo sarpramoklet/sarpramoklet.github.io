@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { History, Search, Monitor, RefreshCw, User, ShieldCheck, Clock, Shield, Smartphone, Globe } from 'lucide-react';
 import { getCurrentUser, ROLES } from '../data/organization';
 
-const LOG_API_URL = "https://script.google.com/macros/s/AKfycbwzimTeSIIEpjUMVfI4EEc90ZDEixIeMBM9WFBQKPulYHYGF2CqhwjHgQe0ZMB7SfNSGw/exec";
+const LOG_API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 
 const AccessLogs = () => {
   const currentUser = getCurrentUser();

@@ -1,7 +1,7 @@
 import { type User, ROLES } from '../data/organization';
 
 // API URL from DB_Sarpramoklet (Google Apps Script)
-const LOG_API_URL = "https://script.google.com/macros/s/AKfycbyyXOLhUEs7IaRtlAgq-S6On6KuUuaAGSkw-sG6IPLmFH1-YHPRT2ZvsNRcRbcUypHljg/exec";
+const LOG_API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 
 export const logAccess = async (user: User) => {
   // Logic to only log Kaur (Coordinators) and Bendahara (PIC Admin) as requested

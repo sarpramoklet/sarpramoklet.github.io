@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Wallet, TrendingUp, TrendingDown, Plus, LayoutDashboard, History, PiggyBank, Edit3, Trash2, X, Save, Search, Filter, Loader2 } from 'lucide-react';
 
-const API_URL = "https://script.google.com/macros/s/AKfycbwzimTeSIIEpjUMVfI4EEc90ZDEixIeMBM9WFBQKPulYHYGF2CqhwjHgQe0ZMB7SfNSGw/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 
 const Finance = () => {
   const [activeTab, setActiveTab] = useState('history'); // Default to history as requested for better view
@@ -87,7 +87,7 @@ const Finance = () => {
 
   const handleDelete = async (trx: any) => {
     if (!confirm(`Hapus riwayat transaksi "${trx.title || trx.keterangan}" dari database?`)) return;
-    
+
     const id = trx.id;
     setLoading(true);
     try {
@@ -95,14 +95,14 @@ const Finance = () => {
         method: "POST",
         mode: "no-cors",
         headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify({ 
-          action: 'DELETE_RECORD', 
+        body: JSON.stringify({
+          action: 'DELETE_RECORD',
           sheetName: 'Finance',
           id: id,
           ID: id
         })
       });
-      
+
       setTransactions(prev => prev.filter(t => t.id !== id));
       setTimeout(fetchTransactions, 2000);
     } catch (error) {

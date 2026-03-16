@@ -4,7 +4,7 @@ import { Activity, Clock10, CheckSquare, TriangleAlert, ArrowUpRight, ArrowDownR
 import { getCurrentUser, ROLES } from '../data/organization';
 import { getUtilityChartData } from '../data/utilities';
 
-const FINANCE_API_URL = "https://script.google.com/macros/s/AKfycbwzimTeSIIEpjUMVfI4EEc90ZDEixIeMBM9WFBQKPulYHYGF2CqhwjHgQe0ZMB7SfNSGw/exec";
+const FINANCE_API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 
 const areaData = [
   { name: 'Jan', IT: 400, Lab: 240, Sarpras: 240 },
