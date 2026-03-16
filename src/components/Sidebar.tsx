@@ -61,33 +61,35 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
             // Hadi (Semua Unit) has full access
             if (user.unit === 'Semua Unit') return true;
             
+            // Common menus for all authenticated staff
+            const commonMenus = [
+              'Dashboard', 'Rapat Bulanan', 'Kinerja Personel', 
+              'Permintaan Layanan', 'Tagihan Utilitas', 'Personel', 
+              'Penugasan', 'Proyek & Pengembangan', 'SOP & Dokumen', 'Notifikasi'
+            ];
+
             // Chusni (Koordinator Laboratorium)
             if (user.unit === 'Laboratorium') {
-               const forbidden = ['Aset & Inventaris', 'Sarpras', 'IT Services', 'Tata Kelola Keuangan'];
-               if (forbidden.includes(item.name)) return false;
-               return true;
+               const allowed = [...commonMenus, 'Laboratorium'];
+               return allowed.includes(item.name);
             }
 
             // Whyna (Koordinator IT)
             if (user.unit === 'IT') {
-               const forbidden = ['Aset & Inventaris', 'Sarpras', 'Laboratorium', 'Tata Kelola Keuangan'];
-               if (forbidden.includes(item.name)) return false;
-               return true;
+               const allowed = [...commonMenus, 'IT Services'];
+               return allowed.includes(item.name);
             }
 
             // Ekon (Koordinator Sarpras)
             if (user.unit === 'Sarpras') {
-               const forbidden = ['IT Services', 'Laboratorium', 'Tata Kelola Keuangan'];
-               if (forbidden.includes(item.name)) return false;
-               return true;
+               const allowed = [...commonMenus, 'Sarpras', 'Aset & Inventaris'];
+               return allowed.includes(item.name);
             }
             
             // Amalia (Tata Kelola / Keuangan)
             if (user.unit === 'Tata Kelola') {
-               const allowed = ['Dashboard', 'Tata Kelola Keuangan', 'SOP & Dokumen', 'Notifikasi', 'Personel', 'Penugasan'];
-               if (allowed.includes(item.name)) return true;
-               // If item is not in allowed, return false (hide IT/Lab/Sarpras technical stuff)
-               return false;
+               const allowed = [...commonMenus, 'Tata Kelola Keuangan'];
+               return allowed.includes(item.name);
             }
             
             return true;
