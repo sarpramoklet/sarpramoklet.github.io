@@ -42,12 +42,11 @@ const Performance = () => {
         <table>
           <thead>
             <tr>
-              <th>Nama Personel & Jabatan</th>
-              <th>Kategori Dominan</th>
-              <th>Tugas Selesai</th>
-              <th>Rata-rata Durasi</th>
-              <th>Kepatuhan SLA</th>
-              <th>Kontribusi Unit</th>
+              <th>Personel / Jabatan</th>
+              <th className="mobile-hide">Tugas</th>
+              <th className="mobile-hide">Rerata Durasi</th>
+              <th>Capaian SLA</th>
+              <th className="mobile-hide">Kontribusi</th>
             </tr>
           </thead>
           <tbody>
@@ -55,44 +54,39 @@ const Performance = () => {
               <tr className="ticket-row" key={perf.id}>
                 <td>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <div style={{ padding: '8px', background: 'var(--bg-primary)', borderRadius: '50%', border: '1px solid var(--border-subtle)' }}>
+                    <div className="mobile-hide" style={{ padding: '8px', background: 'var(--bg-primary)', borderRadius: '50%', border: '1px solid var(--border-subtle)' }}>
                       <Award size={20} color={perf.sla >= 95 ? 'var(--accent-emerald)' : 'var(--text-secondary)'} />
                     </div>
                     <div>
-                      <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{perf.nama}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{perf.jabatan}</div>
+                      <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{perf.nama}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{perf.jabatan} <span className="mobile-show">• {perf.selesai} Selesai</span></div>
                     </div>
                   </div>
                 </td>
-                <td>
-                  <span className="badge" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-focus)' }}>
-                    {perf.subBidang.length > 0 ? perf.subBidang[0] : 'Umum'}
-                  </span>
-                </td>
-                <td style={{ fontWeight: 600, color: 'var(--accent-blue)', fontSize: '1.1rem' }}>
+                <td className="mobile-hide" style={{ fontWeight: 600, color: 'var(--accent-blue)' }}>
                   {perf.selesai}
                 </td>
-                <td>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <td className="mobile-hide">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem' }}>
                     <Clock10 size={14} color="var(--accent-amber)" />
-                    {perf.durasi} Jam
+                    {perf.durasi}j
                   </div>
                 </td>
                 <td>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <ShieldCheck size={16} color={perf.sla >= 90 ? 'var(--accent-emerald)' : 'var(--accent-warning)'} />
-                    <span style={{ fontWeight: 600, color: perf.sla >= 90 ? 'var(--accent-emerald)' : 'var(--accent-warning)' }}>
+                    <span style={{ fontWeight: 700, color: perf.sla >= 90 ? 'var(--accent-emerald)' : 'var(--accent-warning)', fontSize: '0.9rem' }}>
                       {perf.sla}%
                     </span>
                   </div>
                 </td>
-                <td style={{ minWidth: '150px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
-                      <span style={{ color: 'var(--text-secondary)' }}>Proporsi Unit ({perf.unit})</span>
+                <td className="mobile-hide" style={{ minWidth: '120px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>Unit</span>
                       <span style={{ fontWeight: 600 }}>{perf.kontribusi}%</span>
                     </div>
-                    <div className="progress-bar-bg" style={{ height: '6px' }}>
+                    <div className="progress-bar-bg" style={{ height: '4px' }}>
                       <div className="progress-bar-fill" style={{ width: `${perf.kontribusi}%`, background: 'var(--accent-violet)' }}></div>
                     </div>
                   </div>
@@ -102,6 +96,7 @@ const Performance = () => {
           </tbody>
         </table>
       </div>
+
     </div>
   );
 };

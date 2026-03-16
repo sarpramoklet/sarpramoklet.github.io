@@ -79,10 +79,9 @@ const Personnel = () => {
         <table>
           <thead>
             <tr>
-              <th>Personel</th>
-              <th>Unit</th>
-              <th>Jabatan & Role Aplikasi</th>
-              <th>Status Kerja</th>
+              <th>Personel / Unit</th>
+              <th className="mobile-hide">Bidang</th>
+              <th className="mobile-hide">Status</th>
               <th>Aksi</th>
             </tr>
           </thead>
@@ -91,30 +90,24 @@ const Personnel = () => {
               <tr className="ticket-row" key={user.id}>
                 <td>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <div style={{ padding: '8px', background: 'var(--bg-primary)', borderRadius: '50%', border: '1px solid var(--border-subtle)' }}>
+                    <div className="mobile-hide" style={{ padding: '8px', background: 'var(--bg-primary)', borderRadius: '50%', border: '1px solid var(--border-subtle)' }}>
                       <UserCircle2 size={20} color="var(--accent-blue)" />
                     </div>
                     <div>
-                      <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{user.nama}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>NIP: {user.nip}</div>
+                      <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{user.nama}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{user.jabatan} <span className="mobile-show">• {user.unit}</span></div>
                     </div>
                   </div>
                 </td>
-                <td>
-                  <span className="badge" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-focus)' }}>
-                    {user.unit}
-                  </span>
-                </td>
-                <td>
-                  <div style={{ fontWeight: 500, fontSize: '0.85rem' }}>{user.jabatan}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
-                    <ShieldCheck size={12} /> {user.roleAplikasi}
+                <td className="mobile-hide">
+                  <div style={{ fontWeight: 500, fontSize: '0.85rem' }}>{user.unit}</div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                    <ShieldCheck size={10} /> {user.roleAplikasi}
                   </div>
                 </td>
-                <td>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span className="badge badge-success">Aktif</span>
-                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{user.scopePekerjaan.length} Jobdesk</span>
+                <td className="mobile-hide">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <span className="badge badge-success" style={{ fontSize: '0.65rem' }}>Aktif</span>
                   </div>
                 </td>
                 <td>
@@ -122,9 +115,9 @@ const Personnel = () => {
                     <button 
                       className="btn btn-outline" 
                       onClick={() => handleManage(user)}
-                      style={{ padding: '0.4rem 0.75rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                      style={{ padding: '0.4rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
                     >
-                      <Edit3 size={14} /> Kelola Job & Jadwal
+                      <Edit3 size={14} /> <span className="mobile-hide">Kelola</span>
                     </button>
                   )}
                 </td>
@@ -133,6 +126,7 @@ const Personnel = () => {
           </tbody>
         </table>
       </div>
+
 
       {/* Management Modal */}
       {isModalOpen && selectedUser && (
