@@ -63,14 +63,14 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
             
             // Chusni (Koordinator Laboratorium)
             if (user.unit === 'Laboratorium') {
-               const forbidden = ['Tagihan Utilitas', 'Aset & Inventaris', 'Sarpras', 'IT Services'];
+               const forbidden = ['Aset & Inventaris', 'Sarpras', 'IT Services'];
                if (forbidden.includes(item.name)) return false;
                return true;
             }
 
             // Whyna (Koordinator IT)
             if (user.unit === 'IT') {
-               const forbidden = ['Tagihan Utilitas', 'Aset & Inventaris', 'Sarpras', 'Laboratorium'];
+               const forbidden = ['Aset & Inventaris', 'Sarpras', 'Laboratorium'];
                if (forbidden.includes(item.name)) return false;
                return true;
             }
