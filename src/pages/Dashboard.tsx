@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Activity, Clock10, CheckSquare, TriangleAlert, ArrowUpRight, ArrowDownRight, UserCircle2, TrendingUp, Wallet, Loader2 } from 'lucide-react';
+import { Activity, Clock10, CheckSquare, TriangleAlert, ArrowUpRight, ArrowDownRight, UserCircle2, TrendingUp, Wallet, Loader2, History, Monitor } from 'lucide-react';
 import { getCurrentUser, ROLES } from '../data/organization';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbzjzoObkhyXuVA3czMoMutwqW3MjuD4oJ9xYsMotlOC30z0c2dPaE525DhxKM2J9vsCIw/exec";
@@ -39,6 +39,8 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   
   const [financeLoading, setFinanceLoading] = useState(true);
   const [financeData, setFinanceData] = useState({ totalIncome: 0, totalExpense: 0, balance: 0 });
+  const [accessLogs, setAccessLogs] = useState<any[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
 
   useEffect(() => {
     const fetchFinance = async () => {
@@ -62,8 +64,26 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         setFinanceLoading(false);
       }
     };
+    const fetchLogs = async () => {
+      if (!isPimpinan) return;
+      setLogsLoading(true);
+      try {
+        const resp = await fetch(API_URL);
+        const data = await resp.json();
+        if (data && Array.isArray(data)) {
+          const logs = data.filter((item: any) => (item.type || item.Tipe) === 'LOG_ACCESS');
+          setAccessLogs(logs.reverse().slice(0, 10)); // Top 10 latest
+        }
+      } catch (error) {
+        console.error("Dashboard logs fetch error:", error);
+      } finally {
+        setLogsLoading(false);
+      }
+    };
+
     fetchFinance();
-  }, []);
+    fetchLogs();
+  }, [isPimpinan]);
 
   const formatIDR = (val: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
@@ -285,6 +305,58 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {isPimpinan && (
+        <div className="glass-panel delay-300" style={{ marginBottom: '1.5rem' }}>
+          <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <History size={18} color="var(--accent-violet)" /> Monitoring Akses Kaur & Bendahara
+            </h3>
+            {logsLoading && <Loader2 size={16} className="animate-spin" color="var(--accent-blue)" />}
+          </div>
+          <div className="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Waktu Akses</th>
+                  <th>Nama / Unit</th>
+                  <th>Jabatan / Role</th>
+                  <th className="mobile-hide">Browser/Device</th>
+                </tr>
+              </thead>
+              <tbody>
+                {accessLogs.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                      {logsLoading ? 'Menarik data log...' : 'Belum ada log akses terekam.'}
+                    </td>
+                  </tr>
+                ) : accessLogs.map((log, idx) => (
+                  <tr key={idx} style={{ fontSize: '0.85rem' }}>
+                    <td style={{ color: 'var(--accent-cyan)', fontWeight: 500 }}>{log.timestamp || log.Tanggal}</td>
+                    <td>
+                      <div style={{ fontWeight: 600 }}>{log.nama || log.Nama}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Unit: {log.unit || log.Unit}</div>
+                    </td>
+                    <td>
+                      <div>{log.jabatan || log.Jabatan}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--accent-violet)' }}>{log.roleAplikasi || log.Role}</div>
+                    </td>
+                    <td className="mobile-hide">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                         <Monitor size={14} />
+                         <span style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                           {log.browser || log.Browser}
+                         </span>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
