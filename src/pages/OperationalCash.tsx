@@ -7,7 +7,7 @@ import {
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import { getCurrentUser, ROLES } from '../data/organization';
 
-const API_URL = "https://script.google.com/macros/s/AKfycbz_ilOKXYtAngoP1NGMhz6bj8uE2k505xaO0uysQ5RF4zV_x6_zLbSwU7_LamJClpvDZw/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwzimTeSIIEpjUMVfI4EEc90ZDEixIeMBM9WFBQKPulYHYGF2CqhwjHgQe0ZMB7SfNSGw/exec";
 
 interface Transaction {
   id: string;

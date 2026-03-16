@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Wallet, TrendingUp, TrendingDown, Plus, LayoutDashboard, History, PiggyBank, Edit3, Trash2, X, Save, Search, Filter, Loader2 } from 'lucide-react';
 
-const API_URL = "https://script.google.com/macros/s/AKfycbz_ilOKXYtAngoP1NGMhz6bj8uE2k505xaO0uysQ5RF4zV_x6_zLbSwU7_LamJClpvDZw/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwzimTeSIIEpjUMVfI4EEc90ZDEixIeMBM9WFBQKPulYHYGF2CqhwjHgQe0ZMB7SfNSGw/exec";
 
 const Finance = () => {
   const [activeTab, setActiveTab] = useState('history'); // Default to history as requested for better view
