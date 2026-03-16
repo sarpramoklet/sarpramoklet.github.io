@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, LabelList } from 'recharts';
 import { Activity, Clock10, CheckSquare, TriangleAlert, ArrowUpRight, ArrowDownRight, UserCircle2, TrendingUp, Wallet, Loader2, Zap, Droplets } from 'lucide-react';
 import { getCurrentUser, ROLES } from '../data/organization';
 import { getUtilityChartData } from '../data/utilities';
@@ -328,7 +328,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           </div>
           <div style={{ flex: 1, minHeight: 0, marginTop: '1rem' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={getUtilityChartData()} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <BarChart data={getUtilityChartData()} margin={{ top: 25, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
                 <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
                 <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `Rp${v/1000000}jt`} />
@@ -336,7 +336,14 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                   formatter={(v: any) => formatIDR(v as number)}
                   contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-focus)', borderRadius: '8px', fontSize: '10px' }}
                 />
-                <Bar dataKey="PLN" fill="var(--accent-amber)" radius={[4, 4, 0, 0]} barSize={24} />
+                <Bar dataKey="PLN" fill="var(--accent-amber)" radius={[4, 4, 0, 0]} barSize={24}>
+                  <LabelList 
+                    dataKey="PLN" 
+                    position="top" 
+                    formatter={(v: any) => `${(Number(v)/1000000).toFixed(1)}jt`} 
+                    style={{ fill: 'var(--accent-amber)', fontSize: '10px', fontWeight: 600 }} 
+                  />
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -353,7 +360,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           </div>
           <div style={{ flex: 1, minHeight: 0, marginTop: '1rem' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={getUtilityChartData()} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <BarChart data={getUtilityChartData()} margin={{ top: 25, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
                 <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
                 <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `Rp${(v/1000000).toFixed(1)}jt`} />
@@ -361,7 +368,14 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                   formatter={(v: any) => formatIDR(v as number)}
                   contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-focus)', borderRadius: '8px', fontSize: '10px' }}
                 />
-                <Bar dataKey="PDAM" fill="var(--accent-cyan)" radius={[4, 4, 0, 0]} barSize={24} />
+                <Bar dataKey="PDAM" fill="var(--accent-cyan)" radius={[4, 4, 0, 0]} barSize={24}>
+                  <LabelList 
+                    dataKey="PDAM" 
+                    position="top" 
+                    formatter={(v: any) => Number(v) < 1000000 ? `${(Number(v)/1000).toFixed(0)}rb` : `${(Number(v)/1000000).toFixed(1)}jt`} 
+                    style={{ fill: 'var(--accent-cyan)', fontSize: '10px', fontWeight: 600 }} 
+                  />
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
