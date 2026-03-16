@@ -85,9 +85,10 @@ const Finance = () => {
     setShowModal(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Hapus laporan keuangan ini dari database?')) return;
+  const handleDelete = async (trx: any) => {
+    if (!confirm(`Hapus riwayat transaksi "${trx.title || trx.keterangan}" dari database?`)) return;
     
+    const id = trx.id;
     setLoading(true);
     try {
       await fetch(API_URL, {
@@ -95,21 +96,22 @@ const Finance = () => {
         mode: "no-cors",
         headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({ 
-          action: 'DELETE_RECORD', // Common action name for deletion
+          action: 'DELETE_RECORD', // Primary search key for GAS
           sheetName: 'Finance',
+          sheet: 'Finance', // Fallback for some GAS versions
           id: id,
           ID: id
         })
       });
       
-      // Update local state immediately
+      // Update local state immediately for UX
       setTransactions(prev => prev.filter(t => t.id !== id));
       
       // Delay refresh for DB consistency
       setTimeout(fetchTransactions, 2000);
     } catch (error) {
       console.error("Error deleting finance record:", error);
-      alert("Gagal menghapus data.");
+      alert("Gagal menghapus data. Cek koneksi.");
       setLoading(false);
     }
   };
@@ -330,7 +332,7 @@ const Finance = () => {
                           <button className="btn-icon" onClick={() => handleEdit(trx)} style={{ color: 'var(--accent-blue)', padding: '4px' }}>
                             <Edit3 size={14} />
                           </button>
-                          <button className="btn-icon" onClick={() => handleDelete(trx.id)} style={{ color: 'var(--accent-rose)', padding: '4px' }}>
+                          <button className="btn-icon" onClick={() => handleDelete(trx)} style={{ color: 'var(--accent-rose)', padding: '4px' }}>
                             <Trash2 size={14} />
                           </button>
                         </div>

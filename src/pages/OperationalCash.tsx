@@ -134,9 +134,10 @@ const OperationalCash = () => {
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Hapus transaksi ini dari database?')) return;
+  const handleDelete = async (trx: Transaction) => {
+    if (!confirm(`Hapus riwayat transaksi "${trx.keterangan}" dari database?`)) return;
     
+    const id = trx.id;
     setLoading(true);
     try {
       await fetch(API_URL, {
@@ -146,6 +147,7 @@ const OperationalCash = () => {
         body: JSON.stringify({ 
           action: 'DELETE_RECORD', 
           sheetName: 'Kas_TU',
+          sheet: 'Kas_TU',
           id: id,
           ID: id
         })
@@ -446,7 +448,7 @@ const OperationalCash = () => {
                       </button>
                       <button 
                         className="btn-icon" 
-                        onClick={() => handleDelete(trx.id)}
+                        onClick={() => handleDelete(trx)}
                         style={{ padding: '8px', color: 'var(--accent-rose)', background: 'rgba(244, 63, 94, 0.05)' }}
                       >
                         <Trash2 size={15} />
