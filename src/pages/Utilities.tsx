@@ -79,30 +79,30 @@ const Utilities = () => {
 
   return (
     <div className="animate-fade-in" style={{ paddingBottom: '3rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+      <div className="flex-row-responsive" style={{ marginBottom: '2rem' }}>
         <div>
           <h1 className="page-title gradient-text">Manajemen Utilitas</h1>
           <p className="page-subtitle" style={{ margin: 0 }}>Pemantauan Tagihan Listrik (PLN) dan Air (PDAM)</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>
-          <Plus size={18} /> Input Nota Baru
+        <button className="btn btn-primary" onClick={() => setIsModalOpen(true)} style={{ alignSelf: 'flex-start' }}>
+          <Plus size={18} /> <span className="mobile-hide">Input Nota Baru</span><span style={{ display: 'none' }} className="mobile-show">Input</span>
         </button>
       </div>
 
-      <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '1rem' }}>
+      <div className="flex-row-responsive" style={{ gap: '0.5rem', marginBottom: '2rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '1rem' }}>
         <button 
           className={`btn ${activeTab === 'rekap' ? 'btn-primary' : 'btn-outline'}`}
           onClick={() => setActiveTab('rekap')}
-          style={activeTab === 'rekap' ? { background: 'var(--accent-blue)', color: 'white', border: 'none' } : { border: 'none' }}
+          style={{ flex: 1, border: activeTab === 'rekap' ? 'none' : '1px solid var(--border-subtle)', background: activeTab === 'rekap' ? 'var(--accent-blue)' : 'transparent', color: activeTab === 'rekap' ? 'white' : 'var(--text-secondary)' }}
         >
-          <ReceiptText size={18} /> Rekap Perbandingan
+          <ReceiptText size={18} /> <span className="mobile-hide">Rekap Perbandingan</span><span style={{ display: 'none' }} className="mobile-show">Rekap</span>
         </button>
         <button 
           className={`btn ${activeTab === 'grafik' ? 'btn-primary' : 'btn-outline'}`}
           onClick={() => setActiveTab('grafik')}
-          style={activeTab === 'grafik' ? { background: 'var(--accent-blue)', color: 'white', border: 'none' } : { border: 'none' }}
+          style={{ flex: 1, border: activeTab === 'grafik' ? 'none' : '1px solid var(--border-subtle)', background: activeTab === 'grafik' ? 'var(--accent-blue)' : 'transparent', color: activeTab === 'grafik' ? 'white' : 'var(--text-secondary)' }}
         >
-          <BarChart3 size={18} /> Tren Pengeluaran
+          <BarChart3 size={18} /> <span className="mobile-hide">Tren Pengeluaran</span><span style={{ display: 'none' }} className="mobile-show">Grafik</span>
         </button>
       </div>
 

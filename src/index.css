@@ -556,90 +556,101 @@ tr:hover td {
   pointer-events: none;
 }
 
-@media (max-width: 768px) {
-  .app-layout {
-    flex-direction: column;
-  }
-
-  .content-container {
-    padding: 1rem;
-  }
-  
-  .sidebar {
-    position: fixed;
-    top: 0;
-    left: -280px;
-    height: 100vh;
-    z-index: 20;
-    box-shadow: 4px 0 24px rgba(0,0,0,0.5);
-  }
-  
-  .sidebar.open {
-    transform: translateX(280px);
-  }
-  
-  .sidebar-overlay.open {
-    display: block;
-    opacity: 1;
-    pointer-events: auto;
-  }
-
-  .mobile-close-btn {
-    display: block;
-  }
-  
-  .mobile-header {
+  /* Responsive Utilities */
+  .flex-row-responsive {
     display: flex;
-  }
-  
-  .dashboard-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .page-title {
-    font-size: 1.5rem;
-  }
-  
-  .stats-grid {
-    grid-template-columns: 1fr;
+    justify-content: space-between;
+    align-items: center;
     gap: 1rem;
   }
 
-  .stat-card {
-    padding: 1rem;
-  }
-  
-  /* Make utility input side-by-side flex wrap into stacked on mobile */
-  form[style*="flex-direction: column"] > div[style*="flex: 1"] {
-    flex: initial !important;
-    width: 100%;
-  }
-  
-  /* Utilities rekap modal fixes */
-  .glass-panel[style*="width: 500px"] {
-    width: 90% !important;
-    padding: 1.5rem !important;
+  .input-responsive {
+    width: 300px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    padding: 0.5rem 1rem 0.5rem 2.2rem;
+    border-radius: 8px;
+    outline: none;
+    transition: var(--trans-fast);
   }
 
-  /* Handle flex row wrappers that need to wrap on mobile */
-  div[style*="display: flex"][style*="justify-content: space-between"] {
-    flex-direction: column;
-    align-items: flex-start !important;
-    gap: 1rem;
-  }
-  /* But revert flex-wraps inside modal header so X button stays top right */
-  div[style*="width: 500px"] > div[style*="justify-content: space-between"] {
-    flex-direction: row;
-    align-items: center !important;
-  }
-  
-  /* Sidebar logo wrapper fix */
-  .sidebar > div[style*="justify-content: space-between"] {
-    flex-direction: row !important;
-  }
+  @media (max-width: 768px) {
+    .flex-row-responsive {
+      flex-direction: column;
+      align-items: stretch !important;
+    }
 
-  /* Table overflow hints */
-  .table-container {
-    padding-bottom: 0.5rem;
+    .input-responsive {
+      width: 100% !important;
+    }
+
+    .mobile-hide {
+      display: none !important;
+    }
+
+    .mobile-show {
+      display: block !important;
+    }
+
+    .content-container {
+      padding: 1rem;
+    }
+    
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: -280px;
+      height: 100vh;
+      z-index: 20;
+      box-shadow: 4px 0 24px rgba(0,0,0,0.5);
+    }
+    
+    .sidebar.open {
+      transform: translateX(280px);
+    }
+    
+    .sidebar-overlay.open {
+      display: block;
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .mobile-close-btn {
+      display: block;
+    }
+    
+    .mobile-header {
+      display: flex;
+    }
+    
+    .dashboard-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .page-title {
+      font-size: 1.5rem;
+    }
+    
+    .stats-grid {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    .stat-card {
+      padding: 1rem;
+    }
+    
+    /* Utilities rekap modal fixes */
+    .glass-panel[style*="width: 500px"],
+    .glass-panel[style*="maxWidth: 500px"] {
+      width: 95% !important;
+      max-width: none !important;
+    }
+
+    /* Modal header fix to keep close button right */
+    .glass-panel > div[style*="justify-content: space-between"] {
+      flex-direction: row !important;
+      align-items: center !important;
+    }
   }
-}

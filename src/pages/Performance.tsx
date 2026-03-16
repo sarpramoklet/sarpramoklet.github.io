@@ -14,34 +14,28 @@ const mockPerformance = USERS.filter(u => u.atasanLangsung !== null).map((user) 
 const Performance = () => {
   return (
     <div className="animate-fade-in" style={{ paddingBottom: '3rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+      <div className="flex-row-responsive" style={{ marginBottom: '2rem' }}>
         <div>
           <h1 className="page-title gradient-text">Kinerja Personel</h1>
           <p className="page-subtitle" style={{ margin: 0 }}>Analisis capaian SLA, kecepatan dan kontribusi tim</p>
         </div>
-        <button className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <TrendingUp size={16} /> Unduh Laporan Kinerja
+        <button className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', alignSelf: 'flex-start' }}>
+          <TrendingUp size={16} /> <span className="mobile-hide">Unduh Laporan Kinerja</span><span style={{ display: 'none' }} className="mobile-show">Laporan</span>
         </button>
       </div>
 
-      <div className="glass-panel delay-100" style={{ padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <div style={{ position: 'relative' }}>
-            <Search size={16} style={{ position: 'absolute', top: '10px', left: '12px', color: 'var(--text-muted)' }} />
-            <input 
-              type="text" 
-              placeholder="Cari Personel / Divisi..." 
-              style={{ 
-                background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-subtle)', 
-                color: 'var(--text-primary)', padding: '0.5rem 1rem 0.5rem 2.2rem', 
-                borderRadius: '8px', outline: 'none', width: '300px'
-              }} 
-            />
-          </div>
-          <button className="btn btn-outline" style={{ padding: '0.4rem 0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Filter size={16} /> Periode: Bulan Ini
-          </button>
+      <div className="glass-panel delay-100 flex-row-responsive" style={{ padding: '1rem 1.5rem', marginBottom: '1.5rem' }}>
+        <div style={{ position: 'relative', flex: 1 }}>
+          <Search size={16} style={{ position: 'absolute', top: '10px', left: '12px', color: 'var(--text-muted)' }} />
+          <input 
+            type="text" 
+            placeholder="Cari Personel / Divisi..." 
+            className="input-responsive"
+          />
         </div>
+        <button className="btn btn-outline" style={{ padding: '0.4rem 0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center' }}>
+          <Filter size={16} /> Periode: Bulan Ini
+        </button>
       </div>
 
       <div className="glass-panel delay-200 table-container">

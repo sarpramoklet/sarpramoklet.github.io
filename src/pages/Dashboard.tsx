@@ -58,15 +58,15 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         </div>
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+      <div className="flex-row-responsive" style={{ marginBottom: '2rem' }}>
         <div>
           <h1 className="page-title gradient-text">Pusat Kendali Layanan Internal</h1>
           <p className="page-subtitle" style={{ margin: 0, maxWidth: '800px' }}>
             Sistem manajemen terintegrasi untuk memantau penugasan, progres rutin, dan proyek pengembangan tim IT, Laboratorium & Sarana Prasarana.
           </p>
         </div>
-        <button className="btn btn-primary">
-          <Activity size={18} /> Unduh Laporan PDF
+        <button className="btn btn-primary" style={{ alignSelf: 'flex-start' }}>
+          <Activity size={18} /> <span className="mobile-hide">Unduh Laporan PDF</span><span style={{ display: 'none' }} className="mobile-show">Laporan</span>
         </button>
       </div>
 
@@ -204,14 +204,14 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
 
       {isPimpinan && (
         <div className="glass-panel delay-300" style={{ marginBottom: '1.5rem', padding: '1.5rem', background: 'linear-gradient(135deg, var(--accent-violet-ghost), transparent)' }}>
-           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+           <div className="flex-row-responsive">
              <div>
                <h3 style={{ fontSize: '1.1rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                  <Wallet size={20} color="var(--accent-violet)" /> Ringkasan Keuangan Operasional
                </h3>
                <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Status kas dan saldo yang dikelola oleh Tata Kelola (Amalia)</p>
              </div>
-             <div style={{ display: 'flex', gap: '2rem' }}>
+             <div style={{ display: 'flex', gap: '2rem', justifyContent: 'space-between', width: isPimpinan ? 'auto' : '100%' }}>
                 <div style={{ textAlign: 'right' }}>
                    <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>Rp 49.260.000</div>
                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>SALDO SAAT INI</div>

@@ -104,37 +104,33 @@ const Tickets = () => {
 
   return (
     <div className="animate-fade-in" style={{ position: 'relative' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+      <div className="flex-row-responsive" style={{ marginBottom: '2rem' }}>
         <div>
           <h1 className="page-title gradient-text">Manajemen Tiket & Work Order</h1>
           <p className="page-subtitle" style={{ margin: 0 }}>Pusat tracking dan distribusi pekerjaan terintegrasi Google Sheets</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>
-          <Plus size={18} /> Buat Tiket Baru
+        <button className="btn btn-primary" onClick={() => setIsModalOpen(true)} style={{ alignSelf: 'flex-start' }}>
+          <Plus size={18} /> <span className="mobile-hide">Buat Tiket Baru</span><span style={{ display: 'none' }} className="mobile-show">Buat</span>
         </button>
       </div>
 
-      <div className="glass-panel delay-100" style={{ padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <div style={{ position: 'relative' }}>
+      <div className="glass-panel delay-100 flex-row-responsive" style={{ padding: '1rem 1.5rem', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flex: 1, width: '100%' }}>
+          <div style={{ position: 'relative', flex: 1 }}>
             <Search size={16} style={{ position: 'absolute', top: '10px', left: '12px', color: 'var(--text-muted)' }} />
             <input 
               type="text" 
               placeholder="Cari ID Tiket / Deskripsi..." 
-              style={{ 
-                background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-subtle)', 
-                color: 'var(--text-primary)', padding: '0.5rem 1rem 0.5rem 2.2rem', 
-                borderRadius: '8px', outline: 'none', width: '300px'
-              }} 
+              className="input-responsive"
             />
           </div>
           <button className="btn btn-outline" style={{ padding: '0.4rem 0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Filter size={16} /> Filter
+            <Filter size={16} /> <span className="mobile-hide">Filter</span>
           </button>
           {loading && <Loader2 size={16} className="animate-spin" color="var(--accent-blue)" />}
         </div>
 
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', gap: '0.5rem' }} className="mobile-hide">
           <span className="badge" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-focus)' }}>Total ({tickets.length})</span>
           <span className="badge" style={{ background: 'var(--accent-blue-ghost)', color: 'var(--accent-blue)' }}>Live API</span>
         </div>

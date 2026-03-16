@@ -47,36 +47,30 @@ const Personnel = () => {
 
   return (
     <div className="animate-fade-in" style={{ paddingBottom: '3rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+      <div className="flex-row-responsive" style={{ marginBottom: '2rem' }}>
         <div>
           <h1 className="page-title gradient-text">Manajemen Personel {currentUser.unit !== 'Semua Unit' ? `- Unit ${currentUser.unit}` : ''}</h1>
           <p className="page-subtitle" style={{ margin: 0 }}>Daftar personel, role aplikasi, dan struktur organisasi</p>
         </div>
         {isKaur && (
-          <button className="btn btn-primary">
-            <Plus size={18} /> Tambah Personel Baru
+          <button className="btn btn-primary" style={{ alignSelf: 'flex-start' }}>
+            <Plus size={18} /> <span className="mobile-hide">Tambah Personel Baru</span><span style={{ display: 'none' }} className="mobile-show">Tambah</span>
           </button>
         )}
       </div>
 
-      <div className="glass-panel delay-100" style={{ padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <div style={{ position: 'relative' }}>
-            <Search size={16} style={{ position: 'absolute', top: '10px', left: '12px', color: 'var(--text-muted)' }} />
-            <input 
-              type="text" 
-              placeholder="Cari Nama Personel..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ 
-                background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-subtle)', 
-                color: 'var(--text-primary)', padding: '0.5rem 1rem 0.5rem 2.2rem', 
-                borderRadius: '8px', outline: 'none', width: '300px'
-              }} 
-            />
-          </div>
+      <div className="glass-panel delay-100 flex-row-responsive" style={{ padding: '1rem 1.5rem', marginBottom: '1.5rem' }}>
+        <div style={{ position: 'relative', flex: 1 }}>
+          <Search size={16} style={{ position: 'absolute', top: '10px', left: '12px', color: 'var(--text-muted)' }} />
+          <input 
+            type="text" 
+            placeholder="Cari Nama Personel..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="input-responsive"
+          />
         </div>
-        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }} className="mobile-hide">
           Menampilkan {filteredUsers.length} Personel
         </div>
       </div>

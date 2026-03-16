@@ -70,17 +70,17 @@ const Finance = () => {
 
   return (
     <div className="animate-fade-in" style={{ paddingBottom: '3rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+      <div className="flex-row-responsive" style={{ marginBottom: '2rem' }}>
         <div>
           <h1 className="page-title gradient-text">Tata Kelola Keuangan</h1>
           <p className="page-subtitle" style={{ margin: 0 }}>Pelaporan kas, pengeluaran operasional, dan saldo terpusat.</p>
         </div>
-        <div style={{ display: 'flex', gap: '1rem' }}>
-          <button className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <PiggyBank size={18} /> Kelola Saldo
+        <div style={{ display: 'flex', gap: '0.5rem', width: '100%', maxWidth: '400px', justifyContent: 'flex-end' }}>
+          <button className="btn btn-outline" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center' }}>
+            <PiggyBank size={18} /> <span className="mobile-hide">Kelola Saldo</span><span style={{ display: 'none' }} className="mobile-show">Saldo</span>
           </button>
-          <button className="btn btn-primary" onClick={handleCreate} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Plus size={18} /> Tambah Laporan
+          <button className="btn btn-primary" onClick={handleCreate} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center' }}>
+            <Plus size={18} /> <span className="mobile-hide">Tambah Laporan</span><span style={{ display: 'none' }} className="mobile-show">Tambah</span>
           </button>
         </div>
       </div>
@@ -137,7 +137,7 @@ const Finance = () => {
       </div>
 
       {activeTab === 'summary' ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '1.5rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           <div className="glass-panel" style={{ padding: '1.5rem' }}>
             <h3 style={{ fontSize: '1.1rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <TrendingUp size={20} color="var(--accent-emerald)" /> Alokasi Pengeluaran Unit
@@ -172,9 +172,6 @@ const Finance = () => {
               <div style={{ marginTop: '0.75rem', fontSize: '0.75rem', color: 'var(--accent-blue)', fontWeight: 600 }}>
                 — Waka Bidang Sarpra
               </div>
-            </div>
-            <div style={{ padding: '1rem', border: '1px dashed var(--border-subtle)', borderRadius: '12px', textAlign: 'center' }}>
-               <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>Belum ada laporan baru yang perlu verifikasi hari ini.</p>
             </div>
           </div>
         </div>
