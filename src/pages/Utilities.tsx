@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, LabelList } from 'recharts';
 import { Plus, ReceiptText, FileText, BarChart3 } from 'lucide-react';
 
 const formatRupiah = (number: number) => {
@@ -161,7 +161,7 @@ const Utilities = () => {
             </div>
             <div style={{ height: '250px', width: '100%' }}>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <BarChart data={chartData} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
                   <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={11} />
                   <YAxis 
@@ -173,7 +173,14 @@ const Utilities = () => {
                     formatter={(value: any) => formatRupiah(value as number)}
                     contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-focus)', borderRadius: '8px', fontSize: '12px' }}
                   />
-                  <Bar dataKey="PLN" fill="var(--accent-amber)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="PLN" fill="var(--accent-amber)" radius={[4, 4, 0, 0]}>
+                    <LabelList 
+                      dataKey="PLN" 
+                      position="top" 
+                      formatter={(v: any) => v ? `${(Number(v) / 1000000).toFixed(1)}jt` : ''} 
+                      style={{ fill: 'var(--accent-amber)', fontSize: '10px', fontWeight: 600 }}
+                    />
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -186,7 +193,7 @@ const Utilities = () => {
             </div>
             <div style={{ height: '250px', width: '100%' }}>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <BarChart data={chartData} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
                   <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={11} />
                   <YAxis 
@@ -198,7 +205,14 @@ const Utilities = () => {
                     formatter={(value: any) => formatRupiah(value as number)}
                     contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-focus)', borderRadius: '8px', fontSize: '12px' }}
                   />
-                  <Bar dataKey="PDAM" fill="var(--accent-cyan)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="PDAM" fill="var(--accent-cyan)" radius={[4, 4, 0, 0]}>
+                    <LabelList 
+                      dataKey="PDAM" 
+                      position="top" 
+                      formatter={(v: any) => v ? `${(Number(v) / 1000000).toFixed(2)}jt` : ''} 
+                      style={{ fill: 'var(--accent-cyan)', fontSize: '10px', fontWeight: 600 }}
+                    />
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
