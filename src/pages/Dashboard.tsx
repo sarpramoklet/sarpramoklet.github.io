@@ -41,6 +41,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   const [financeLoading, setFinanceLoading] = useState(true);
   const [internalFinance, setInternalFinance] = useState({ balance: 0, expense: 0, categories: [] as any[] });
   const [tuFinance, setTuFinance] = useState({ balance: 0, expense: 0 });
+  const [acFinance, setAcFinance] = useState({ balance: 0, expense: 0 });
 
   useEffect(() => {
     const fetchFinanceData = async () => {
@@ -72,16 +73,52 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         const respTU = await fetch(`${FINANCE_API_URL}?sheetName=Kas_TU`);
         const dataTU = await respTU.json();
         
-        if (dataTU && Array.isArray(dataTU)) {
+        if (dataTU && Array.isArray(dataTU) && dataTU.length > 0) {
+          // Get balance from last valid row for true sync with spreadsheet
+          const validRows = dataTU.filter((item: any) => (item.debit || item.Debit || item.kredit || item.Kredit));
+          const lastRow = validRows.length > 0 ? validRows[validRows.length - 1] : null;
+          
           let balance = 0;
           let totalExpense = 0;
+          
+          if (lastRow) {
+            balance = Number(lastRow.saldo || lastRow.Saldo || 0);
+          } else {
+             dataTU.forEach((item: any) => {
+               balance += (Number(item.debit || item.Debit || 0) - Number(item.kredit || item.Kredit || 0));
+             });
+          }
+          
           dataTU.forEach((item: any) => {
-            const deb = Number(item.debit || item.Debit || 0);
-            const kre = Number(item.kredit || item.Kredit || 0);
-            balance += (deb - kre);
-            totalExpense += kre;
+            totalExpense += Number(item.kredit || item.Kredit || 0);
           });
+          
           setTuFinance({ balance, expense: totalExpense });
+        }
+
+        // Fetch Kas AC
+        const respAC = await fetch(`${FINANCE_API_URL}?sheetName=Kas_AC`);
+        const dataAC = await respAC.json();
+        if (dataAC && Array.isArray(dataAC) && dataAC.length > 0) {
+          const validRows = dataAC.filter((item: any) => (item.debit || item.Debit || item.kredit || item.Kredit));
+          const lastRow = validRows.length > 0 ? validRows[validRows.length - 1] : null;
+          
+          let balance = 0;
+          let totalExpense = 0;
+          
+          if (lastRow) {
+            balance = Number(lastRow.saldo || lastRow.Saldo || 0);
+          } else {
+            dataAC.forEach((item: any) => {
+              balance += (Number(item.debit || item.Debit || 0) - Number(item.kredit || item.Kredit || 0));
+            });
+          }
+          
+          dataAC.forEach((item: any) => {
+            totalExpense += Number(item.kredit || item.Kredit || 0);
+          });
+          
+          setAcFinance({ balance, expense: totalExpense });
         }
       } catch (error) {
         console.error("Dashboard monitor fetch error:", error);
@@ -118,7 +155,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           </div>
           <div>
             <h2 style={{ fontSize: '1rem', margin: 0, fontWeight: 700 }}>Hai, {getCurrentUser().nama.split(' ')[0]}!</h2>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0 }} className="mobile-hide">Jabatan: <strong>{getCurrentUser().jabatan}</strong></p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0 0', fontStyle: 'italic', opacity: 0.9 }}>"Melayani dengan hati, memberikan yang terbaik untuk setiap solusi."</p>
           </div>
         </div>
       )}
@@ -297,7 +334,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                  <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Dana operasional dari Bendahara</p>
                </div>
                <div style={{ textAlign: 'right' }}>
-                 <div style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                 <div style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--accent-rose)' }}>
                    {financeLoading ? '---' : formatIDR(tuFinance.balance)}
                  </div>
                  <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Saldo TU</div>
@@ -309,6 +346,31 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                   <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--accent-rose)' }}>{financeLoading ? '---' : formatIDR(tuFinance.expense)}</div>
                </div>
                <ArrowDownRight size={20} color="var(--accent-rose)" />
+             </div>
+          </div>
+
+          {/* AC Cash Monitor */}
+          <div className="glass-panel stat-card" style={{ padding: '1.25rem', background: 'linear-gradient(135deg, var(--accent-emerald-ghost), transparent)', borderLeft: '4px solid var(--accent-emerald)' }}>
+             <div className="flex-row-responsive" style={{ gap: '1rem', alignItems: 'flex-start' }}>
+               <div style={{ flex: 1 }}>
+                 <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: '0 0 0.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                   <Zap size={18} color="var(--accent-emerald)" /> Kas Pemeliharaan AC {financeLoading && <Loader2 size={14} className="animate-spin" />}
+                 </h3>
+                 <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Monitoring dana perawatan AC</p>
+               </div>
+               <div style={{ textAlign: 'right' }}>
+                 <div style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--accent-emerald)' }}>
+                   {financeLoading ? '---' : formatIDR(acFinance.balance)}
+                 </div>
+                 <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Saldo AC</div>
+               </div>
+             </div>
+             <div style={{ marginTop: '1.25rem', padding: '0.75rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+               <div>
+                  <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Akumulasi Kredit (Keluar)</div>
+                  <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--accent-emerald)' }}>{financeLoading ? '---' : formatIDR(acFinance.expense)}</div>
+               </div>
+               <TrendingUp size={20} color="var(--accent-emerald)" />
              </div>
           </div>
         </div>

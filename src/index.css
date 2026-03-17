@@ -112,6 +112,20 @@ body.light-theme tr:hover td {
   border-color: var(--border-focus);
 }
 
+.theme-aware-logo {
+  transition: filter var(--trans-smooth);
+  /* Step-by-step for non-transparent images with white bg:
+     1. grayscale(1) makes everything shades of grey
+     2. invert(1) turns white bg to black and dark logo to light
+     3. brightness(2) forces the resulting light logo to white
+  */
+  filter: grayscale(1) invert(1) brightness(2);
+}
+
+body.light-theme .theme-aware-logo {
+  filter: none;
+}
+
 * {
   margin: 0;
   padding: 0;

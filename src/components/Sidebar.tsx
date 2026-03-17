@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { NAVIGATION } from '../navigation';
-import { Activity, UserCircle2, X, Sun, Moon, LogOut, LogIn } from 'lucide-react';
+import { UserCircle2, X, Sun, Moon, LogOut, LogIn } from 'lucide-react';
 import { getCurrentUser } from '../data/organization';
 
 interface SidebarProps {
@@ -31,25 +31,21 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
       
       <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
         <div style={{ padding: '2rem 1.5rem 1rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <div style={{ padding: '8px', background: 'linear-gradient(135deg, var(--accent-cyan), var(--accent-blue))', borderRadius: '12px', color: 'white' }}>
-                <Activity size={24} />
-              </div>
-              <div>
-                <h2 style={{ fontSize: '1.25rem', fontFamily: 'var(--font-display)', margin: 0 }} className="gradient-text">Sarpramoklet</h2>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Command Center</span>
-              </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', textAlign: 'center', position: 'relative' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '0.5rem 0' }}>
+              <img src="./logo.png" alt="Sarpramoklet" className="theme-aware-logo" style={{ height: '42px', width: 'auto', objectFit: 'contain' }} />
             </div>
             
-            <button className="mobile-close-btn" onClick={handleClose}>
+            <div>
+              <h2 style={{ fontSize: '1.5rem', fontFamily: 'var(--font-display)', margin: 0, fontWeight: 800 }} className="gradient-text">Sarpramoklet</h2>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600, margin: '0.25rem 0 0 0' }}>Command Center</p>
+            </div>
+            
+            <button className="mobile-close-btn" onClick={handleClose} style={{ position: 'absolute', top: '-1rem', right: '-0.5rem' }}>
                <X size={24} />
             </button>
           </div>
           
-          <div style={{ padding: '0.5rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid var(--border-subtle)', textAlign: 'center' }}>
-            <img src="./logo_telkom.png" alt="Logo Telkom" style={{ width: '100%', height: 'auto', maxHeight: '40px', objectFit: 'contain' }} />
-          </div>
         </div>
 
         <div style={{ padding: '0 1rem 1rem 1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>

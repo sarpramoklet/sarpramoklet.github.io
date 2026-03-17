@@ -25,7 +25,7 @@ const SEED_DATA: Transaction[] = [
   { id: 'AC-3', tanggal: '19-Jan', keterangan: 'Pemeliharaan AC des-jan', debit: 0, kredit: 2690000, saldo: 177000 },
   { id: 'AC-4', tanggal: '23-Feb', keterangan: 'Jatah AC Februari 2026', debit: 1667000, kredit: 0, saldo: 1844000 },
   { id: 'AC-5', tanggal: '23-Feb', keterangan: 'Pemeliharaan AC feb', debit: 0, kredit: 1285000, saldo: 559000 },
-  { id: 'AC-6', tanggal: '05-Mar', keterangan: 'Jatah AC Maret 2026', debit: 1667000, kredit: 0, saldo: 2226000 },
+  { id: 'AC-6', tanggal: '5-Mar', keterangan: 'Jatah AC Maret 2026', debit: 1667000, kredit: 0, saldo: 2226000 },
 ];
 
 const ACCash = () => {
@@ -51,6 +51,14 @@ const ACCash = () => {
     fetchData();
   }, []);
 
+  const calculateBalances = (data: Transaction[]) => {
+    let currentBalance = 0;
+    return data.map(item => {
+      currentBalance = currentBalance + (item.debit || 0) - (item.kredit || 0);
+      return { ...item, saldo: currentBalance };
+    });
+  };
+
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -58,15 +66,14 @@ const ACCash = () => {
       const data = await response.json();
       
       if (data && Array.isArray(data) && data.length > 0) {
-        // Map and filter out completely empty rows
-        const validData = data
+        const mappedData = data
           .map((item: any) => ({
             id: item.id || item.ID || `AC-${Date.now()}-${Math.random()}`,
             tanggal: item.tanggal || item.Tanggal || '',
             keterangan: item.keterangan || item.Keterangan || '',
             debit: Number(item.debit || item.Debit || 0),
             kredit: Number(item.kredit || item.Kredit || 0),
-            saldo: Number(item.saldo || item.Saldo || 0),
+            saldo: 0, // Will be recalculated
             hasRealId: !!(item.id || item.ID)
           }))
           .filter(item => 
@@ -74,26 +81,26 @@ const ACCash = () => {
             (item.debit > 0 || item.kredit > 0)
           );
 
-        if (validData.length > 0) {
-          setTransactions(validData);
+        if (mappedData.length > 0) {
+          setTransactions(calculateBalances(mappedData));
         } else {
-          setTransactions(SEED_DATA);
+          setTransactions(calculateBalances(SEED_DATA));
         }
       } else {
-        setTransactions(SEED_DATA);
+        setTransactions(calculateBalances(SEED_DATA));
       }
     } catch (error) {
       console.error("Error fetching AC cash data:", error);
-      setTransactions(SEED_DATA);
+      setTransactions(calculateBalances(SEED_DATA));
     } finally {
       setLoading(false);
     }
   };
 
   const totals = useMemo(() => {
-    const income = transactions.reduce((sum, t) => sum + t.debit, 0);
-    const expense = transactions.reduce((sum, t) => sum + t.kredit, 0);
-    const balance = transactions.length > 0 ? transactions[transactions.length - 1].saldo : 0;
+    const income = transactions.reduce((sum, t) => sum + Number(t.debit), 0);
+    const expense = transactions.reduce((sum, t) => sum + Number(t.kredit), 0);
+    const balance = income - expense;
     return { income, expense, balance };
   }, [transactions]);
 
@@ -220,6 +227,20 @@ const ACCash = () => {
     }).format(amount);
   };
 
+  const formatDisplayDate = (dateStr: string) => {
+    if (!dateStr) return '-';
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = String(d.getFullYear()).slice(-2);
+      return `${day}-${month}-${year}`;
+    } catch {
+      return dateStr;
+    }
+  };
+
   return (
     <div className="animate-fade-in" style={{ paddingBottom: '3rem' }}>
       {/* Header & Stats Section */}
@@ -244,35 +265,24 @@ const ACCash = () => {
 
       {/* Summary Cards */}
       <div className="stats-grid" style={{ marginBottom: '2.5rem' }}>
-        <div className="glass-panel stat-card">
-          <div className="stat-icon-container" style={{ color: 'var(--accent-emerald)', background: 'var(--accent-emerald-ghost)' }}>
-            <ArrowUpCircle size={24} />
-          </div>
-          <div className="stat-info">
-            <span className="stat-label">Total Jatah Masuk</span>
-            <span className="stat-value">{formatCurrency(totals.income)}</span>
-          </div>
-        </div>
-
-        <div className="glass-panel stat-card">
-          <div className="stat-icon-container" style={{ color: 'var(--accent-rose)', background: 'var(--accent-rose-ghost)' }}>
-            <ArrowDownCircle size={24} />
-          </div>
-          <div className="stat-info">
-            <span className="stat-label">Total Pemeliharaan</span>
-            <span className="stat-value">{formatCurrency(totals.expense)}</span>
-          </div>
-        </div>
-
-        <div className="glass-panel stat-card accent-border" style={{ borderColor: 'var(--accent-blue)' }}>
-          <div className="stat-icon-container" style={{ color: 'var(--accent-blue)', background: 'var(--accent-blue-ghost)' }}>
-            <Wallet size={24} />
-          </div>
-          <div className="stat-info">
-            <span className="stat-label">Saldo Saat Ini</span>
-            <span className="stat-value" style={{ color: 'var(--accent-blue)' }}>{formatCurrency(totals.balance)}</span>
-          </div>
-        </div>
+        {[
+          { title: 'Total Jatah Masuk', value: totals.income, icon: ArrowUpCircle, color: 'var(--accent-emerald)', label: 'Total Jatah Masuk' },
+          { title: 'Total Pemeliharaan', value: totals.expense, icon: ArrowDownCircle, color: 'var(--accent-rose)', label: 'Total Pemeliharaan' },
+          { title: 'Saldo Kas Saat Ini', value: totals.balance, icon: Wallet, color: 'var(--accent-blue)', label: 'Saldo Saat Ini' },
+        ].map((stat) => {
+          const Icon = stat.icon;
+          return (
+            <div key={stat.title} className="glass-panel" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ background: `${stat.color}15`, padding: '0.5rem 1rem', display: 'flex', alignItems: 'center' }}>
+                <Icon size={20} color={stat.color} />
+              </div>
+              <div style={{ padding: '1.5rem 1.25rem' }}>
+                <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>{stat.label.split(' ').slice(0, -1).join(' ')}</div>
+                <div style={{ color: 'var(--text-primary)', fontSize: '0.9rem', marginBottom: '0.25rem' }}>{stat.label.split(' ').pop()} <span style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-primary)', marginLeft: '0.25rem' }}>{formatCurrency(stat.value)}</span></div>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Charts & History Section */}
@@ -375,7 +385,7 @@ const ACCash = () => {
                 ) : (
                   filteredTransactions.map((trx) => (
                     <tr key={trx.id} className="ticket-row">
-                      <td style={{ fontSize: '0.85rem' }}>{trx.tanggal}</td>
+                      <td style={{ fontSize: '0.85rem' }}>{formatDisplayDate(trx.tanggal)}</td>
                       <td style={{ fontSize: '0.9rem', fontWeight: 500 }}>{trx.keterangan}</td>
                       <td style={{ textAlign: 'right', color: 'var(--accent-emerald)', fontSize: '0.85rem' }}>
                         {trx.debit > 0 ? formatCurrency(trx.debit) : '-'}

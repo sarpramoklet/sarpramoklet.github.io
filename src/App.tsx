@@ -100,7 +100,7 @@ function App() {
               </button>
               <h1 className="mobile-title gradient-text" style={{ margin: 0 }}>Sarpramoklet</h1>
             </div>
-            <img src="./logo_telkom.png" alt="Logo Telkom" style={{ height: '24px', objectFit: 'contain', marginLeft: 'auto' }} />
+            <img src="./logo_telkom.png" alt="Logo Telkom" className="theme-aware-logo" style={{ height: '24px', objectFit: 'contain', marginLeft: 'auto' }} />
           </div>
           
           <div className="content-container">

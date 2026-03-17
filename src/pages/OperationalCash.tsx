@@ -120,7 +120,18 @@ const OperationalCash = () => {
 
   const calculateBalances = (data: Transaction[]) => {
     let currentBalance = 0;
-    // We assume chronological order from sheet
+    
+    // Check if the first row already has a saldo from sheet (carryover)
+    if (data.length > 0 && data[0].saldo > 0 && data[0].debit === 0 && data[0].kredit === 0) {
+      currentBalance = data[0].saldo;
+      return data.map((item, idx) => {
+        if (idx === 0) return item;
+        currentBalance = currentBalance + (Number(item.debit) || 0) - (Number(item.kredit) || 0);
+        return { ...item, saldo: currentBalance };
+      });
+    }
+
+    // Default recalculate from 0 or use the first item's balance if it's the only one
     return data.map(item => {
       currentBalance = currentBalance + (Number(item.debit) || 0) - (Number(item.kredit) || 0);
       return { ...item, saldo: currentBalance };
@@ -238,6 +249,20 @@ const OperationalCash = () => {
       currency: 'IDR',
       minimumFractionDigits: 0
     }).format(num);
+  };
+
+  const formatDisplayDate = (dateStr: string) => {
+    if (!dateStr) return '-';
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = String(d.getFullYear()).slice(-2);
+      return `${day}-${month}-${year}`;
+    } catch {
+      return dateStr;
+    }
   };
 
   const transactionsWithBalance = useMemo(() => {
@@ -429,7 +454,7 @@ const OperationalCash = () => {
                 </td>
                 <td style={{ whiteSpace: 'nowrap', fontWeight: 600, color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                     <Calendar size={14} style={{ opacity: 0.5 }} /> {trx.tanggal}
+                     <Calendar size={14} style={{ opacity: 0.5 }} /> {formatDisplayDate(trx.tanggal)}
                    </div>
                 </td>
                 <td style={{ maxWidth: '400px' }}>

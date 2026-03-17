@@ -12,6 +12,10 @@ const Finance = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [editingTrx, setEditingTrx] = useState<any>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
+  
+  // Cross-sheet summaries
+  const [tuBalance, setTuBalance] = useState(0);
+  const [acBalance, setAcBalance] = useState(0);
 
   useEffect(() => {
     fetchTransactions();
@@ -41,6 +45,25 @@ const Finance = () => {
 
         setTransactions(financeData.sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime()));
       }
+
+      // Fetch other kas for consolidation
+      const [respTU, respAC] = await Promise.all([
+        fetch(`${API_URL}?sheetName=Kas_TU`),
+        fetch(`${API_URL}?sheetName=Kas_AC`)
+      ]);
+      
+      const [dataTU, dataAC] = await Promise.all([respTU.json(), respAC.json()]);
+      
+      if (Array.isArray(dataTU) && dataTU.length > 0) {
+        const lastRow = dataTU.reverse().find((r: any) => r.saldo || r.Saldo);
+        setTuBalance(Number(lastRow?.saldo || lastRow?.Saldo || 0));
+      }
+      
+      if (Array.isArray(dataAC) && dataAC.length > 0) {
+        const lastRow = dataAC.reverse().find((r: any) => r.saldo || r.Saldo);
+        setAcBalance(Number(lastRow?.saldo || lastRow?.Saldo || 0));
+      }
+
     } catch (error) {
       console.error("Error fetching finance data:", error);
     } finally {
@@ -59,6 +82,20 @@ const Finance = () => {
 
   const formatIDR = (val: string | number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(val));
+  };
+
+  const formatDisplayDate = (dateStr: string) => {
+    if (!dateStr) return '-';
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = String(d.getFullYear()).slice(-2);
+      return `${day}-${month}-${year}`;
+    } catch {
+      return dateStr;
+    }
   };
 
   const handleCreate = () => {
@@ -167,6 +204,7 @@ const Finance = () => {
   const totalIncome = transactions.filter(t => t.type === 'income').reduce((acc, curr) => acc + Number(curr.amount), 0);
   const totalExpense = transactions.filter(t => t.type === 'expense').reduce((acc, curr) => acc + Number(curr.amount), 0);
   const finalBalance = totalIncome - totalExpense;
+  const consolidatedTotal = finalBalance + tuBalance + acBalance;
 
   const filteredTransactions = transactionsWithBalance.filter(t =>
     t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -192,22 +230,23 @@ const Finance = () => {
 
       <div className="stats-grid" style={{ marginBottom: '2rem' }}>
         {[
-          { title: 'Total Pemasukan', value: totalIncome, icon: TrendingUp, color: 'var(--accent-emerald)', trend: 'Akumulasi Debit' },
-          { title: 'Total Pengeluaran', value: totalExpense, icon: TrendingDown, color: 'var(--accent-rose)', trend: 'Akumulasi Kredit' },
-          { title: 'Saldo Kas Saat Ini', value: finalBalance, icon: Wallet, color: 'var(--accent-violet)', trend: 'Saldo Akhir Tersedia' },
+          { title: 'Saldo Internal Sarpra', value: finalBalance, icon: Wallet, color: 'var(--accent-blue)', trend: 'Dana Operasional Unit' },
+          { title: 'Saldo Kas TU (Taktis)', value: tuBalance, icon: PiggyBank, color: 'var(--accent-rose)', trend: 'Dana dari Bendahara' },
+          { title: 'Saldo Kas AC', value: acBalance, icon: TrendingUp, color: 'var(--accent-emerald)', trend: 'Dana Pemeliharaan' },
+          { title: 'Total Kas Tersedia', value: consolidatedTotal, icon: Wallet, color: 'var(--accent-violet)', trend: 'Konsolidasi Seluruh Pos' },
         ].map((stat, i) => {
           const Icon = stat.icon;
           return (
-            <div key={i} className={`glass-panel stat-card delay-${(i + 1) * 100}`}>
+            <div key={i} className={`glass-panel stat-card delay-${(i + 1) * 100}`} style={{ padding: '1.25rem' }}>
               <div className="stat-header">
-                <span className="stat-title">{stat.title}</span>
-                <div className="stat-icon-wrapper" style={{ background: `${stat.color}15`, color: stat.color }}>
-                  <Icon size={20} />
+                <span className="stat-title" style={{ fontSize: '0.7rem' }}>{stat.title}</span>
+                <div className="stat-icon-wrapper" style={{ background: `${stat.color}15`, color: stat.color, padding: '6px' }}>
+                  <Icon size={16} />
                 </div>
               </div>
-              <div style={{ marginTop: '1rem' }}>
-                <div className="stat-value" style={{ fontSize: '1.6rem' }}>{formatIDR(stat.value)}</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>{stat.trend}</div>
+              <div style={{ marginTop: '0.75rem' }}>
+                <div className="stat-value" style={{ fontSize: '1.3rem' }}>{formatIDR(stat.value)}</div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>{stat.trend}</div>
               </div>
             </div>
           );
@@ -309,7 +348,7 @@ const Finance = () => {
                   filteredTransactions.map((trx) => (
                     <tr className="ticket-row" key={trx.id}>
                       <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                        {new Date(trx.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                        {formatDisplayDate(trx.date)}
                       </td>
                       <td>
                         <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{trx.title}</div>
