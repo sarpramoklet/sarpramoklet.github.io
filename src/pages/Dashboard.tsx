@@ -127,9 +127,9 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       }
     };
     
-    if (isAuthorizedFinance) fetchFinanceData();
+    if (isLoggedIn && isAuthorizedFinance) fetchFinanceData();
     else setFinanceLoading(false);
-  }, [isAuthorizedFinance]);
+  }, [isAuthorizedFinance, isLoggedIn]);
 
   const formatIDR = (val: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
@@ -286,7 +286,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         </div>
       </div>
 
-      {isAuthorizedFinance && (
+      {isLoggedIn && isAuthorizedFinance && (
         <div className="stats-grid" style={{ marginBottom: '1.5rem', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
           {/* Internal Sarpra Cash Monitor */}
           <div className="glass-panel stat-card" style={{ padding: '1.25rem', background: 'linear-gradient(135deg, var(--accent-blue-ghost), transparent)', borderLeft: '4px solid var(--accent-blue)' }}>
