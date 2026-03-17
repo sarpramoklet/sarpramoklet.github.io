@@ -119,9 +119,9 @@ function App() {
               <Route path="/it" element={<ITPage />} />
               <Route path="/lab" element={<LabPage />} />
               <Route path="/sarpras" element={<SarprasPage />} />
-              <Route path="/performance" element={<Performance />} />
 
               {/* Protected Routes */}
+              <Route path="/performance" element={<ProtectedRoute isLoggedIn={isLoggedIn}><Performance /></ProtectedRoute>} />
               <Route path="/tickets" element={<ProtectedRoute isLoggedIn={isLoggedIn}><Tickets /></ProtectedRoute>} />
               <Route path="/utilities" element={<ProtectedRoute isLoggedIn={isLoggedIn}><Utilities /></ProtectedRoute>} />
               <Route path="/assets" element={<ProtectedRoute isLoggedIn={isLoggedIn}><Assets /></ProtectedRoute>} />

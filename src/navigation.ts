@@ -6,7 +6,7 @@ export const NAVIGATION = [
   { path: '/it', name: 'IT Services', icon: Server, authRequired: false },
   { path: '/lab', name: 'Laboratorium', icon: Component, authRequired: false },
   { path: '/sarpras', name: 'Sarpras', icon: Building, authRequired: false },
-  { path: '/performance', name: 'Kinerja Personel', icon: TrendingUp, authRequired: false },
+  { path: '/performance', name: 'Kinerja Personel', icon: TrendingUp, authRequired: true },
   { path: '/tickets', name: 'Permintaan Layanan', icon: Ticket, authRequired: true },
   { path: '/utilities', name: 'Tagihan Utilitas', icon: Zap, authRequired: true },
   { path: '/assets', name: 'Aset & Inventaris', icon: Package, authRequired: true },
