@@ -524,7 +524,7 @@ tr:hover td {
   align-items: center;
   gap: 1rem;
   border-bottom: 1px solid var(--border-subtle);
-  background: rgba(15, 15, 17, 0.85);
+  background: var(--bg-card);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   z-index: 5;
