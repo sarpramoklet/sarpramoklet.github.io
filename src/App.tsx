@@ -49,7 +49,21 @@ function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     const email = localStorage.getItem('userEmail');
-    const allowed = ['hadi@smktelkom-mlg.sch.id', 'chusni@smktelkom-mlg.sch.id', 'whyna@smktelkom-mlg.sch.id', 'ekon.a.poernomo@smktelkom-mlg.sch.id', 'amalia@smktelkom-mlg.sch.id'];
+    const allowed = [
+      'hadi@smktelkom-mlg.sch.id', 
+      'chusni@smktelkom-mlg.sch.id', 
+      'whyna@smktelkom-mlg.sch.id', 
+      'ekon.a.poernomo@smktelkom-mlg.sch.id', 
+      'amalia@smktelkom-mlg.sch.id',
+      'rudimistriono@smktelkom-mlg.sch.id',
+      'zainul@smktelkom-mlg.sch.id',
+      'yoko@smktelkom-mlg.sch.id',
+      'nico@smktelkom-mlg.sch.id',
+      'zakaria@smktelkom-mlg.sch.id',
+      'bagus@smktelkom-mlg.sch.id',
+      'chandra@smktelkom-mlg.sch.id',
+      'ayat@smktelkom-mlg.sch.id'
+    ];
     return allowed.includes(email || '');
   });
   const [userPicture, setUserPicture] = useState(() => {

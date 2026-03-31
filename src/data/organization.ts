@@ -223,9 +223,26 @@ export const USERS: User[] = [
 
 export const getCurrentUser = (): User => {
   const email = localStorage.getItem('userEmail');
-  if (email === 'chusni@smktelkom-mlg.sch.id') return USERS.find(u => u.id === 'U003') || USERS[0];
-  if (email === 'whyna@smktelkom-mlg.sch.id') return USERS.find(u => u.id === 'U002') || USERS[0];
-  if (email === 'ekon.a.poernomo@smktelkom-mlg.sch.id') return USERS.find(u => u.id === 'U004') || USERS[0];
-  if (email === 'amalia@smktelkom-mlg.sch.id') return USERS.find(u => u.id === 'U005') || USERS[0];
+  
+  const emailMap: Record<string, string> = {
+    'chusni@smktelkom-mlg.sch.id': 'U003',
+    'whyna@smktelkom-mlg.sch.id': 'U002',
+    'ekon.a.poernomo@smktelkom-mlg.sch.id': 'U004',
+    'amalia@smktelkom-mlg.sch.id': 'U005',
+    'rudimistriono@smktelkom-mlg.sch.id': 'U012',
+    'zainul@smktelkom-mlg.sch.id': 'U006',
+    'yoko@smktelkom-mlg.sch.id': 'U013',
+    'nico@smktelkom-mlg.sch.id': 'U010',
+    'zakaria@smktelkom-mlg.sch.id': 'U007',
+    'bagus@smktelkom-mlg.sch.id': 'U009',
+    'chandra@smktelkom-mlg.sch.id': 'U008',
+    'ayat@smktelkom-mlg.sch.id': 'U011'
+  };
+
+  const userId = emailMap[email || ''];
+  if (userId) {
+    return USERS.find(u => u.id === userId) || USERS[0];
+  }
+
   return USERS[0]; // Default / Hadi
 };
