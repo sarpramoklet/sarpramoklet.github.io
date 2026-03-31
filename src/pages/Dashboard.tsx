@@ -204,6 +204,24 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
   };
 
+  const formatPiketDate = (dateValue: any) => {
+    if (!dateValue || dateValue === "") return "-";
+    try {
+      const d = new Date(dateValue);
+      if (isNaN(d.getTime())) return dateValue;
+      
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      const yyyy = d.getFullYear();
+      const h = d.getHours();
+      const m = String(d.getMinutes()).padStart(2, '0');
+      
+      return `${mm}-${dd}-${yyyy} ${h}:${m}`;
+    } catch (e) {
+      return dateValue;
+    }
+  };
+
   const recentIssues = [
     { id: 'TKT-1049', title: 'Server Database Down', unit: 'IT', time: '1 jam lalu', priority: 'High', status: 'Dikerjakan' },
     { id: 'TKT-1048', title: 'AC Ruang Guru Bocor', unit: 'Sarpras', time: '3 jam lalu', priority: 'Medium', status: 'Direncanakan' },
@@ -373,7 +391,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                     <span className={`badge ${note.kategori === 'Temuan' ? 'badge-danger' : 'badge-info'}`} style={{ fontSize: '0.6rem', padding: '0.1rem 0.4rem' }}>
                       {note.kategori}
                     </span>
-                    <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{note.tanggal}</span>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{formatPiketDate(note.tanggal)}</span>
                   </div>
                   <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.85rem', color: 'var(--text-primary)', lineHeight: '1.4', fontStyle: 'italic' }}>
                     "{note.amount}"

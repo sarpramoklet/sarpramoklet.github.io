@@ -46,10 +46,15 @@ const DutyNotes = () => {
     if (!dateValue || dateValue === "") return "-";
     try {
       const d = new Date(dateValue);
-      // Cek apakah date valid, jika tidak gunakan string aslinya
       if (isNaN(d.getTime())) return dateValue;
       
-      return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      const yyyy = d.getFullYear();
+      const h = d.getHours();
+      const m = String(d.getMinutes()).padStart(2, '0');
+      
+      return `${mm}-${dd}-${yyyy} ${h}:${m}`;
     } catch (e) {
       return dateValue;
     }
