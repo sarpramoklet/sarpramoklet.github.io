@@ -18,5 +18,6 @@ export const NAVIGATION = [
   { path: '/assignment', name: 'Penugasan', icon: Briefcase, authRequired: true },
   { path: '/projects', name: 'Proyek & Pengembangan', icon: BarChart3, authRequired: true },
   { path: '/sop', name: 'SOP & Dokumen', icon: BookOpen, authRequired: true },
+  { path: '/duty-notes', name: 'Catatan Piket', icon: BookOpen, authRequired: true },
   { path: '/notifications', name: 'Notifikasi', icon: Bell, authRequired: true },
 ];

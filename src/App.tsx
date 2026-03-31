@@ -18,6 +18,7 @@ import Assignment from './pages/Assignment';
 import Performance from './pages/Performance';
 import Utilities from './pages/Utilities';
 import AccessLogs from './pages/AccessLogs';
+import DutyNotes from './pages/DutyNotes';
 import Login from './pages/Login';
 import { getCurrentUser } from './data/organization';
 import { logAccess } from './utils/logger';
@@ -134,6 +135,7 @@ function App() {
               <Route path="/projects" element={<ProtectedRoute isLoggedIn={isLoggedIn}><DummyPage title="Proyek & Pengembangan" /></ProtectedRoute>} />
               <Route path="/sop" element={<ProtectedRoute isLoggedIn={isLoggedIn}><DummyPage title="SOP & Dokumen" /></ProtectedRoute>} />
               <Route path="/notifications" element={<ProtectedRoute isLoggedIn={isLoggedIn}><DummyPage title="Notifikasi Pribadi" /></ProtectedRoute>} />
+              <Route path="/duty-notes" element={<ProtectedRoute isLoggedIn={isLoggedIn}><DutyNotes /></ProtectedRoute>} />
               <Route path="/maintenance" element={<ProtectedRoute isLoggedIn={isLoggedIn}><DummyPage title="Jadwal Maintenance" /></ProtectedRoute>} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
