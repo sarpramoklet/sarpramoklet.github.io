@@ -269,7 +269,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
               ))}
             </div>
             <div style={{ marginTop: '1.25rem', padding: '0.75rem', borderRadius: '8px', background: 'var(--accent-amber-ghost)', border: '1px solid rgba(245, 158, 11, 0.2)', fontSize: '0.7rem', color: 'var(--accent-amber)', fontStyle: 'italic' }}>
-              * Mohon kerja samanya untuk kelancaran layanan Sarpras MTP.
+              * mari bekerja sama untuk kelancaran layanan excelent dari sarana
             </div>
           </div>
         </div>
