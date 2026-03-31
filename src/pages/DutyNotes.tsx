@@ -257,11 +257,9 @@ const DutyNotes = () => {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Petugas Piket (Pengirim)</label>
-                <select name="senderId" value={formData.senderId} onChange={handleInputChange} style={{ padding: '0.6rem', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-subtle)', color: 'white' }}>
-                  {USERS.filter(u => ['Sarpras', 'Semua Unit', 'IT', 'Laboratorium'].includes(u.unit)).map(u => (
-                    <option key={u.id} value={u.id}>{u.nama}</option>
-                  ))}
-                </select>
+                <div style={{ padding: '0.6rem 1rem', borderRadius: '8px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-subtle)', color: 'var(--accent-blue)', fontSize: '0.9rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <User size={16} /> {USERS.find(u => u.id === formData.senderId)?.nama || 'Unknown'}
+                </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
