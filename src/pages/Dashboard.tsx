@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, LabelList } from 'recharts';
-import { Activity, Clock10, CheckSquare, TriangleAlert, ArrowUpRight, ArrowDownRight, UserCircle2, TrendingUp, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, ShieldCheck } from 'lucide-react';
+import { Activity, Clock10, CheckSquare, TriangleAlert, ArrowUpRight, ArrowDownRight, UserCircle2, TrendingUp, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, ShieldCheck, MessageSquare, AlertCircle } from 'lucide-react';
 import { getCurrentUser, ROLES } from '../data/organization';
 import { getUtilityChartData } from '../data/utilities';
 
@@ -42,6 +42,8 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   const [internalFinance, setInternalFinance] = useState({ balance: 0, expense: 0, categories: [] as any[] });
   const [tuFinance, setTuFinance] = useState({ balance: 0, expense: 0 });
   const [acFinance, setAcFinance] = useState({ balance: 0, expense: 0 });
+  const [piketNotes, setPiketNotes] = useState<any[]>([]);
+  const [piketLoading, setPiketLoading] = useState(false);
 
   useEffect(() => {
     const fetchFinanceData = async () => {
@@ -129,6 +131,29 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
     
     if (isLoggedIn && isAuthorizedFinance) fetchFinanceData();
     else setFinanceLoading(false);
+
+    // Fetch Recent Piket Notes
+    const fetchPiketNotes = async () => {
+      setPiketLoading(true);
+      try {
+        const resp = await fetch(`${FINANCE_API_URL}?sheetName=Piket`);
+        const data = await resp.json();
+        if (data && Array.isArray(data)) {
+          // Ambil 3 catatan terbaru yang isinya tidak kosong
+          const valid = data
+            .filter((item: any) => item.id && item.amount)
+            .reverse()
+            .slice(0, 3);
+          setPiketNotes(valid);
+        }
+      } catch (e) {
+        console.error("Dashboard piket fetch error:", e);
+      } finally {
+        setPiketLoading(false);
+      }
+    };
+
+    if (isLoggedIn) fetchPiketNotes();
   }, [isAuthorizedFinance, isLoggedIn]);
 
   const formatIDR = (val: number) => {
@@ -272,6 +297,53 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
               * mari bekerja sama untuk kelancaran layanan excelent dari sarana
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Catatan Piket Terkini */}
+      <div className="glass-panel delay-300" style={{ marginBottom: '2rem', borderTop: '1px solid var(--border-subtle)' }}>
+        <div style={{ padding: '1rem 1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 style={{ fontSize: '0.95rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <MessageSquare size={18} color="var(--accent-blue)" /> Catatan Temuan Piket Terkini
+          </h3>
+          <a href="#/duty-notes" style={{ fontSize: '0.75rem', color: 'var(--accent-blue)', fontWeight: 600, textDecoration: 'none' }}>Lihat Semua &rarr;</a>
+        </div>
+        <div style={{ padding: '0 1.25rem 1.25rem 1.25rem' }}>
+          {piketLoading ? (
+            <div style={{ padding: '2rem', textAlign: 'center' }}><Loader2 size={24} className="animate-spin" color="var(--accent-blue)" /></div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
+              {piketNotes.length === 0 ? (
+                <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.8rem', background: 'rgba(255,255,255,0.01)', borderRadius: '12px', border: '1px dashed var(--border-subtle)' }}>
+                  Belum ada catatan temuan baru di database.
+                </div>
+              ) : piketNotes.map((note, idx) => (
+                <div key={idx} className="note-card-dashboard" style={{ 
+                  padding: '1rem', 
+                  borderRadius: '12px', 
+                  background: 'rgba(255,255,255,0.02)', 
+                  border: `1px solid ${note.type === 'Urgent' ? 'rgba(244, 63, 94, 0.2)' : 'var(--border-subtle)'}`,
+                  position: 'relative'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                    <span className={`badge ${note.kategori === 'Temuan' ? 'badge-danger' : 'badge-info'}`} style={{ fontSize: '0.6rem', padding: '0.1rem 0.4rem' }}>
+                      {note.kategori}
+                    </span>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{note.tanggal}</span>
+                  </div>
+                  <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.85rem', color: 'var(--text-primary)', lineHeight: '1.4', fontStyle: 'italic' }}>
+                    "{note.amount}"
+                  </p>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: 'var(--accent-blue)', fontWeight: 600 }}>
+                      <UserCircle2 size={14} /> {note.keterangan.split(' ')[0]}
+                    </div>
+                    {note.type === 'Urgent' && <AlertCircle size={14} color="var(--accent-rose)" className="animate-pulse" />}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
