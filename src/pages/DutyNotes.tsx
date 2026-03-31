@@ -3,7 +3,7 @@ import { Plus, Search, User, Loader2, X, RefreshCw, Edit3, Trash2 } from 'lucide
 import { USERS, getCurrentUser } from '../data/organization';
 
 // URL Apps Script DB_Sarpramoklet (URL Terbaru)
-const API_URL = "https://script.google.com/macros/s/AKfycbyiQcb0i1TRlhPgXSXks1SxEYSfRgk-PkFOKuoJn1hK-en708kYHMiYZqBZ1JhZuwROBg/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 
 const DutyNotes = () => {
   const [notes, setNotes] = useState<any[]>([]);
