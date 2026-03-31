@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, LabelList } from 'recharts';
-import { Activity, Clock10, CheckSquare, TriangleAlert, ArrowUpRight, ArrowDownRight, UserCircle2, TrendingUp, Wallet, Loader2, Zap, Droplets, Calendar, Info, ShieldCheck } from 'lucide-react';
+import { Activity, Clock10, CheckSquare, TriangleAlert, ArrowUpRight, ArrowDownRight, UserCircle2, TrendingUp, Wallet, Loader2, Zap, Droplets, Calendar, ShieldCheck } from 'lucide-react';
 import { getCurrentUser, ROLES } from '../data/organization';
 import { getUtilityChartData } from '../data/utilities';
 
@@ -189,6 +189,68 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         <button className="btn btn-primary" style={{ alignSelf: 'flex-start' }}>
           <Activity size={18} /> <span className="mobile-hide">Unduh Laporan PDF</span><span style={{ display: 'none' }} className="mobile-show">Laporan</span>
         </button>
+      </div>
+
+      {/* Jadwal Piket Peminjaman Sarpras - Moved Up for Visibility */}
+      <div className="dashboard-grid" style={{ marginBottom: '2rem', gridTemplateColumns: 'minmax(0, 1.5fr) minmax(0, 1fr)' }}>
+        <div className="glass-panel" style={{ padding: '1.5rem', borderLeft: '4px solid var(--accent-violet)', background: 'linear-gradient(135deg, var(--accent-violet-ghost), transparent)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+            <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <Calendar size={20} color="var(--accent-violet)" /> Jadwal Piket Peminjaman
+            </h3>
+            <div className="badge badge-info" style={{ fontSize: '0.65rem', background: 'var(--accent-violet-ghost)', color: 'var(--accent-violet)', border: '1px solid rgba(139, 92, 246, 0.3)' }}>
+              MULAI 31 MARET 2026
+            </div>
+          </div>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '1rem' }}>
+            {dutySchedule.map((item) => {
+              const daysInIndonesian = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+              const isToday = daysInIndonesian[new Date().getDay()] === item.day;
+              
+              return (
+                <div key={item.day} style={{ 
+                  padding: '1rem', 
+                  borderRadius: '12px', 
+                  background: isToday ? 'var(--accent-violet-ghost)' : 'rgba(255,255,255,0.03)',
+                  border: isToday ? '1px solid var(--accent-violet)' : '1px solid var(--border-subtle)',
+                  position: 'relative'
+                }}>
+                  {isToday && (
+                    <div style={{ position: 'absolute', top: '-10px', right: '10px', background: 'var(--accent-violet)', color: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 800 }}>HARI INI</div>
+                  )}
+                  <div style={{ fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.75rem', color: isToday ? 'var(--accent-violet)' : 'var(--text-primary)' }}>{item.day}</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    {item.personnel.map(p => (
+                      <div key={p} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                        <div style={{ width: 4, height: 4, borderRadius: '50%', background: p === 'Rudi' ? 'var(--accent-emerald)' : 'var(--accent-blue)' }}></div>
+                        {p}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="glass-panel" style={{ padding: '1.5rem', borderLeft: '4px solid var(--accent-cyan)', background: 'linear-gradient(135deg, var(--accent-cyan-ghost), transparent)' }}>
+          <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: '0 0 1.25rem 0', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <ShieldCheck size={20} color="var(--accent-cyan)" /> Ketentuan & Himbauan
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {dutyRules.map((rule, idx) => (
+              <div key={idx} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                <div style={{ flexShrink: 0, marginTop: '2px' }}>
+                  <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'var(--accent-cyan-ghost)', color: 'var(--accent-cyan)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 700, border: '1px solid rgba(6, 182, 212, 0.3)' }}>
+                    {idx + 1}
+                  </div>
+                </div>
+                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>{rule}</p>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
 
@@ -463,71 +525,6 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         </div>
       </div>
 
-      {/* Jadwal Piket Peminjaman Sarpras */}
-      <div className="dashboard-grid delay-300" style={{ marginBottom: '1.5rem', gridTemplateColumns: 'minmax(0, 1.5fr) minmax(0, 1fr)' }}>
-        <div className="glass-panel" style={{ padding: '1.5rem', borderLeft: '4px solid var(--accent-violet)', background: 'linear-gradient(135deg, var(--accent-violet-ghost), transparent)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-            <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <Calendar size={20} color="var(--accent-violet)" /> Jadwal Piket Peminjaman
-            </h3>
-            <div className="badge badge-info" style={{ fontSize: '0.65rem', background: 'var(--accent-violet-ghost)', color: 'var(--accent-violet)', border: '1px solid rgba(139, 92, 246, 0.3)' }}>
-              MULAI 31 MARET 2026
-            </div>
-          </div>
-          
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '1rem' }}>
-            {dutySchedule.map((item) => {
-              const daysInIndonesian = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-              const isToday = daysInIndonesian[new Date().getDay()] === item.day;
-              
-              return (
-                <div key={item.day} style={{ 
-                  padding: '1rem', 
-                  borderRadius: '12px', 
-                  background: isToday ? 'var(--accent-violet-ghost)' : 'rgba(255,255,255,0.03)',
-                  border: isToday ? '1px solid var(--accent-violet)' : '1px solid var(--border-subtle)',
-                  position: 'relative'
-                }}>
-                  {isToday && (
-                    <div style={{ position: 'absolute', top: '-10px', right: '10px', background: 'var(--accent-violet)', color: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 800 }}>HARI INI</div>
-                  )}
-                  <div style={{ fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.75rem', color: isToday ? 'var(--accent-violet)' : 'var(--text-primary)' }}>{item.day}</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                    {item.personnel.map(p => (
-                      <div key={p} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                        <div style={{ width: 4, height: 4, borderRadius: '50%', background: p === 'Rudi' ? 'var(--accent-emerald)' : 'var(--accent-blue)' }}></div>
-                        {p}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="glass-panel" style={{ padding: '1.5rem', borderLeft: '4px solid var(--accent-cyan)', background: 'linear-gradient(135deg, var(--accent-cyan-ghost), transparent)' }}>
-          <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: '0 0 1.25rem 0', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <ShieldCheck size={20} color="var(--accent-cyan)" /> Ketentuan & Himbauan
-          </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {dutyRules.map((rule, idx) => (
-              <div key={idx} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-                <div style={{ flexShrink: 0, marginTop: '2px' }}>
-                  <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'var(--accent-cyan-ghost)', color: 'var(--accent-cyan)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 700, border: '1px solid rgba(6, 182, 212, 0.3)' }}>
-                    {idx + 1}
-                  </div>
-                </div>
-                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>{rule}</p>
-              </div>
-            ))}
-          </div>
-          <div style={{ marginTop: '1.25rem', padding: '0.75rem', borderRadius: '8px', background: 'rgba(6, 182, 212, 0.05)', border: '1px dashed rgba(6, 182, 212, 0.3)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <Info size={16} color="var(--accent-cyan)" />
-            <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--accent-cyan)', fontStyle: 'italic' }}>Informasi penting bagi petugas piket harian.</p>
-          </div>
-        </div>
-      </div>
 
       {isLoggedIn && isPimpinan && (
         <div className="glass-panel delay-300" style={{ marginBottom: '1.5rem' }}>
