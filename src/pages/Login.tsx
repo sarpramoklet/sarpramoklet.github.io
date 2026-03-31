@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Shield } from 'lucide-react';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 import { jwtDecode } from 'jwt-decode';
+import { USERS } from '../data/organization';
+import { logLoginEvent } from '../utils/logger';
 
 // NOTE: Replace this with your actual Google Client ID
 const GOOGLE_CLIENT_ID = "975387842374-locrn64jjrt4m6h7ffsq1ic6m2etbl3o.apps.googleusercontent.com";
@@ -35,6 +37,35 @@ const Login = ({ onLogin }: LoginProps) => {
           'ayat@smktelkom-mlg.sch.id'
         ];
         if (allowedEmails.includes(decoded?.email)) {
+          // Lookup extended user info for the log
+          const emailMap: Record<string, string> = {
+            'hadi@smktelkom-mlg.sch.id': 'U001',
+            'chusni@smktelkom-mlg.sch.id': 'U003',
+            'whyna@smktelkom-mlg.sch.id': 'U002',
+            'ekon.a.poernomo@smktelkom-mlg.sch.id': 'U004',
+            'amalia@smktelkom-mlg.sch.id': 'U005',
+            'rudimistriono@smktelkom-mlg.sch.id': 'U012',
+            'zainul@smktelkom-mlg.sch.id': 'U006',
+            'yoko@smktelkom-mlg.sch.id': 'U013',
+            'nico@smktelkom-mlg.sch.id': 'U010',
+            'zakaria@smktelkom-mlg.sch.id': 'U007',
+            'bagus@smktelkom-mlg.sch.id': 'U009',
+            'chandra@smktelkom-mlg.sch.id': 'U008',
+            'ayat@smktelkom-mlg.sch.id': 'U011'
+          };
+          const userId = emailMap[decoded.email] || '-';
+          const userProfile = USERS.find(u => u.id === userId);
+          
+          // Fire login log BEFORE navigating away
+          logLoginEvent(
+            decoded.email,
+            userProfile?.nama || decoded.name || decoded.email,
+            userProfile?.jabatan || '-',
+            userProfile?.unit || '-',
+            userProfile?.roleAplikasi || '-',
+            userId
+          );
+
           onLogin(decoded.email, decoded.picture);
           navigate('/');
         } else {
@@ -45,6 +76,7 @@ const Login = ({ onLogin }: LoginProps) => {
       }
     }
   };
+
 
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
