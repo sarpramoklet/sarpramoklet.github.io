@@ -131,7 +131,7 @@ const DutyNotes = () => {
     const senderName = USERS.find(u => u.id === formData.senderId)?.nama || currentUser.nama;
     
     const payload = {
-      action: editingNote ? 'UPDATE_RECORD' : 'ADD_RECORD',
+      action: 'FINANCE_RECORD',
       sheetName: 'Piket',
       // Send both cases for record ID
       id: editingNote ? editingNote.id : `NOTE-${Math.floor(1000 + Math.random() * 9000)}`,
