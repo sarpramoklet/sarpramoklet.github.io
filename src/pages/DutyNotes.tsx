@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, User, Loader2, X, RefreshCw } from 'lucide-react';
-import { USERS, getCurrentUser } from '../data/organization';
+import { Plus, Search, User, Loader2, X, RefreshCw, Edit3, Trash2 } from 'lucide-react';
+import { USERS, getCurrentUser, ROLES } from '../data/organization';
 
 // URL Apps Script DB_Sarpramoklet (URL Terbaru)
 const API_URL = "https://script.google.com/macros/s/AKfycbyiQcb0i1TRlhPgXSXks1SxEYSfRgk-PkFOKuoJn1hK-en708kYHMiYZqBZ1JhZuwROBg/exec";
@@ -11,6 +11,21 @@ const DutyNotes = () => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingNote, setEditingNote] = useState<any>(null);
+
+  const currentUser = getCurrentUser();
+  const isAuthorizedToManage = (noteSender: string) => {
+    if (!currentUser) return false;
+    
+    const sender = (noteSender || '').trim().toLowerCase();
+    const currentName = (currentUser.nama || '').trim().toLowerCase();
+    const role = (currentUser.roleAplikasi || '').toLowerCase();
+    
+    return sender === currentName || 
+           role.includes('pimpinan') || 
+           role.includes('admin') ||
+           role.includes('executive');
+  };
 
   // Form State
   const [formData, setFormData] = useState({
@@ -47,16 +62,16 @@ const DutyNotes = () => {
       if (data && Array.isArray(data)) {
         // PERBAIKAN: Filter baris kosong & Normalisasi data
         const normalized = data
-          .filter(item => item.id && item.amount !== "") // Filter baris yang punya ID dan Isi
+          .filter(item => item.id && (item.amount !== "" || item.Amount !== "")) // Filter baris yang punya ID dan Isi
           .map(item => ({
-            id: item.id,
-            tanggal: formatDate(item.tanggal), // Pastikan format tanggal seragam
-            keterangan: item.keterangan || "Petugas",
-            kategori: item.kategori || "Pesan",
-            amount: item.amount,
-            type: item.type || "Info",
-            debit: item.debit === true || item.debit === "TRUE",
-            kredit: item.kredit || ""
+            id: item.id || item.ID,
+            tanggal: formatDate(item.tanggal || item.Tanggal), // Pastikan format tanggal seragam
+            keterangan: item.keterangan || item.Keterangan || "Petugas",
+            kategori: item.kategori || item.Kategori || "Pesan",
+            amount: item.amount || item.Amount,
+            type: item.type || item.Type || "Info",
+            debit: item.debit === true || item.debit === "TRUE" || item.Debit === "TRUE",
+            kredit: item.kredit || item.Kredit || ""
           }));
         setNotes(normalized.reverse());
       } else {
@@ -69,23 +84,61 @@ const DutyNotes = () => {
     }
   };
 
+  const handleEdit = (note: any) => {
+    setEditingNote(note);
+    setFormData({
+      kategori: note.kategori,
+      type: note.type,
+      amount: note.amount,
+      kredit: note.kredit === "-" ? "" : note.kredit,
+      senderId: USERS.find(u => u.nama === note.keterangan)?.id || currentUser.id
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleDelete = async (id: string, keterangan: string) => {
+    if (!confirm(`Hapus catatan dari "${keterangan}"?`)) return;
+    
+    setLoading(true);
+    try {
+      await fetch(API_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ 
+          action: 'DELETE_RECORD', 
+          sheetName: 'Piket',
+          id: id
+        })
+      });
+      
+      // Update local state immediately
+      setNotes(prev => prev.filter(n => n.id !== id));
+      setTimeout(fetchNotes, 2000);
+    } catch (error) {
+      console.error("Delete failed:", error);
+      alert("Gagal menghapus. Cek koneksi Anda.");
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.amount.trim()) return;
     
     setIsSubmitting(true);
-    const currentUser = getCurrentUser();
     const senderName = USERS.find(u => u.id === formData.senderId)?.nama || currentUser.nama;
     
     const payload = {
+      action: editingNote ? 'UPDATE_RECORD' : 'ADD_RECORD',
       sheetName: 'Piket',
-      id: `NOTE-${Math.floor(1000 + Math.random() * 9000)}`,
-      tanggal: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
+      id: editingNote ? editingNote.id : `NOTE-${Math.floor(1000 + Math.random() * 9000)}`,
+      tanggal: editingNote ? editingNote.tanggal : new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
       keterangan: senderName,
       kategori: formData.kategori,
       amount: formData.amount,
       type: formData.type,
-      debit: "FALSE",
+      debit: editingNote ? (editingNote.debit ? "TRUE" : "FALSE") : "FALSE",
       kredit: formData.kredit || "-"
     };
 
@@ -99,6 +152,7 @@ const DutyNotes = () => {
       });
       
       setIsModalOpen(false);
+      setEditingNote(null);
       setFormData({ ...formData, amount: '', kredit: '' });
       setTimeout(fetchNotes, 3000); // Sinkronisasi ulang dengan jeda lebih lama agar DB sempat update
     } catch (error) {
@@ -201,7 +255,31 @@ const DutyNotes = () => {
                 </div>
                 <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{note.keterangan}</span>
               </div>
-              {!note.debit && <div style={{ fontSize: '0.65rem', color: 'var(--accent-blue)', fontWeight: 700 }}>BARU</div>}
+              
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                {!note.debit && <div style={{ fontSize: '0.65rem', color: 'var(--accent-blue)', fontWeight: 700, marginRight: '0.5rem' }}>BARU</div>}
+                
+                {isAuthorizedToManage(note.keterangan) && (
+                  <div style={{ display: 'flex', gap: '0.25rem' }}>
+                    <button 
+                      onClick={() => handleEdit(note)} 
+                      className="btn-icon" 
+                      style={{ padding: '6px', background: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)' }}
+                      title="Edit Catatan"
+                    >
+                      <Edit3 size={14} />
+                    </button>
+                    <button 
+                      onClick={() => handleDelete(note.id, note.keterangan)} 
+                      className="btn-icon" 
+                      style={{ padding: '6px', background: 'rgba(244, 63, 94, 0.05)', color: 'var(--accent-rose)' }}
+                      title="Hapus Catatan"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         ))}
@@ -215,8 +293,8 @@ const DutyNotes = () => {
         }}>
           <div className="glass-panel" style={{ width: '500px', padding: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h2 style={{ fontSize: '1.25rem', margin: 0 }}>Tambah Catatan</h2>
-              <button onClick={() => setIsModalOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)' }}><X size={20} /></button>
+              <h2 style={{ fontSize: '1.25rem', margin: 0 }}>{editingNote ? 'Edit Catatan' : 'Tambah Catatan'}</h2>
+              <button onClick={() => { setIsModalOpen(false); setEditingNote(null); }} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={20} /></button>
             </div>
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -248,7 +326,7 @@ const DutyNotes = () => {
               </div>
 
               <button type="submit" className="btn btn-primary" disabled={isSubmitting} style={{ padding: '0.75rem' }}>
-                {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : 'Kirim Catatan'}
+                {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : (editingNote ? 'Simpan Perubahan' : 'Kirim Catatan')}
               </button>
             </form>
           </div>

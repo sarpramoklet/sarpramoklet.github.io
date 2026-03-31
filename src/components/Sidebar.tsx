@@ -143,7 +143,7 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
             if (user.unit === 'Semua Unit') return true;
             
             // Common menus for all authenticated staff
-            const alwaysVisible = ['Dashboard', 'Rapat Bulanan', 'Notifikasi'];
+            const alwaysVisible = ['Dashboard', 'Rapat Bulanan', 'Notifikasi', 'Catatan Piket'];
 
             // Chusni (Koordinator Laboratorium)
             if (user.unit === 'Laboratorium') {

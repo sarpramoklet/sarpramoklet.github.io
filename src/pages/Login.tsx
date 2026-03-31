@@ -24,7 +24,15 @@ const Login = ({ onLogin }: LoginProps) => {
           'chusni@smktelkom-mlg.sch.id',
           'whyna@smktelkom-mlg.sch.id',
           'ekon.a.poernomo@smktelkom-mlg.sch.id',
-          'amalia@smktelkom-mlg.sch.id'
+          'amalia@smktelkom-mlg.sch.id',
+          'rudimistriono@smktelkom-mlg.sch.id',
+          'zainul@smktelkom-mlg.sch.id',
+          'yoko@smktelkom-mlg.sch.id',
+          'nico@smktelkom-mlg.sch.id',
+          'zakaria@smktelkom-mlg.sch.id',
+          'bagus@smktelkom-mlg.sch.id',
+          'chandra@smktelkom-mlg.sch.id',
+          'ayat@smktelkom-mlg.sch.id'
         ];
         if (allowedEmails.includes(decoded?.email)) {
           onLogin(decoded.email, decoded.picture);

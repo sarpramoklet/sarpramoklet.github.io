@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, LabelList } from 'recharts';
-import { Activity, Clock10, CheckSquare, TriangleAlert, ArrowUpRight, ArrowDownRight, UserCircle2, TrendingUp, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, ShieldCheck, MessageSquare, AlertCircle } from 'lucide-react';
+import { Activity, Clock10, CheckSquare, TriangleAlert, ArrowUpRight, ArrowDownRight, UserCircle2, TrendingUp, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, ShieldCheck, MessageSquare, AlertCircle, Edit3, Trash2 } from 'lucide-react';
 import { getCurrentUser, ROLES } from '../data/organization';
 import { getUtilityChartData } from '../data/utilities';
 
@@ -155,6 +155,48 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
 
     if (isLoggedIn) fetchPiketNotes();
   }, [isAuthorizedFinance, isLoggedIn]);
+
+  const handleDeletePiket = async (id: string, keterangan: string) => {
+    if (!confirm(`Hapus catatan dari "${keterangan}"?`)) return;
+    
+    setPiketLoading(true);
+    try {
+      await fetch(FINANCE_API_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ 
+          action: 'DELETE_RECORD', 
+          sheetName: 'Piket',
+          id: id
+        })
+      });
+      
+      setPiketNotes(prev => prev.filter(n => n.id !== id));
+      // Refresh after a delay
+      setTimeout(() => {
+        // Simple manual refresh of state
+        setPiketLoading(false);
+      }, 1000);
+    } catch (error) {
+      console.error("Delete dashboard piket failed:", error);
+      alert("Gagal menghapus.");
+      setPiketLoading(false);
+    }
+  };
+
+  const isAuthorizedToManagePiket = (noteSender: string) => {
+    if (!currentUser) return false;
+    
+    const sender = (noteSender || '').trim().toLowerCase();
+    const currentName = (currentUser.nama || '').trim().toLowerCase();
+    const role = (currentUser.roleAplikasi || '').toLowerCase();
+    
+    return sender === currentName || 
+           role.includes('pimpinan') || 
+           role.includes('admin') ||
+           role.includes('executive');
+  };
 
   const formatIDR = (val: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
@@ -338,7 +380,28 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: 'var(--accent-blue)', fontWeight: 600 }}>
                       <UserCircle2 size={14} /> {note.keterangan.split(' ')[0]}
                     </div>
-                    {note.type === 'Urgent' && <AlertCircle size={14} color="var(--accent-rose)" className="animate-pulse" />}
+                    
+                    <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                      {isAuthorizedToManagePiket(note.keterangan) && (
+                        <>
+                          <button 
+                            onClick={(e) => { e.preventDefault(); window.location.hash = '/duty-notes'; }} 
+                            style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px' }}
+                            title="Edit"
+                          >
+                            <Edit3 size={13} />
+                          </button>
+                          <button 
+                            onClick={(e) => { e.preventDefault(); handleDeletePiket(note.id, note.keterangan); }} 
+                            style={{ background: 'transparent', border: 'none', color: 'var(--accent-rose)', cursor: 'pointer', padding: '2px' }}
+                            title="Hapus"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </>
+                      )}
+                      {note.type === 'Urgent' && <AlertCircle size={14} color="var(--accent-rose)" className="animate-pulse" />}
+                    </div>
                   </div>
                 </div>
               ))}
