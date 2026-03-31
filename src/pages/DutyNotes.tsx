@@ -210,10 +210,7 @@ const DutyNotes = () => {
     <div className="animate-fade-in">
       <div className="flex-row-responsive" style={{ marginBottom: '2rem' }}>
         <div>
-           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-              <span className="badge badge-info" style={{ fontSize: '0.65rem' }}>SQL_CLOUD_SYNC</span>
-              <span className="badge" style={{ fontSize: '0.65rem', background: 'rgba(255,255,255,0.05)' }}>Sheet: Piket</span>
-           </div>
+
            <h1 className="page-title gradient-text">Buku Catatan Piket</h1>
            <p className="page-subtitle" style={{ margin: 0 }}>Koordinasi & tindak lanjut operasional lapangan</p>
         </div>
