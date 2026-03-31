@@ -127,65 +127,88 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
             scrollbarWidth: 'thin'
           }}
         >
-          {NAVIGATION.filter(item => {
+          {(() => {
             const user = getCurrentUser();
-            
-            // For Amalia (Tata Kelola), exclude unit-specific public landing pages
-            if (user.unit === 'Tata Kelola') {
-               const excludedPublic = ['IT Services', 'Laboratorium', 'Sarpras'];
-               if (excludedPublic.includes(item.name)) return false;
+            const userEmail = localStorage.getItem('userEmail') || '';
+            const piketEmails = [
+              'rudimistriono@smktelkom-mlg.sch.id',
+              'zainul@smktelkom-mlg.sch.id',
+              'yoko@smktelkom-mlg.sch.id',
+              'nico@smktelkom-mlg.sch.id',
+              'zakaria@smktelkom-mlg.sch.id',
+              'bagus@smktelkom-mlg.sch.id',
+              'chandra@smktelkom-mlg.sch.id',
+              'ayat@smktelkom-mlg.sch.id'
+            ];
+            const isPetugasPiket = piketEmails.includes(userEmail);
+
+            // Filter logic
+            const filteredItems = NAVIGATION.filter(item => {
+              // Hide Performance for Petugas Piket as requested
+              if (isPetugasPiket && item.name === 'Kinerja Personel') return false;
+              
+              // For Amalia (Tata Kelola), exclude unit-specific public landing pages
+              if (user.unit === 'Tata Kelola') {
+                const excludedPublic = ['IT Services', 'Laboratorium', 'Sarpras'];
+                if (excludedPublic.includes(item.name)) return false;
+              }
+
+              if (!item.authRequired) return true;
+              if (!isLoggedIn) return false;
+              
+              // Hadi (Semua Unit) has full access
+              if (user.unit === 'Semua Unit') return true;
+              
+              // Common menus for all authenticated staff
+              const alwaysVisible = ['Dashboard', 'Rapat Bulanan', 'Notifikasi', 'Catatan Piket'];
+
+              // Unit based access
+              if (user.unit === 'Laboratorium') {
+                const allowed = [...alwaysVisible, 'Laboratorium', 'Permintaan Layanan', 'Penugasan', 'Kinerja Personel', 'Proyek & Pengembangan'];
+                return allowed.includes(item.name);
+              }
+              if (user.unit === 'IT') {
+                const allowed = [...alwaysVisible, 'IT Services', 'Permintaan Layanan', 'Penugasan', 'Kinerja Personel', 'Proyek & Pengembangan'];
+                return allowed.includes(item.name);
+              }
+              if (user.unit === 'Sarpras') {
+                const allowed = [...alwaysVisible, 'Sarpras', 'Permintaan Layanan', 'Tagihan Utilitas', 'Aset & Inventaris', 'Penugasan', 'Kinerja Personel', 'Proyek & Pengembangan'];
+                return allowed.includes(item.name);
+              }
+              if (user.unit === 'Tata Kelola') {
+                const allowed = [...alwaysVisible, 'Tata Kelola Keuangan', 'Kas Operasional TU', 'Personel', 'SOP & Dokumen'];
+                return allowed.includes(item.name);
+              }
+              
+              return alwaysVisible.includes(item.name);
+            });
+
+            // Sorting logic for Petugas Piket: Move Catatan Piket to top
+            if (isPetugasPiket) {
+              const piketNoteIndex = filteredItems.findIndex(i => i.name === 'Catatan Piket');
+              if (piketNoteIndex > -1) {
+                const [piketNote] = filteredItems.splice(piketNoteIndex, 1);
+                filteredItems.unshift(piketNote);
+              }
             }
 
-            if (!item.authRequired) return true;
-            if (!isLoggedIn) return false;
-            
-            // Hadi (Semua Unit) has full access
-            if (user.unit === 'Semua Unit') return true;
-            
-            // Common menus for all authenticated staff
-            const alwaysVisible = ['Dashboard', 'Rapat Bulanan', 'Notifikasi', 'Catatan Piket'];
-
-            // Chusni (Koordinator Laboratorium)
-            if (user.unit === 'Laboratorium') {
-               const allowed = [...alwaysVisible, 'Laboratorium', 'Permintaan Layanan', 'Penugasan', 'Kinerja Personel', 'Proyek & Pengembangan'];
-               return allowed.includes(item.name);
-            }
-
-            // Whyna (Koordinator IT)
-            if (user.unit === 'IT') {
-               const allowed = [...alwaysVisible, 'IT Services', 'Permintaan Layanan', 'Penugasan', 'Kinerja Personel', 'Proyek & Pengembangan'];
-               return allowed.includes(item.name);
-            }
-
-            // Ekon (Koordinator Sarpras)
-            if (user.unit === 'Sarpras') {
-               const allowed = [...alwaysVisible, 'Sarpras', 'Permintaan Layanan', 'Tagihan Utilitas', 'Aset & Inventaris', 'Penugasan', 'Kinerja Personel', 'Proyek & Pengembangan'];
-               return allowed.includes(item.name);
-            }
-            
-            // Amalia (Tata Kelola / Keuangan)
-            if (user.unit === 'Tata Kelola') {
-               const allowed = [...alwaysVisible, 'Tata Kelola Keuangan', 'Kas Operasional TU', 'Personel', 'SOP & Dokumen'];
-               return allowed.includes(item.name);
-            }
-            
-            return alwaysVisible.includes(item.name);
-          }).map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.path;
-            
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`nav-item ${isActive ? 'active' : ''}`}
-                onClick={handleClose}
-              >
-                <Icon className="nav-icon" />
-                <span>{item.name}</span>
-              </Link>
-            );
-          })}
+            return filteredItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = location.pathname === item.path;
+              
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`nav-item ${isActive ? 'active' : ''}`}
+                  onClick={handleClose}
+                >
+                  <Icon className="nav-icon" />
+                  <span>{item.name}</span>
+                </Link>
+              );
+            });
+          })()}
         </nav>
 
         <div style={{ padding: '1rem', borderTop: '1px solid var(--border-subtle)', textAlign: 'center' }}>
