@@ -93,15 +93,17 @@ const DutyNotes = () => {
       await fetch(API_URL, {
         method: "POST",
         mode: "no-cors",
+        redirect: "follow",
         headers: { "Content-Type": "text/plain" },
         body: JSON.stringify(payload)
       });
       
       setIsModalOpen(false);
       setFormData({ ...formData, amount: '', kredit: '' });
-      setTimeout(fetchNotes, 1500); // Sync ulang setelah 1.5 detik
+      setTimeout(fetchNotes, 3000); // Sinkronisasi ulang dengan jeda lebih lama agar DB sempat update
     } catch (error) {
       console.error("Submit failed:", error);
+      alert("Gagal mengirim ke database. Coba cek koneksi Anda.");
     } finally {
       setIsSubmitting(false);
     }
