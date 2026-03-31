@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, User, Loader2, X, RefreshCw, Edit3, Trash2 } from 'lucide-react';
 import { USERS, getCurrentUser } from '../data/organization';
+import { logAccess } from '../utils/logger';
 
 // URL Apps Script DB_Sarpramoklet (URL Terbaru)
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
@@ -38,6 +39,7 @@ const DutyNotes = () => {
 
   useEffect(() => {
     fetchNotes();
+    logAccess(getCurrentUser(), 'Catatan Piket');
   }, []);
 
   const formatDate = (dateValue: any) => {
@@ -309,9 +311,10 @@ const DutyNotes = () => {
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)',
-          display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100
+          display: 'flex', justifyContent: 'center', alignItems: 'flex-start', 
+          zIndex: 100, padding: '1rem', paddingTop: '5rem', overflowY: 'auto'
         }}>
-          <div className="glass-panel" style={{ width: '500px', padding: '2rem' }}>
+          <div className="glass-panel" style={{ width: '500px', maxWidth: '100%', padding: '2rem', marginBottom: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h2 style={{ fontSize: '1.25rem', margin: 0 }}>{editingNote ? 'Edit Catatan' : 'Tambah Catatan'}</h2>
               <button onClick={() => { setIsModalOpen(false); setEditingNote(null); }} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={20} /></button>
