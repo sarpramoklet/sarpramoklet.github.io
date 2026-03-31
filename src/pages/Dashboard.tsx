@@ -172,70 +172,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         </button>
       </div>
 
-
-      <div className="stats-grid">
-        <div className="glass-panel stat-card delay-100">
-          <div className="stat-header">
-            <span className="stat-title">Pekerjaan Aktif</span>
-            <div className="stat-icon-wrapper" style={{ background: 'var(--accent-blue-ghost)', color: 'var(--accent-blue)' }}>
-              <Activity size={20} />
-            </div>
-          </div>
-          <div>
-            <div className="stat-value">142</div>
-            <div className="stat-trend trend-up">
-              <ArrowUpRight size={16} /> <span>12% dibanding bulan lalu</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="glass-panel stat-card delay-200">
-          <div className="stat-header">
-            <span className="stat-title">Rata-rata Penanganan</span>
-            <div className="stat-icon-wrapper" style={{ background: 'var(--accent-emerald-ghost)', color: 'var(--accent-emerald)' }}>
-              <Clock10 size={20} />
-            </div>
-          </div>
-          <div>
-            <div className="stat-value">2.4 <span style={{ fontSize: '1.25rem', color: 'var(--text-secondary)' }}>jam</span></div>
-            <div className="stat-trend trend-down">
-              <ArrowDownRight size={16} /> <span style={{ color: 'var(--accent-emerald)' }}>Menurun 15% (Lebih Cepat)</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="glass-panel stat-card delay-300">
-          <div className="stat-header">
-            <span className="stat-title">Pekerjaan Selesai</span>
-            <div className="stat-icon-wrapper" style={{ background: 'var(--accent-violet-ghost)', color: 'var(--accent-violet)' }}>
-              <CheckSquare size={20} />
-            </div>
-          </div>
-          <div>
-            <div className="stat-value">489</div>
-            <div className="stat-trend trend-up">
-              <ArrowUpRight size={16} /> <span>Tingkat Ketercapaian: 94%</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="glass-panel stat-card" style={{ animationDelay: '0.4s' }}>
-          <div className="stat-header">
-            <span className="stat-title">Tiket Overdue</span>
-            <div className="stat-icon-wrapper" style={{ background: 'var(--accent-rose-ghost)', color: 'var(--accent-rose)' }}>
-              <TriangleAlert size={20} />
-            </div>
-          </div>
-          <div>
-            <div className="stat-value" style={{ color: 'var(--accent-rose)' }}>14</div>
-            <div className="stat-trend trend-up" style={{ color: 'var(--accent-rose)' }}>
-              <ArrowUpRight size={16} /> <span>Perlu Perhatian Pimpinan</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Jadwal Piket Sarpras Section */}
+      {/* Jadwal Piket Sarpras Section - Moved to Top */}
       <div className="glass-panel delay-300" style={{ marginBottom: '2rem', overflow: 'hidden' }}>
         <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border-subtle)', background: 'linear-gradient(90deg, var(--accent-violet-ghost), transparent)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
@@ -333,6 +270,68 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
             </div>
             <div style={{ marginTop: '1.25rem', padding: '0.75rem', borderRadius: '8px', background: 'var(--accent-amber-ghost)', border: '1px solid rgba(245, 158, 11, 0.2)', fontSize: '0.7rem', color: 'var(--accent-amber)', fontStyle: 'italic' }}>
               * Mohon kerja samanya untuk kelancaran layanan Sarpras MTP.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="stats-grid">
+        <div className="glass-panel stat-card delay-100">
+          <div className="stat-header">
+            <span className="stat-title">Pekerjaan Aktif</span>
+            <div className="stat-icon-wrapper" style={{ background: 'var(--accent-blue-ghost)', color: 'var(--accent-blue)' }}>
+              <Activity size={20} />
+            </div>
+          </div>
+          <div>
+            <div className="stat-value">142</div>
+            <div className="stat-trend trend-up">
+              <ArrowUpRight size={16} /> <span>12% dibanding bulan lalu</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="glass-panel stat-card delay-200">
+          <div className="stat-header">
+            <span className="stat-title">Rata-rata Penanganan</span>
+            <div className="stat-icon-wrapper" style={{ background: 'var(--accent-emerald-ghost)', color: 'var(--accent-emerald)' }}>
+              <Clock10 size={20} />
+            </div>
+          </div>
+          <div>
+            <div className="stat-value">2.4 <span style={{ fontSize: '1.25rem', color: 'var(--text-secondary)' }}>jam</span></div>
+            <div className="stat-trend trend-down">
+              <ArrowDownRight size={16} /> <span style={{ color: 'var(--accent-emerald)' }}>Menurun 15% (Lebih Cepat)</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="glass-panel stat-card delay-300">
+          <div className="stat-header">
+            <span className="stat-title">Pekerjaan Selesai</span>
+            <div className="stat-icon-wrapper" style={{ background: 'var(--accent-violet-ghost)', color: 'var(--accent-violet)' }}>
+              <CheckSquare size={20} />
+            </div>
+          </div>
+          <div>
+            <div className="stat-value">489</div>
+            <div className="stat-trend trend-up">
+              <ArrowUpRight size={16} /> <span>Tingkat Ketercapaian: 94%</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="glass-panel stat-card" style={{ animationDelay: '0.4s' }}>
+          <div className="stat-header">
+            <span className="stat-title">Tiket Overdue</span>
+            <div className="stat-icon-wrapper" style={{ background: 'var(--accent-rose-ghost)', color: 'var(--accent-rose)' }}>
+              <TriangleAlert size={20} />
+            </div>
+          </div>
+          <div>
+            <div className="stat-value" style={{ color: 'var(--accent-rose)' }}>14</div>
+            <div className="stat-trend trend-up" style={{ color: 'var(--accent-rose)' }}>
+              <ArrowUpRight size={16} /> <span>Perlu Perhatian Pimpinan</span>
             </div>
           </div>
         </div>
