@@ -21,33 +21,41 @@ const buildLogPayload = (
   role: string,
   email: string,
   page: string
-) => ({
-  // Action that reliably appends a new row via Apps Script
-  action: 'FINANCE_RECORD',
-  sheetName: 'Log_Akses',
-  sheet: 'Log_Akses',
+) => {
+  // Always unique per access event — ensures FINANCE_RECORD always INSERTs a new row
+  const logId = `LOG-${Date.now()}-${Math.floor(Math.random() * 9999)}`;
 
-  // Match exact column header names (case-sensitive)
-  Timestamp: new Date().toLocaleString('id-ID'),
-  ID: userId,
-  Nama: nama,
-  Jabatan: jabatan,
-  Unit: unit,
-  Role: role,
-  Email: email,
-  Device: getDeviceInfo(),
+  return {
+    // Action that appends a new row via Apps Script
+    action: 'FINANCE_RECORD',
+    sheetName: 'Log_Akses',
+    sheet: 'Log_Akses',
 
-  // Lowercase fallback keys for compatibility
-  id: userId,
-  timestamp: new Date().toLocaleString('id-ID'),
-  nama: nama,
-  jabatan: jabatan,
-  unit: unit,
-  roleAplikasi: role,
-  email: email,
-  device: getDeviceInfo(),
-  page: page,
-});
+    // Unique log entry ID — never the same, so always inserts
+    id: logId,
+    ID: logId,
+
+    // Match exact column header names (case-sensitive)
+    Timestamp: new Date().toLocaleString('id-ID'),
+    ID_User: userId,   // User's own ID stored separately
+    Nama: nama,
+    Jabatan: jabatan,
+    Unit: unit,
+    Role: role,
+    Email: email,
+    Device: getDeviceInfo(),
+    Page: page,
+
+    // Lowercase fallback keys
+    timestamp: new Date().toLocaleString('id-ID'),
+    nama,
+    jabatan,
+    unit,
+    roleAplikasi: role,
+    email,
+    device: getDeviceInfo(),
+  };
+};
 
 // For use in page components — reads from getCurrentUser() after login
 export const logAccess = async (user: User, pageName: string = 'Dashboard') => {
