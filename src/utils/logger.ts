@@ -5,8 +5,19 @@ const LOG_API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQC
 
 export const logAccess = async (user: User, pageName: string = 'Dashboard') => {
   const logData = {
-    action: 'LOG_ACCESS',
+    action: 'LOG_ACCESS', // Keep this as common action for logging scripts
     page: pageName,
+    
+    // Exact matches for spreadsheet headers
+    Timestamp: new Date().toLocaleString('id-ID'),
+    ID: user.id,
+    Nama: user.nama,
+    Jabatan: user.jabatan,
+    Unit: user.unit,
+    Role: user.roleAplikasi,
+    Email: localStorage.getItem('userEmail') || 'unknown',
+    
+    // Also keep lowercase versions for broader compatibility
     timestamp: new Date().toLocaleString('id-ID'),
     userId: user.id,
     nama: user.nama,
