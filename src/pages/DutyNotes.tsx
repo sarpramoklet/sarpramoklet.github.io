@@ -108,7 +108,8 @@ const DutyNotes = () => {
         body: JSON.stringify({ 
           action: 'DELETE_RECORD', 
           sheetName: 'Piket',
-          id: id
+          id: id,
+          ID: id
         })
       });
       
@@ -132,14 +133,31 @@ const DutyNotes = () => {
     const payload = {
       action: editingNote ? 'UPDATE_RECORD' : 'ADD_RECORD',
       sheetName: 'Piket',
+      // Send both cases for record ID
       id: editingNote ? editingNote.id : `NOTE-${Math.floor(1000 + Math.random() * 9000)}`,
+      ID: editingNote ? editingNote.id : `NOTE-${Math.floor(1000 + Math.random() * 9000)}`,
+      
+      // Standard header names in Sheets (mapped in both cases)
       tanggal: editingNote ? editingNote.tanggal : new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
+      Tanggal: editingNote ? editingNote.tanggal : new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
+      
       keterangan: senderName,
+      Sender: senderName,
+      
       kategori: formData.kategori,
+      Category: formData.kategori,
+      
       amount: formData.amount,
+      Amount: formData.amount,
+      
       type: formData.type,
+      Priority: formData.type,
+      
       debit: editingNote ? (editingNote.debit ? "TRUE" : "FALSE") : "FALSE",
-      kredit: formData.kredit || "-"
+      Read: editingNote ? (editingNote.debit ? "TRUE" : "FALSE") : "FALSE",
+      
+      kredit: formData.kredit || "-",
+      Followup: formData.kredit || "-"
     };
 
     try {
