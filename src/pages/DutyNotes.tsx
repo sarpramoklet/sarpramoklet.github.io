@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { ClipboardList, Plus, Search, MessageSquare, AlertCircle, CheckCircle2, User, Calendar, Loader2, X } from 'lucide-react';
 import { USERS, getCurrentUser } from '../data/organization';
 
-// URL Apps Script DB_Sarpramoklet (Same as Dashboard/Finance)
-const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
+// URL Apps Script DB_Sarpramoklet (URL Terbaru)
+const API_URL = "https://script.google.com/macros/s/AKfycbzIk_jtgDIgpcKq_CFRUrRo0kosl1upxt6QTZRTypc-PAnA01p5ZKfHhIFk8Wt1k3u_zQ/exec";
 
 const DutyNotes = () => {
   const [notes, setNotes] = useState<any[]>([]);
