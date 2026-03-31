@@ -3,7 +3,7 @@ import { Plus, Search, User, Loader2, X, RefreshCw } from 'lucide-react';
 import { USERS, getCurrentUser } from '../data/organization';
 
 // URL Apps Script DB_Sarpramoklet (URL Terbaru)
-const API_URL = "https://script.google.com/macros/s/AKfycbzIk_jtgDIgpcKq_CFRUrRo0kosl1upxt6QTZRTypc-PAnA01p5ZKfHhIFk8Wt1k3u_zQ/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyDoWkbsahg_JmUKQNFvydy9Mlx4yScY4yp6pGDPkNtfI9V8KBDuzZhte_lSJObuFtiEg/exec";
 
 const DutyNotes = () => {
   const [notes, setNotes] = useState<any[]>([]);
