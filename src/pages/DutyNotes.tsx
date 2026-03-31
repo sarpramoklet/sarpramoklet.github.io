@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Search, User, Loader2, X, RefreshCw } from 'lucide-react';
 import { USERS, getCurrentUser } from '../data/organization';
 
-// URL Apps Script DB_Sarpramoklet
+// URL Apps Script DB_Sarpramoklet (URL Terbaru)
 const API_URL = "https://script.google.com/macros/s/AKfycbzIk_jtgDIgpcKq_CFRUrRo0kosl1upxt6QTZRTypc-PAnA01p5ZKfHhIFk8Wt1k3u_zQ/exec";
 
 const DutyNotes = () => {
@@ -12,18 +12,31 @@ const DutyNotes = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Form State disesuaikan dengan skema DB baru
+  // Form State
   const [formData, setFormData] = useState({
     kategori: 'Temuan',
     type: 'Info',
-    amount: '', // Isi Pesan
-    kredit: '', // Tindak Lanjut
+    amount: '',
+    kredit: '',
     senderId: getCurrentUser().id
   });
 
   useEffect(() => {
     fetchNotes();
   }, []);
+
+  const formatDate = (dateValue: any) => {
+    if (!dateValue || dateValue === "") return "-";
+    try {
+      const d = new Date(dateValue);
+      // Cek apakah date valid, jika tidak gunakan string aslinya
+      if (isNaN(d.getTime())) return dateValue;
+      
+      return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch (e) {
+      return dateValue;
+    }
+  };
 
   const fetchNotes = async () => {
     setLoading(true);
@@ -32,17 +45,19 @@ const DutyNotes = () => {
       const data = await response.json();
       
       if (data && Array.isArray(data)) {
-        // Normalisasi data dari DB sesuai header user: id, tanggal, keterangan, kategori, amount, type, debit, kredit
-        const normalized = data.map(item => ({
-          id: item.id,
-          tanggal: item.tanggal,
-          keterangan: item.keterangan, // Sender
-          kategori: item.kategori, // Temuan/Pesan
-          amount: item.amount, // Content
-          type: item.type, // Priority
-          debit: item.debit === true || item.debit === "TRUE", // Read Status
-          kredit: item.kredit // Follow-up
-        }));
+        // PERBAIKAN: Filter baris kosong & Normalisasi data
+        const normalized = data
+          .filter(item => item.id && item.amount !== "") // Filter baris yang punya ID dan Isi
+          .map(item => ({
+            id: item.id,
+            tanggal: formatDate(item.tanggal), // Pastikan format tanggal seragam
+            keterangan: item.keterangan || "Petugas",
+            kategori: item.kategori || "Pesan",
+            amount: item.amount,
+            type: item.type || "Info",
+            debit: item.debit === true || item.debit === "TRUE",
+            kredit: item.kredit || ""
+          }));
         setNotes(normalized.reverse());
       } else {
         setNotes([]);
@@ -59,11 +74,9 @@ const DutyNotes = () => {
     if (!formData.amount.trim()) return;
     
     setIsSubmitting(true);
-
     const currentUser = getCurrentUser();
     const senderName = USERS.find(u => u.id === formData.senderId)?.nama || currentUser.nama;
     
-    // Mapping Payload sesuai header Spreadsheet: id, tanggal, keterangan, kategori, amount, type, debit, kredit
     const payload = {
       sheetName: 'Piket',
       id: `NOTE-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -72,8 +85,8 @@ const DutyNotes = () => {
       kategori: formData.kategori,
       amount: formData.amount,
       type: formData.type,
-      debit: "FALSE", // Default status baca
-      kredit: formData.kredit || "-" // Tindak Lanjut
+      debit: "FALSE",
+      kredit: formData.kredit || "-"
     };
 
     try {
@@ -86,7 +99,7 @@ const DutyNotes = () => {
       
       setIsModalOpen(false);
       setFormData({ ...formData, amount: '', kredit: '' });
-      setTimeout(fetchNotes, 1500);
+      setTimeout(fetchNotes, 1500); // Sync ulang setelah 1.5 detik
     } catch (error) {
       console.error("Submit failed:", error);
     } finally {
@@ -105,7 +118,7 @@ const DutyNotes = () => {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh', flexDirection: 'column', gap: '1rem' }}>
         <Loader2 size={32} className="animate-spin" color="var(--accent-blue)" />
-        <p style={{ color: 'var(--text-secondary)' }}>Menyambungkan ke Database...</p>
+        <p style={{ color: 'var(--text-secondary)' }}>Membaca Catatan dari Cloud DB...</p>
       </div>
     );
   }
@@ -115,11 +128,11 @@ const DutyNotes = () => {
       <div className="flex-row-responsive" style={{ marginBottom: '2rem' }}>
         <div>
            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-              <span className="badge badge-info" style={{ fontSize: '0.65rem' }}>DB_Sarpramoklet</span>
+              <span className="badge badge-info" style={{ fontSize: '0.65rem' }}>SQL_CLOUD_SYNC</span>
               <span className="badge" style={{ fontSize: '0.65rem', background: 'rgba(255,255,255,0.05)' }}>Sheet: Piket</span>
            </div>
            <h1 className="page-title gradient-text">Buku Catatan Piket</h1>
-           <p className="page-subtitle" style={{ margin: 0 }}>Koordinasi temuan & tindak lanjut operasional lapangan</p>
+           <p className="page-subtitle" style={{ margin: 0 }}>Koordinasi & tindak lanjut operasional lapangan</p>
         </div>
         <button className="btn btn-primary" onClick={() => setIsModalOpen(true)} style={{ alignSelf: 'flex-start' }}>
           <Plus size={18} /> <span>Tambah Catatan</span>
@@ -134,26 +147,30 @@ const DutyNotes = () => {
               type="text" 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Cari pesan, petugas, atau tindak lanjut..." 
+              placeholder="Cari dalam catatan..." 
               className="input-responsive"
               style={{ width: '100%', paddingLeft: '2.75rem' }}
             />
           </div>
           <button onClick={fetchNotes} className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Sync
+            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Sync Live
           </button>
         </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '1.5rem' }}>
-        {filteredNotes.map((note) => (
+        {filteredNotes.length === 0 && !loading ? (
+          <div className="glass-panel" style={{ gridColumn: '1/-1', padding: '4rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+             <p>Tidak ada catatan yang ditemukan.</p>
+          </div>
+        ) : filteredNotes.map((note) => (
           <div 
             key={note.id} 
             className="glass-panel" 
             style={{ 
               padding: '1.5rem', 
               borderLeft: `4px solid ${note.type === 'Urgent' ? 'var(--accent-rose)' : 'var(--accent-blue)'}`,
-              background: note.debit ? 'transparent' : 'rgba(59, 130, 246, 0.03)'
+              background: note.debit ? 'transparent' : 'rgba(59, 130, 246, 0.05)'
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
@@ -163,14 +180,14 @@ const DutyNotes = () => {
                 </span>
                 {note.type === 'Urgent' && <span className="badge badge-warning" style={{ fontSize: '0.65rem' }}>URGENT</span>}
               </div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{note.tanggal}</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>{note.tanggal}</div>
             </div>
 
-            <p style={{ fontSize: '1rem', color: 'var(--text-primary)', marginBottom: '1.5rem' }}>"{note.amount}"</p>
+            <p style={{ fontSize: '1rem', color: 'var(--text-primary)', marginBottom: '1.5rem', lineHeight: '1.5' }}>{note.amount}</p>
 
             {note.kredit && note.kredit !== "-" && (
               <div style={{ padding: '0.75rem', borderRadius: '8px', background: 'var(--accent-emerald-ghost)', border: '1px solid rgba(16, 185, 129, 0.1)', marginBottom: '1.5rem' }}>
-                <div style={{ fontSize: '0.65rem', color: 'var(--accent-emerald)', fontWeight: 700, marginBottom: '0.25rem', textTransform: 'uppercase' }}>Tindak Lanjut / Follow-up:</div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--accent-emerald)', fontWeight: 700, marginBottom: '0.25rem', textTransform: 'uppercase' }}>Tindak Lanjut:</div>
                 <div style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>{note.kredit}</div>
               </div>
             )}
@@ -182,6 +199,7 @@ const DutyNotes = () => {
                 </div>
                 <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{note.keterangan}</span>
               </div>
+              {!note.debit && <div style={{ fontSize: '0.65rem', color: 'var(--accent-blue)', fontWeight: 700 }}>BARU</div>}
             </div>
           </div>
         ))}
@@ -195,7 +213,7 @@ const DutyNotes = () => {
         }}>
           <div className="glass-panel" style={{ width: '500px', padding: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h2 style={{ fontSize: '1.25rem', margin: 0 }}>Tambah Catatan Piket</h2>
+              <h2 style={{ fontSize: '1.25rem', margin: 0 }}>Tambah Catatan</h2>
               <button onClick={() => setIsModalOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)' }}><X size={20} /></button>
             </div>
 
@@ -204,31 +222,31 @@ const DutyNotes = () => {
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Kategori</label>
                   <select value={formData.kategori} onChange={(e) => setFormData({...formData, kategori: e.target.value})} style={{ padding: '0.6rem', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-subtle)', color: 'white' }}>
-                    <option value="Temuan">Temuan</option>
-                    <option value="Pesan">Pesan</option>
+                    <option value="Temuan">🚨 Temuan</option>
+                    <option value="Pesan">💬 Pesan</option>
                   </select>
                 </div>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Prioritas</label>
                   <select value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})} style={{ padding: '0.6rem', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-subtle)', color: 'white' }}>
-                    <option value="Info">Info Biasa</option>
-                    <option value="Urgent">Urgent</option>
+                    <option value="Info">Normal</option>
+                    <option value="Urgent">Penting / Urgent</option>
                   </select>
                 </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Pesan / Temuan *</label>
-                <textarea required value={formData.amount} onChange={(e) => setFormData({...formData, amount: e.target.value})} rows={3} placeholder="Ceritakan temuan Anda..." style={{ padding: '0.75rem', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-subtle)', color: 'white', resize: 'none' }}></textarea>
+                <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Isi Catatan *</label>
+                <textarea required value={formData.amount} onChange={(e) => setFormData({...formData, amount: e.target.value})} rows={3} placeholder="Apa temuannya?" style={{ padding: '0.75rem', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-subtle)', color: 'white', resize: 'none' }}></textarea>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Tindak Lanjut (Opsional)</label>
-                <textarea value={formData.kredit} onChange={(e) => setFormData({...formData, kredit: e.target.value})} rows={2} placeholder="Misal: Sudah diperbaiki, Sudah dikunci, dll." style={{ padding: '0.75rem', borderRadius: '8px', background: 'rgba(0,0,0,0.1)', border: '1px solid var(--border-subtle)', color: 'white', resize: 'none' }}></textarea>
+                <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Tindak Lanjut</label>
+                <textarea value={formData.kredit} onChange={(e) => setFormData({...formData, kredit: e.target.value})} rows={2} placeholder="Opsi tindak lanjut..." style={{ padding: '0.75rem', borderRadius: '8px', background: 'rgba(0,0,0,0.1)', border: '1px solid var(--border-subtle)', color: 'white', resize: 'none' }}></textarea>
               </div>
 
               <button type="submit" className="btn btn-primary" disabled={isSubmitting} style={{ padding: '0.75rem' }}>
-                {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : 'Simpan ke Google Sheets'}
+                {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : 'Kirim Catatan'}
               </button>
             </form>
           </div>
