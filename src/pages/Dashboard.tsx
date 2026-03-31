@@ -168,7 +168,9 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         body: JSON.stringify({ 
           action: 'DELETE_RECORD', 
           sheetName: 'Piket',
-          id: id
+          sheet: 'Piket',
+          id: id,
+          ID: id
         })
       });
       

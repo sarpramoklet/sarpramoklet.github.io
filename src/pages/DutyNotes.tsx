@@ -108,6 +108,7 @@ const DutyNotes = () => {
         body: JSON.stringify({ 
           action: 'DELETE_RECORD', 
           sheetName: 'Piket',
+          sheet: 'Piket',
           id: id,
           ID: id
         })
@@ -133,6 +134,7 @@ const DutyNotes = () => {
     const payload = {
       action: 'FINANCE_RECORD',
       sheetName: 'Piket',
+      sheet: 'Piket',
       // Send both cases for record ID
       id: editingNote ? editingNote.id : `NOTE-${Math.floor(1000 + Math.random() * 9000)}`,
       ID: editingNote ? editingNote.id : `NOTE-${Math.floor(1000 + Math.random() * 9000)}`,
