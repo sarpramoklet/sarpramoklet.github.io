@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, User, Loader2, X, RefreshCw, Edit3, Trash2 } from 'lucide-react';
-import { USERS, getCurrentUser, ROLES } from '../data/organization';
+import { USERS, getCurrentUser } from '../data/organization';
 
 // URL Apps Script DB_Sarpramoklet (URL Terbaru)
 const API_URL = "https://script.google.com/macros/s/AKfycbyiQcb0i1TRlhPgXSXks1SxEYSfRgk-PkFOKuoJn1hK-en708kYHMiYZqBZ1JhZuwROBg/exec";
