@@ -440,10 +440,10 @@ const CapexBudget = () => {
                         <div style={{
                           height: '100%',
                           width: `${p}%`,
-                          background: p === 0 ? 'transparent' : `linear-gradient(90deg, ${sc}cc, ${sc})`,
+                          background: p === 0 ? 'transparent' : 'linear-gradient(90deg, #d97706, #f59e0b)',
                           borderRadius: '100px',
                           transition: 'width 1.2s ease',
-                          boxShadow: p > 0 ? `0 0 8px ${sc}60` : 'none'
+                          boxShadow: p > 0 ? '0 0 8px #f59e0b60' : 'none'
                         }} />
                       </div>
                     </div>
