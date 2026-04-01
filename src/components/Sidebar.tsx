@@ -153,10 +153,16 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
                 if (excludedPublic.includes(item.name)) return false;
               }
 
-              // leaderOnly items: hide from everyone except Pimpinan
+              // leaderOnly items: hanya Waka (Pimpinan) + 3 Kaur
               if (item.leaderOnly) {
                 if (!isLoggedIn) return false;
-                return user.roleAplikasi === ROLES.PIMPINAN;
+                const seniorRoles = [
+                  ROLES.PIMPINAN,
+                  ROLES.KOORDINATOR_IT,
+                  ROLES.KOORDINATOR_LAB,
+                  ROLES.KOORDINATOR_SARPRAS,
+                ];
+                return seniorRoles.includes(user.roleAplikasi as any);
               }
 
               if (!item.authRequired) return true;
