@@ -349,16 +349,23 @@ const CapexBudget = () => {
           </div>
           <span style={{ fontWeight: 800, fontSize: '1.1rem', color: clr(totalPct) }}>{totalPct.toFixed(2)}%</span>
         </div>
-        <div style={{ height: '12px', background: 'rgba(255,255,255,0.06)', borderRadius: '100px', overflow: 'hidden' }}>
+        <div style={{ position: 'relative', height: '16px', background: 'rgba(255,255,255,0.12)', borderRadius: '100px', overflow: 'hidden' }}>
           <div style={{
             height: '100%', width: `${totalPct}%`,
-            background: `linear-gradient(90deg, ${clr(totalPct)}, ${clr(totalPct)}99)`,
+            background: `linear-gradient(90deg, ${clr(totalPct)}cc, ${clr(totalPct)})`,
             borderRadius: '100px', transition: 'width 1.2s ease',
-            boxShadow: `0 0 12px ${clr(totalPct)}60`
-          }} />
+            boxShadow: totalPct > 0 ? `0 0 16px ${clr(totalPct)}80` : 'none',
+            display: 'flex', alignItems: 'center', justifyContent: 'flex-end'
+          }}>
+            {totalPct >= 12 && (
+              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'white', paddingRight: '8px', whiteSpace: 'nowrap', textShadow: '0 1px 2px rgba(0,0,0,0.4)' }}>
+                {totalPct.toFixed(1)}%
+              </span>
+            )}
+          </div>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-          <span>0%</span>
+          <span>0% — Belum terserap</span>
           <span style={{ color: 'var(--accent-emerald)' }}>Target: 100%</span>
         </div>
       </div>
@@ -419,8 +426,26 @@ const CapexBudget = () => {
                         </span>
                       )}
                     </div>
-                    <div style={{ marginTop: '0.6rem', height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '100px', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${p}%`, background: `linear-gradient(90deg,${sc},${sc}cc)`, borderRadius: '100px', transition: 'width 1s ease' }} />
+                    {/* Progress bar with label */}
+                    <div style={{ marginTop: '0.75rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                        <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                          Terserap: <strong style={{ color: sc }}>{fmtShort(real)}</strong>
+                        </span>
+                        <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                          Sisa: {fmtShort(sisa)}
+                        </span>
+                      </div>
+                      <div style={{ position: 'relative', height: '10px', background: 'rgba(255,255,255,0.12)', borderRadius: '100px', overflow: 'hidden' }}>
+                        <div style={{
+                          height: '100%',
+                          width: `${p}%`,
+                          background: `linear-gradient(90deg, ${sc}cc, ${sc})`,
+                          borderRadius: '100px',
+                          transition: 'width 1.2s ease',
+                          boxShadow: p > 0 ? `0 0 10px ${sc}80` : 'none'
+                        }} />
+                      </div>
                     </div>
                   </div>
 
