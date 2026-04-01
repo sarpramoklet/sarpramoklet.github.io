@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
-  Building2, FlaskConical, BookOpen, Monitor, TrendingUp, X,
+  Building2, FlaskConical, BookOpen, Monitor, TrendingUp, Edit3, X,
   Save, Loader2, RefreshCw, AlertTriangle, CheckCircle, Clock, BarChart3,
   ChevronDown, ChevronRight, DollarSign, Target, Activity, Plus, Trash2,
   Receipt, CalendarDays, FileText
@@ -59,6 +59,7 @@ const CapexBudget = () => {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab]       = useState<'cards' | 'table'>('cards');
   const [deletingId, setDeletingId]     = useState<string | null>(null);
+  const [editingEntry, setEditingEntry] = useState<RealisasiEntry | null>(null);
 
   const [formData, setFormData] = useState({
     akun: '1232101',
@@ -156,6 +157,7 @@ const CapexBudget = () => {
 
   /* ── add entry ── */
   const handleAdd = (akunDefault?: string) => {
+    setEditingEntry(null);
     setFormData({
       akun: akunDefault || '1232101',
       deskripsiKegiatan: '',
@@ -166,44 +168,58 @@ const CapexBudget = () => {
     setShowModal(true);
   };
 
+  /* ── edit entry ── */
+  const handleEdit = (entry: RealisasiEntry) => {
+    setEditingEntry(entry);
+    setFormData({
+      akun:              entry.akun,
+      deskripsiKegiatan: entry.deskripsiKegiatan,
+      tanggal:           entry.tanggal,
+      jumlah:            String(entry.jumlah),
+      keterangan:        entry.keterangan,
+    });
+    setShowModal(true);
+  };
+
   const handleSave = async () => {
     if (!formData.deskripsiKegiatan.trim() || !formData.jumlah) return;
     setIsSubmitting(true);
 
-    const budget = BUDGET_MASTER.find(b => b.akun === formData.akun);
-    const newEntry: RealisasiEntry = {
-      id:                `REAL-${Date.now()}`,
+    const isEdit  = !!editingEntry;
+    const budget  = BUDGET_MASTER.find(b => b.akun === formData.akun);
+    const savedEntry: RealisasiEntry = {
+      id:                isEdit ? editingEntry!.id : `REAL-${Date.now()}`,
       akun:              formData.akun,
       deskripsiKegiatan: formData.deskripsiKegiatan.trim(),
       tanggal:           formData.tanggal,
       jumlah:            Number(formData.jumlah),
       keterangan:        formData.keterangan.trim(),
-      createdBy:         currentUser.nama,
-      createdAt:         new Date().toISOString(),
+      createdBy:         isEdit ? editingEntry!.createdBy : currentUser.nama,
+      createdAt:         isEdit ? editingEntry!.createdAt : new Date().toISOString(),
     };
 
     const payload = {
       action:              'FINANCE_RECORD',
       sheetName:           SHEET_REALISASI,
       sheet:               SHEET_REALISASI,
-      id:                  newEntry.id,
-      ID:                  newEntry.id,
-      akun:                newEntry.akun,
-      Akun:                newEntry.akun,
-      deskripsiKegiatan:   newEntry.deskripsiKegiatan,
-      DeskripsiKegiatan:   newEntry.deskripsiKegiatan,
+      id:                  savedEntry.id,
+      ID:                  savedEntry.id,
+      akun:                savedEntry.akun,
+      Akun:                savedEntry.akun,
+      deskripsiKegiatan:   savedEntry.deskripsiKegiatan,
+      DeskripsiKegiatan:   savedEntry.deskripsiKegiatan,
       namaAkun:            budget?.deskripsi || '',
       NamaAkun:            budget?.deskripsi || '',
-      tanggal:             newEntry.tanggal,
-      Tanggal:             newEntry.tanggal,
-      jumlah:              newEntry.jumlah,
-      Jumlah:              newEntry.jumlah,
-      keterangan:          newEntry.keterangan,
-      Keterangan:          newEntry.keterangan,
-      createdBy:           newEntry.createdBy,
-      CreatedBy:           newEntry.createdBy,
-      createdAt:           newEntry.createdAt,
-      CreatedAt:           newEntry.createdAt,
+      tanggal:             savedEntry.tanggal,
+      Tanggal:             savedEntry.tanggal,
+      jumlah:              savedEntry.jumlah,
+      Jumlah:              savedEntry.jumlah,
+      keterangan:          savedEntry.keterangan,
+      Keterangan:          savedEntry.keterangan,
+      createdBy:           savedEntry.createdBy,
+      CreatedBy:           savedEntry.createdBy,
+      createdAt:           savedEntry.createdAt,
+      CreatedAt:           savedEntry.createdAt,
     };
 
     try {
@@ -214,9 +230,14 @@ const CapexBudget = () => {
         body: JSON.stringify(payload),
       });
 
-      setEntries(prev => [newEntry, ...prev]);
+      if (isEdit) {
+        setEntries(prev => prev.map(e => e.id === savedEntry.id ? savedEntry : e));
+      } else {
+        setEntries(prev => [savedEntry, ...prev]);
+      }
       setShowModal(false);
-      setTimeout(fetchData, 3000); // re-sync after 3s
+      setEditingEntry(null);
+      setTimeout(fetchData, 3000);
     } catch (err) {
       alert('Gagal menyimpan. Periksa koneksi.');
     } finally {
@@ -486,12 +507,21 @@ const CapexBudget = () => {
                                 <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '2px' }}>#{ti + 1}</div>
                               </div>
                               {canUpdate && (
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); handleDelete(tx); }}
-                                  disabled={deletingId === tx.id}
-                                  style={{ background: 'none', border: 'none', color: 'var(--accent-rose)', cursor: 'pointer', padding: '4px', flexShrink: 0, opacity: deletingId === tx.id ? 0.5 : 1 }}>
-                                  {deletingId === tx.id ? <Loader2 size={14} className="animate-spin"/> : <Trash2 size={14}/>}
-                                </button>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flexShrink: 0 }}>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); handleEdit(tx); }}
+                                    style={{ background: 'none', border: 'none', color: 'var(--accent-blue)', cursor: 'pointer', padding: '4px' }}
+                                    title="Edit">
+                                    <Edit3 size={13}/>
+                                  </button>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); handleDelete(tx); }}
+                                    disabled={deletingId === tx.id}
+                                    style={{ background: 'none', border: 'none', color: 'var(--accent-rose)', cursor: 'pointer', padding: '4px', opacity: deletingId === tx.id ? 0.5 : 1 }}
+                                    title="Hapus">
+                                    {deletingId === tx.id ? <Loader2 size={13} className="animate-spin"/> : <Trash2 size={13}/>}
+                                  </button>
+                                </div>
                               )}
                             </div>
                           ))}
@@ -607,7 +637,7 @@ const CapexBudget = () => {
                       <th>DESKRIPSI KEGIATAN</th>
                       <th style={{ textAlign: 'right' }}>JUMLAH</th>
                       <th className="mobile-hide">DICATAT OLEH</th>
-                      {canUpdate && <th style={{ width: '50px' }}></th>}
+                      {canUpdate && <th style={{ width: '70px', textAlign: 'center' }}>AKSI</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -633,10 +663,18 @@ const CapexBudget = () => {
                             <td className="mobile-hide" style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{tx.createdBy.split(',')[0]}</td>
                             {canUpdate && (
                               <td style={{ textAlign: 'center' }}>
-                                <button onClick={() => handleDelete(tx)} disabled={deletingId === tx.id}
-                                  style={{ background: 'none', border: 'none', color: 'var(--accent-rose)', cursor: 'pointer', padding: '4px' }}>
-                                  {deletingId === tx.id ? <Loader2 size={14} className="animate-spin"/> : <Trash2 size={14}/>}
-                                </button>
+                                <div style={{ display: 'flex', gap: '2px', justifyContent: 'center' }}>
+                                  <button onClick={() => handleEdit(tx)}
+                                    style={{ background: 'none', border: 'none', color: 'var(--accent-blue)', cursor: 'pointer', padding: '4px' }}
+                                    title="Edit">
+                                    <Edit3 size={14}/>
+                                  </button>
+                                  <button onClick={() => handleDelete(tx)} disabled={deletingId === tx.id}
+                                    style={{ background: 'none', border: 'none', color: 'var(--accent-rose)', cursor: 'pointer', padding: '4px', opacity: deletingId === tx.id ? 0.5 : 1 }}
+                                    title="Hapus">
+                                    {deletingId === tx.id ? <Loader2 size={14} className="animate-spin"/> : <Trash2 size={14}/>}
+                                  </button>
+                                </div>
                               </td>
                             )}
                           </tr>
@@ -670,10 +708,14 @@ const CapexBudget = () => {
             <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <h2 style={{ fontSize: '1.1rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                  <Plus size={20} color="var(--accent-blue)"/> Tambah Entri Realisasi
+                  {editingEntry
+                    ? <><Edit3 size={20} color="var(--accent-blue)"/> Edit Realisasi</>
+                    : <><Plus  size={20} color="var(--accent-blue)"/> Tambah Entri Realisasi</>}
                 </h2>
                 <p style={{ margin: '0.3rem 0 0', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  Setiap entri menambah serapan anggaran akun yang dipilih
+                  {editingEntry
+                    ? `Mengubah entri: ${editingEntry.deskripsiKegiatan}`
+                    : 'Setiap entri menambah serapan anggaran akun yang dipilih'}
                 </p>
               </div>
               <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}>
@@ -687,11 +729,13 @@ const CapexBudget = () => {
               <div>
                 <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', fontWeight: 600 }}>Akun Anggaran</label>
                 <select value={formData.akun} onChange={e => setFormData({ ...formData, akun: e.target.value })}
-                  style={{ width: '100%', background: '#1a1a1a', border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '0.75rem', color: 'white', outline: 'none', fontSize: '0.9rem' }}>
+                  disabled={!!editingEntry}
+                  style={{ width: '100%', background: '#1a1a1a', border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '0.75rem', color: 'white', outline: 'none', fontSize: '0.9rem', opacity: editingEntry ? 0.6 : 1 }}>
                   {BUDGET_MASTER.map(b => (
                     <option key={b.akun} value={b.akun}>{b.akun} — {b.deskripsi} (sisa: {fmtShort(b.anggaran - realisasiByAkun(b.akun))})</option>
                   ))}
                 </select>
+                {editingEntry && <div style={{ marginTop: '0.3rem', fontSize: '0.72rem', color: 'var(--text-muted)' }}>⚠ Akun tidak bisa diubah saat edit</div>}
                 {/* Remaining budget info */}
                 <div style={{ marginTop: '0.4rem', display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                   <span>Terserap: <strong style={{ color: 'var(--accent-emerald)' }}>{fmtIDR(realisasiByAkun(formData.akun))}</strong></span>
@@ -725,14 +769,19 @@ const CapexBudget = () => {
                 </div>
               </div>
 
-              {/* Live preview baru setelah ditambah */}
+              {/* Live preview */}
               {Number(formData.jumlah) > 0 && (() => {
-                const budget = BUDGET_MASTER.find(b => b.akun === formData.akun)!;
-                const newReal = realisasiByAkun(formData.akun) + Number(formData.jumlah);
-                const newPct  = pct(newReal, budget.anggaran);
+                const budget    = BUDGET_MASTER.find(b => b.akun === formData.akun)!;
+                // When editing, exclude the old value from the base total
+                const baseReal  = editingEntry
+                  ? realisasiByAkun(formData.akun) - editingEntry.jumlah
+                  : realisasiByAkun(formData.akun);
+                const newReal   = baseReal + Number(formData.jumlah);
+                const newPct    = pct(newReal, budget.anggaran);
+                const label     = editingEntry ? 'Preview setelah diubah:' : 'Preview setelah ditambahkan:';
                 return (
                   <div style={{ padding: '0.75rem 1rem', background: `${ACCOUNT_COLORS[formData.akun]}12`, border: `1px solid ${ACCOUNT_COLORS[formData.akun]}30`, borderRadius: '10px', fontSize: '0.8rem' }}>
-                    <div style={{ fontWeight: 600, marginBottom: '0.3rem', color: 'var(--text-secondary)' }}>Preview setelah ditambahkan:</div>
+                    <div style={{ fontWeight: 600, marginBottom: '0.3rem', color: 'var(--text-secondary)' }}>{label}</div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span style={{ color: 'var(--text-muted)' }}>Realisasi baru:</span>
                       <strong style={{ color: 'var(--accent-emerald)' }}>{fmtIDR(newReal)}</strong>
@@ -768,7 +817,7 @@ const CapexBudget = () => {
                   className="btn btn-primary"
                   style={{ flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
                   {isSubmitting ? <Loader2 size={18} className="animate-spin"/> : <Save size={18}/>}
-                  {isSubmitting ? 'Menyimpan...' : 'Simpan Realisasi'}
+                  {isSubmitting ? 'Menyimpan...' : editingEntry ? 'Simpan Perubahan' : 'Simpan Realisasi'}
                 </button>
               </div>
             </div>
