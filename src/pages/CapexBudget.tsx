@@ -352,9 +352,9 @@ const CapexBudget = () => {
         <div style={{ position: 'relative', height: '16px', background: 'rgba(120,120,120,0.18)', borderRadius: '100px', overflow: 'hidden', border: '1px solid rgba(120,120,120,0.12)' }}>
           <div style={{
             height: '100%', width: `${totalPct}%`,
-            background: `linear-gradient(90deg, ${clr(totalPct)}dd, ${clr(totalPct)})`,
+            background: 'linear-gradient(90deg, #d97706, #f59e0b)',
             borderRadius: '100px', transition: 'width 1.2s ease',
-            boxShadow: totalPct > 0 ? `0 0 12px ${clr(totalPct)}60` : 'none',
+            boxShadow: totalPct > 0 ? '0 0 12px #f59e0b60' : 'none',
             display: 'flex', alignItems: 'center', justifyContent: 'flex-end'
           }}>
             {totalPct >= 12 && (
