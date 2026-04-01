@@ -1,229 +1,209 @@
 import { useState, useEffect } from 'react';
 import {
-  Building2, FlaskConical, BookOpen, Monitor, TrendingUp, Edit3, X,
+  Building2, FlaskConical, BookOpen, Monitor, TrendingUp, X,
   Save, Loader2, RefreshCw, AlertTriangle, CheckCircle, Clock, BarChart3,
-  ChevronDown, ChevronRight, DollarSign, Target, Activity
+  ChevronDown, ChevronRight, DollarSign, Target, Activity, Plus, Trash2,
+  Receipt, CalendarDays, FileText
 } from 'lucide-react';
 import { getCurrentUser, ROLES } from '../data/organization';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
-const SHEET_NAME = 'Capex_Budget';
+const SHEET_REALISASI = 'Capex_Realisasi';
 
-interface CapexItem {
+/* ─── Static budget master (RKA Investasi 2026) ─── */
+interface BudgetItem {
   id: string;
   akun: string;
   deskripsi: string;
   anggaran: number;
-  realisasi: number;
-  keterangan: string;
-  updatedAt: string;
-  updatedBy: string;
 }
 
-// Static RKA data from the official document
-const INITIAL_CAPEX_DATA: CapexItem[] = [
-  {
-    id: 'CAPEX-1232101',
-    akun: '1232101',
-    deskripsi: 'Gedung dan Bangunan',
-    anggaran: 3128087702,
-    realisasi: 0,
-    keterangan: '',
-    updatedAt: '',
-    updatedBy: ''
-  },
-  {
-    id: 'CAPEX-1233101',
-    akun: '1233101',
-    deskripsi: 'SarPen Laboratorium',
-    anggaran: 700576820,
-    realisasi: 0,
-    keterangan: '',
-    updatedAt: '',
-    updatedBy: ''
-  },
-  {
-    id: 'CAPEX-1233201',
-    akun: '1233201',
-    deskripsi: 'Sarana Pendidikan',
-    anggaran: 731701609,
-    realisasi: 0,
-    keterangan: '',
-    updatedAt: '',
-    updatedBy: ''
-  },
-  {
-    id: 'CAPEX-1234101',
-    akun: '1234101',
-    deskripsi: 'Inventaris Kantor',
-    anggaran: 2885730,
-    realisasi: 0,
-    keterangan: '',
-    updatedAt: '',
-    updatedBy: ''
-  }
+const BUDGET_MASTER: BudgetItem[] = [
+  { id: 'CAPEX-1232101', akun: '1232101', deskripsi: 'Gedung dan Bangunan',   anggaran: 3128087702 },
+  { id: 'CAPEX-1233101', akun: '1233101', deskripsi: 'SarPen Laboratorium',    anggaran: 700576820  },
+  { id: 'CAPEX-1233201', akun: '1233201', deskripsi: 'Sarana Pendidikan',      anggaran: 731701609  },
+  { id: 'CAPEX-1234101', akun: '1234101', deskripsi: 'Inventaris Kantor',      anggaran: 2885730    },
 ];
+
+/* ─── Transaction (realisasi entry) ─── */
+interface RealisasiEntry {
+  id: string;
+  akun: string;
+  deskripsiKegiatan: string;
+  tanggal: string;
+  jumlah: number;
+  keterangan: string;
+  createdBy: string;
+  createdAt: string;
+}
 
 const ACCOUNT_ICONS: Record<string, any> = {
   '1232101': Building2,
   '1233101': FlaskConical,
   '1233201': BookOpen,
-  '1234101': Monitor
+  '1234101': Monitor,
 };
-
 const ACCOUNT_COLORS: Record<string, string> = {
   '1232101': 'var(--accent-blue)',
   '1233101': 'var(--accent-violet)',
   '1233201': 'var(--accent-emerald)',
-  '1234101': 'var(--accent-rose)'
+  '1234101': 'var(--accent-rose)',
 };
 
+/* ──────────────────── Component ──────────────────── */
 const CapexBudget = () => {
-  const [items, setItems] = useState<CapexItem[]>(INITIAL_CAPEX_DATA);
-  const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [editingItem, setEditingItem] = useState<CapexItem | null>(null);
+  const [entries, setEntries]           = useState<RealisasiEntry[]>([]);
+  const [loading, setLoading]           = useState(true);
+  const [showModal, setShowModal]       = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [activeTab, setActiveTab]       = useState<'cards' | 'table'>('cards');
+  const [deletingId, setDeletingId]     = useState<string | null>(null);
+
   const [formData, setFormData] = useState({
-    realisasi: '',
-    keterangan: ''
+    akun: '1232101',
+    deskripsiKegiatan: '',
+    tanggal: new Date().toISOString().split('T')[0],
+    jumlah: '',
+    keterangan: '',
   });
 
   const currentUser = getCurrentUser();
-  const isPimpinan = currentUser.roleAplikasi === ROLES.PIMPINAN;
-  const canUpdate = isPimpinan;
+  const canUpdate   = currentUser.roleAplikasi === ROLES.PIMPINAN;
 
-  const formatIDR = (val: number) =>
-    new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      maximumFractionDigits: 0
-    }).format(val);
+  /* ── helpers ── */
+  const fmtIDR = (v: number) =>
+    new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(v);
 
-  const formatShortIDR = (val: number) => {
-    if (val >= 1_000_000_000) return `Rp ${(val / 1_000_000_000).toFixed(2)}M`;
-    if (val >= 1_000_000) return `Rp ${(val / 1_000_000).toFixed(1)}jt`;
-    return formatIDR(val);
+  const fmtShort = (v: number) => {
+    if (v >= 1_000_000_000) return `Rp ${(v / 1_000_000_000).toFixed(2)}M`;
+    if (v >= 1_000_000)     return `Rp ${(v / 1_000_000).toFixed(1)}jt`;
+    return fmtIDR(v);
   };
 
-  const getAbsorptionPercent = (realisasi: number, anggaran: number) => {
-    if (anggaran === 0) return 0;
-    return Math.min((realisasi / anggaran) * 100, 100);
-  };
-
-  const getStatusColor = (pct: number) => {
-    if (pct >= 80) return 'var(--accent-emerald)';
-    if (pct >= 40) return 'var(--accent-blue)';
-    if (pct >= 10) return 'var(--accent-amber, #f59e0b)';
-    return 'var(--accent-rose)';
-  };
-
-  const getStatusLabel = (pct: number) => {
-    if (pct >= 80) return { label: 'Sangat Baik', icon: CheckCircle };
-    if (pct >= 40) return { label: 'Berjalan', icon: Activity };
-    if (pct >= 10) return { label: 'Awal', icon: Clock };
-    return { label: 'Belum Terserap', icon: AlertTriangle };
-  };
-
-  const formatDisplayDate = (dateStr: string) => {
-    if (!dateStr) return '-';
+  const fmtDate = (s: string) => {
+    if (!s) return '-';
     try {
-      const d = new Date(dateStr);
-      if (isNaN(d.getTime())) return dateStr;
-      return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
-    } catch {
-      return dateStr;
-    }
+      return new Date(s).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch { return s; }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const pct  = (real: number, anggar: number) => anggar ? Math.min((real / anggar) * 100, 100) : 0;
+  const clr  = (p: number) => p >= 80 ? 'var(--accent-emerald)' : p >= 40 ? 'var(--accent-blue)' : p >= 10 ? '#f59e0b' : 'var(--accent-rose)';
+  const stat = (p: number) => {
+    if (p >= 80) return { label: 'Sangat Baik',   Icon: CheckCircle };
+    if (p >= 40) return { label: 'Berjalan',       Icon: Activity };
+    if (p >= 10) return { label: 'Awal',           Icon: Clock };
+    return             { label: 'Belum Terserap',  Icon: AlertTriangle };
+  };
 
+  /* ── realisasi per akun ── */
+  const realisasiByAkun = (akun: string) =>
+    entries.filter(e => e.akun === akun).reduce((s, e) => s + e.jumlah, 0);
+
+  const entriesByAkun = (akun: string) =>
+    [...entries.filter(e => e.akun === akun)].sort(
+      (a, b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime()
+    );
+
+  /* ── grand totals ── */
+  const totalAnggaran   = BUDGET_MASTER.reduce((s, b) => s + b.anggaran, 0);
+  const totalRealisasi  = entries.reduce((s, e) => s + e.jumlah, 0);
+  const totalPct        = pct(totalRealisasi, totalAnggaran);
+  const sisaTotal       = totalAnggaran - totalRealisasi;
+
+  /* ── fetch ── */
   const fetchData = async () => {
     setLoading(true);
     try {
-      const resp = await fetch(`${API_URL}?sheetName=${SHEET_NAME}`);
+      const resp = await fetch(`${API_URL}?sheetName=${SHEET_REALISASI}`);
       const data = await resp.json();
 
-      if (data && Array.isArray(data) && data.length > 0) {
-        // Normalize keys to lowercase for robust matching
-        const normalize = (row: any): Record<string, any> => {
+      if (Array.isArray(data) && data.length > 0) {
+        const norm = (row: any): Record<string, any> => {
           const out: Record<string, any> = {};
           Object.keys(row).forEach(k => { out[k.toLowerCase()] = row[k]; });
           return out;
         };
 
-        const merged = INITIAL_CAPEX_DATA.map(base => {
-          const found = data
-            .map(normalize)
-            .find((d: any) =>
-              d['id'] === base.id ||
-              d['akun'] === base.akun
-            );
-          if (found) {
-            return {
-              ...base,
-              realisasi: Number(found['realisasi'] ?? 0),
-              keterangan: found['keterangan'] || '',
-              updatedAt: found['updatedat'] || found['updated_at'] || '',
-              updatedBy: found['updatedby'] || found['updated_by'] || ''
-            };
-          }
-          return base;
-        });
-        setItems(merged);
+        const parsed: RealisasiEntry[] = data
+          .map(norm)
+          .filter((r: any) => r['akun'] && r['jumlah'])
+          .map((r: any) => ({
+            id:                r['id']               || r['id_realisasi'] || '',
+            akun:              String(r['akun']       || ''),
+            deskripsiKegiatan: r['deskripsikegiatan'] || r['deskripsi_kegiatan'] || r['deskripsi'] || '',
+            tanggal:           r['tanggal']           || '',
+            jumlah:            Number(r['jumlah']     || 0),
+            keterangan:        r['keterangan']        || '',
+            createdBy:         r['createdby']         || r['created_by'] || '',
+            createdAt:         r['createdat']         || r['created_at'] || '',
+          }))
+          .filter((e: RealisasiEntry) => e.jumlah > 0);
+
+        setEntries(parsed);
+      } else {
+        setEntries([]);
       }
     } catch (err) {
-      console.error('Error fetching CAPEX data:', err);
-      // Keep static data on error
+      console.error('Error fetching realisasi:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleEditRealisasi = (item: CapexItem) => {
-    setEditingItem(item);
+  useEffect(() => { fetchData(); }, []);
+
+  /* ── add entry ── */
+  const handleAdd = (akunDefault?: string) => {
     setFormData({
-      realisasi: String(item.realisasi),
-      keterangan: item.keterangan
+      akun: akunDefault || '1232101',
+      deskripsiKegiatan: '',
+      tanggal: new Date().toISOString().split('T')[0],
+      jumlah: '',
+      keterangan: '',
     });
     setShowModal(true);
   };
 
   const handleSave = async () => {
-    if (!editingItem) return;
+    if (!formData.deskripsiKegiatan.trim() || !formData.jumlah) return;
     setIsSubmitting(true);
 
-    const updatedItem: CapexItem = {
-      ...editingItem,
-      realisasi: Number(formData.realisasi),
-      keterangan: formData.keterangan,
-      updatedAt: new Date().toISOString(),
-      updatedBy: currentUser.nama
+    const budget = BUDGET_MASTER.find(b => b.akun === formData.akun);
+    const newEntry: RealisasiEntry = {
+      id:                `REAL-${Date.now()}`,
+      akun:              formData.akun,
+      deskripsiKegiatan: formData.deskripsiKegiatan.trim(),
+      tanggal:           formData.tanggal,
+      jumlah:            Number(formData.jumlah),
+      keterangan:        formData.keterangan.trim(),
+      createdBy:         currentUser.nama,
+      createdAt:         new Date().toISOString(),
     };
 
     const payload = {
-      action: 'FINANCE_RECORD',
-      sheetName: SHEET_NAME,
-      sheet: SHEET_NAME,
-      id: updatedItem.id,
-      ID: updatedItem.id,
-      akun: updatedItem.akun,
-      Akun: updatedItem.akun,
-      deskripsi: updatedItem.deskripsi,
-      Deskripsi: updatedItem.deskripsi,
-      anggaran: updatedItem.anggaran,
-      Anggaran: updatedItem.anggaran,
-      realisasi: updatedItem.realisasi,
-      Realisasi: updatedItem.realisasi,
-      keterangan: updatedItem.keterangan,
-      Keterangan: updatedItem.keterangan,
-      updatedAt: updatedItem.updatedAt,
-      UpdatedAt: updatedItem.updatedAt,
-      updatedBy: updatedItem.updatedBy,
-      UpdatedBy: updatedItem.updatedBy
+      action:              'FINANCE_RECORD',
+      sheetName:           SHEET_REALISASI,
+      sheet:               SHEET_REALISASI,
+      id:                  newEntry.id,
+      ID:                  newEntry.id,
+      akun:                newEntry.akun,
+      Akun:                newEntry.akun,
+      deskripsiKegiatan:   newEntry.deskripsiKegiatan,
+      DeskripsiKegiatan:   newEntry.deskripsiKegiatan,
+      namaAkun:            budget?.deskripsi || '',
+      NamaAkun:            budget?.deskripsi || '',
+      tanggal:             newEntry.tanggal,
+      Tanggal:             newEntry.tanggal,
+      jumlah:              newEntry.jumlah,
+      Jumlah:              newEntry.jumlah,
+      keterangan:          newEntry.keterangan,
+      Keterangan:          newEntry.keterangan,
+      createdBy:           newEntry.createdBy,
+      CreatedBy:           newEntry.createdBy,
+      createdAt:           newEntry.createdAt,
+      CreatedAt:           newEntry.createdAt,
     };
 
     try {
@@ -231,43 +211,56 @@ const CapexBudget = () => {
         method: 'POST',
         mode: 'no-cors',
         headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
 
-      // Update local state immediately for UX
-      setItems(prev =>
-        prev.map(it => (it.id === updatedItem.id ? updatedItem : it))
-      );
+      setEntries(prev => [newEntry, ...prev]);
       setShowModal(false);
-      setEditingItem(null);
-
-      // Re-fetch after 3s to confirm DB sync
-      setTimeout(fetchData, 3000);
+      setTimeout(fetchData, 3000); // re-sync after 3s
     } catch (err) {
-      console.error('Error saving CAPEX data:', err);
-      alert('Gagal menyimpan data. Periksa koneksi internet.');
+      alert('Gagal menyimpan. Periksa koneksi.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const totalAnggaran = items.reduce((s, i) => s + i.anggaran, 0);
-  const totalRealisasi = items.reduce((s, i) => s + i.realisasi, 0);
-  const totalPct = getAbsorptionPercent(totalRealisasi, totalAnggaran);
-  const sisaAnggaran = totalAnggaran - totalRealisasi;
-
-  const toggleRow = (id: string) => {
-    setExpandedRows(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  /* ── delete entry ── */
+  const handleDelete = async (entry: RealisasiEntry) => {
+    if (!confirm(`Hapus realisasi "${entry.deskripsiKegiatan}" sebesar ${fmtIDR(entry.jumlah)}?`)) return;
+    setDeletingId(entry.id);
+    try {
+      await fetch(API_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({
+          action:    'DELETE_RECORD',
+          sheetName: SHEET_REALISASI,
+          id:        entry.id,
+          ID:        entry.id,
+        }),
+      });
+      setEntries(prev => prev.filter(e => e.id !== entry.id));
+      setTimeout(fetchData, 3000);
+    } catch {
+      alert('Gagal menghapus. Coba lagi.');
+    } finally {
+      setDeletingId(null);
+    }
   };
 
+  const toggleRow = (id: string) =>
+    setExpandedRows(prev => {
+      const n = new Set(prev);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+
+  /* ════════════════════════════════════════ RENDER ════════════════════════════════════════ */
   return (
     <div className="animate-fade-in" style={{ paddingBottom: '3rem' }}>
-      {/* Header */}
+
+      {/* ── Header ── */}
       <div className="flex-row-responsive" style={{ marginBottom: '2rem', alignItems: 'flex-start' }}>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
@@ -280,93 +273,67 @@ const CapexBudget = () => {
             RKA Investasi Tahun 2026 — Yayasan Pendidikan Telkom / SMK Telkom Malang
           </p>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-            <span>Dokumen: Rekana Kerja dan Anggaran (RKA) Investasi</span>
-            <span>•</span>
             <span>Disahkan: 5 Desember 2025</span>
+            <span>•</span>
+            <span style={{ color: 'var(--accent-emerald)' }}>{entries.length} entri realisasi tercatat</span>
           </div>
         </div>
+
         <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-          <button
-            className="btn btn-outline"
-            onClick={fetchData}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}
-            title="Refresh data"
-          >
-            <RefreshCw size={16} />
-            <span className="mobile-hide">Refresh</span>
+          <button className="btn btn-outline" onClick={fetchData}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}>
+            <RefreshCw size={16} /><span className="mobile-hide">Refresh</span>
           </button>
+          {canUpdate && (
+            <button className="btn btn-primary" onClick={() => handleAdd()}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}>
+              <Plus size={16} /><span className="mobile-hide">Tambah Realisasi</span><span className="mobile-show" style={{ display:'none' }}>+</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Summary Stats */}
+      {/* ── Summary Stats ── */}
       <div className="stats-grid" style={{ marginBottom: '2rem' }}>
         {[
-          {
-            title: 'Total Anggaran CAPEX',
-            value: formatIDR(totalAnggaran),
-            sub: 'Tangible Asset 2026',
-            icon: DollarSign,
-            color: 'var(--accent-blue)'
-          },
-          {
-            title: 'Realisasi / Terserap',
-            value: formatIDR(totalRealisasi),
-            sub: `${totalPct.toFixed(1)}% dari total anggaran`,
-            icon: TrendingUp,
-            color: 'var(--accent-emerald)'
-          },
-          {
-            title: 'Sisa Anggaran',
-            value: formatIDR(sisaAnggaran),
-            sub: 'Belum terserap',
-            icon: AlertTriangle,
-            color: 'var(--accent-amber, #f59e0b)'
-          },
-          {
-            title: 'Keterserapan',
-            value: `${totalPct.toFixed(1)}%`,
-            sub: totalPct === 0 ? '⚠ Belum ada realisasi' : totalPct >= 80 ? '✅ Sangat Baik' : '📊 Sedang Berjalan',
-            icon: BarChart3,
-            color: getStatusColor(totalPct)
-          }
-        ].map((stat, i) => {
-          const Icon = stat.icon;
+          { title: 'Total Anggaran CAPEX',  value: fmtIDR(totalAnggaran),  sub: 'Tangible Asset 2026',           icon: DollarSign, color: 'var(--accent-blue)' },
+          { title: 'Total Terserap',         value: fmtIDR(totalRealisasi), sub: `${totalPct.toFixed(1)}% dari total anggaran`, icon: TrendingUp,  color: 'var(--accent-emerald)' },
+          { title: 'Sisa Anggaran',          value: fmtIDR(sisaTotal),      sub: 'Belum terserap',                icon: AlertTriangle, color: '#f59e0b' },
+          { title: 'Total Keterserapan',     value: `${totalPct.toFixed(1)}%`, sub: totalPct === 0 ? '⚠ Belum ada realisasi' : totalPct >= 80 ? '✅ Sangat Baik' : '📊 Sedang Berjalan', icon: BarChart3, color: clr(totalPct) },
+        ].map((s, i) => {
+          const Icon = s.icon;
           return (
-            <div key={i} className={`glass-panel stat-card delay-${(i + 1) * 100}`} style={{ padding: '1.25rem' }}>
+            <div key={i} className={`glass-panel stat-card delay-${(i+1)*100}`} style={{ padding: '1.25rem' }}>
               <div className="stat-header">
-                <span className="stat-title" style={{ fontSize: '0.7rem' }}>{stat.title}</span>
-                <div className="stat-icon-wrapper" style={{ background: `${stat.color}20`, color: stat.color, padding: '6px' }}>
+                <span className="stat-title" style={{ fontSize: '0.7rem' }}>{s.title}</span>
+                <div className="stat-icon-wrapper" style={{ background: `${s.color}20`, color: s.color, padding: '6px' }}>
                   <Icon size={16} />
                 </div>
               </div>
               <div style={{ marginTop: '0.75rem' }}>
-                <div className="stat-value" style={{ fontSize: '1.3rem', color: stat.color }}>{stat.value}</div>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>{stat.sub}</div>
+                <div className="stat-value" style={{ fontSize: '1.3rem', color: s.color }}>{s.value}</div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>{s.sub}</div>
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* Overall Progress Bar */}
+      {/* ── Overall Progress ── */}
       <div className="glass-panel delay-100" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <BarChart3 size={18} color="var(--accent-blue)" />
             <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>Progres Keterserapan Total</span>
           </div>
-          <span style={{ fontWeight: 800, fontSize: '1.1rem', color: getStatusColor(totalPct) }}>
-            {totalPct.toFixed(2)}%
-          </span>
+          <span style={{ fontWeight: 800, fontSize: '1.1rem', color: clr(totalPct) }}>{totalPct.toFixed(2)}%</span>
         </div>
-        <div style={{ height: '12px', background: 'rgba(255,255,255,0.06)', borderRadius: '100px', overflow: 'hidden', position: 'relative' }}>
+        <div style={{ height: '12px', background: 'rgba(255,255,255,0.06)', borderRadius: '100px', overflow: 'hidden' }}>
           <div style={{
-            height: '100%',
-            width: `${totalPct}%`,
-            background: `linear-gradient(90deg, ${getStatusColor(totalPct)}, ${getStatusColor(totalPct)}99)`,
-            borderRadius: '100px',
-            transition: 'width 1s ease',
-            boxShadow: `0 0 12px ${getStatusColor(totalPct)}60`
+            height: '100%', width: `${totalPct}%`,
+            background: `linear-gradient(90deg, ${clr(totalPct)}, ${clr(totalPct)}99)`,
+            borderRadius: '100px', transition: 'width 1.2s ease',
+            boxShadow: `0 0 12px ${clr(totalPct)}60`
           }} />
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
@@ -375,390 +342,432 @@ const CapexBudget = () => {
         </div>
       </div>
 
-      {/* Account Items */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
-        {items.map((item, idx) => {
-          const pct = getAbsorptionPercent(item.realisasi, item.anggaran);
-          const statusColor = getStatusColor(pct);
-          const { label: statusLabel, icon: StatusIcon } = getStatusLabel(pct);
-          const IconComp = ACCOUNT_ICONS[item.akun] || Building2;
-          const accentColor = ACCOUNT_COLORS[item.akun] || 'var(--accent-blue)';
-          const sisa = item.anggaran - item.realisasi;
-          const isExpanded = expandedRows.has(item.id);
+      {/* ── Tab selector ── */}
+      <div className="glass-panel" style={{ padding: '0.4rem', marginBottom: '1.5rem', display: 'flex', gap: '0.4rem', background: 'rgba(255,255,255,0.03)' }}>
+        {([['cards','Per Akun (Detail)'], ['table','Tabel Rekap RKA']] as const).map(([key, label]) => (
+          <button key={key} onClick={() => setActiveTab(key)}
+            style={{
+              flex: 1, padding: '0.65rem', borderRadius: '8px', border: 'none',
+              background: activeTab === key ? 'var(--accent-blue)' : 'transparent',
+              color: activeTab === key ? 'white' : 'var(--text-secondary)',
+              fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.25s',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem'
+            }}>
+            {key === 'cards' ? <Target size={15}/> : <BarChart3 size={15}/>}
+            {label}
+          </button>
+        ))}
+      </div>
 
-          return (
-            <div
-              key={item.id}
-              className={`glass-panel delay-${(idx + 1) * 100}`}
-              style={{
-                padding: 0,
-                overflow: 'hidden',
-                border: `1px solid ${accentColor}30`,
-                transition: 'all 0.3s ease'
-              }}
-            >
-              {/* Row header */}
-              <div
-                style={{
-                  padding: '1.25rem 1.5rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '1rem',
-                  cursor: 'pointer',
-                  background: isExpanded ? `${accentColor}08` : 'transparent'
-                }}
-                onClick={() => toggleRow(item.id)}
-              >
-                {/* Icon */}
-                <div style={{
-                  padding: '0.6rem',
-                  background: `${accentColor}20`,
-                  color: accentColor,
-                  borderRadius: '10px',
-                  display: 'flex',
-                  flexShrink: 0
-                }}>
-                  <IconComp size={20} />
-                </div>
+      {/* ══════════════ TAB: CARDS ══════════════ */}
+      {activeTab === 'cards' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+          {BUDGET_MASTER.map((budget, idx) => {
+            const real       = realisasiByAkun(budget.akun);
+            const sisa       = budget.anggaran - real;
+            const p          = pct(real, budget.anggaran);
+            const sc         = clr(p);
+            const { label: stLabel, Icon: StIcon } = stat(p);
+            const IconComp   = ACCOUNT_ICONS[budget.akun] || Building2;
+            const ac         = ACCOUNT_COLORS[budget.akun] || 'var(--accent-blue)';
+            const txList     = entriesByAkun(budget.akun);
+            const isExpanded = expandedRows.has(budget.id);
 
-                {/* Account info */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '0.7rem', fontFamily: 'monospace', background: `${accentColor}20`, color: accentColor, padding: '2px 8px', borderRadius: '4px', fontWeight: 700 }}>
-                      {item.akun}
-                    </span>
-                    <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>{item.deskripsi}</span>
+            return (
+              <div key={budget.id}
+                className={`glass-panel delay-${(idx+1)*100}`}
+                style={{ padding: 0, overflow: 'hidden', border: `1px solid ${ac}30`, transition: 'all 0.3s ease' }}>
+
+                {/* Card Header */}
+                <div style={{ padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', cursor: 'pointer', background: isExpanded ? `${ac}08` : 'transparent' }}
+                  onClick={() => toggleRow(budget.id)}>
+
+                  <div style={{ padding: '0.6rem', background: `${ac}20`, color: ac, borderRadius: '10px', display: 'flex', flexShrink: 0 }}>
+                    <IconComp size={20} />
                   </div>
-                  {/* Progress bar */}
-                  <div style={{ marginTop: '0.6rem' }}>
-                    <div style={{ height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '100px', overflow: 'hidden' }}>
-                      <div style={{
-                        height: '100%',
-                        width: `${pct}%`,
-                        background: `linear-gradient(90deg, ${statusColor}, ${statusColor}cc)`,
-                        borderRadius: '100px',
-                        transition: 'width 1s ease'
-                      }} />
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '0.7rem', fontFamily: 'monospace', background: `${ac}20`, color: ac, padding: '2px 8px', borderRadius: '4px', fontWeight: 700 }}>
+                        {budget.akun}
+                      </span>
+                      <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>{budget.deskripsi}</span>
+                      {txList.length > 0 && (
+                        <span style={{ fontSize: '0.7rem', background: `${ac}15`, color: ac, padding: '1px 8px', borderRadius: '20px' }}>
+                          {txList.length} transaksi
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ marginTop: '0.6rem', height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '100px', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${p}%`, background: `linear-gradient(90deg,${sc},${sc}cc)`, borderRadius: '100px', transition: 'width 1s ease' }} />
                     </div>
                   </div>
-                </div>
 
-                {/* Numbers */}
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <div style={{ fontWeight: 800, fontSize: '1rem', color: accentColor }}>
-                    {formatShortIDR(item.anggaran)}
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div style={{ fontWeight: 800, fontSize: '1rem', color: ac }}>{fmtShort(budget.anggaran)}</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>Anggaran 2026</div>
                   </div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                    Anggaran 2026
+
+                  <div style={{ padding: '0.4rem 0.75rem', background: `${sc}20`, color: sc, borderRadius: '20px', fontSize: '0.85rem', fontWeight: 800, flexShrink: 0, minWidth: '56px', textAlign: 'center' }}>
+                    {p.toFixed(1)}%
+                  </div>
+                  <div style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
+                    {isExpanded ? <ChevronDown size={18}/> : <ChevronRight size={18}/>}
                   </div>
                 </div>
 
-                {/* Percent badge */}
-                <div style={{
-                  padding: '0.4rem 0.75rem',
-                  background: `${statusColor}20`,
-                  color: statusColor,
-                  borderRadius: '20px',
-                  fontSize: '0.85rem',
-                  fontWeight: 800,
-                  flexShrink: 0,
-                  minWidth: '56px',
-                  textAlign: 'center'
-                }}>
-                  {pct.toFixed(1)}%
-                </div>
+                {/* Expanded Detail */}
+                {isExpanded && (
+                  <div style={{ padding: '0 1.5rem 1.5rem', borderTop: '1px solid var(--border-subtle)', background: `${ac}05` }}>
 
-                {/* Chevron */}
-                <div style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
-                  {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
-                </div>
-              </div>
-
-              {/* Expanded detail */}
-              {isExpanded && (
-                <div style={{
-                  padding: '0 1.5rem 1.5rem',
-                  borderTop: '1px solid var(--border-subtle)',
-                  background: `${accentColor}05`
-                }}>
-                  <div style={{ paddingTop: '1.25rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
-                    {/* Anggaran */}
-                    <div style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.04)', borderRadius: '10px' }}>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Anggaran Ditetapkan</div>
-                      <div style={{ fontWeight: 700, fontSize: '0.95rem', color: accentColor }}>{formatIDR(item.anggaran)}</div>
-                    </div>
-                    {/* Realisasi */}
-                    <div style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.04)', borderRadius: '10px' }}>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Realisasi / Terserap</div>
-                      <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--accent-emerald)' }}>{formatIDR(item.realisasi)}</div>
-                    </div>
-                    {/* Sisa */}
-                    <div style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.04)', borderRadius: '10px' }}>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Sisa Anggaran</div>
-                      <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--accent-rose)' }}>{formatIDR(sisa)}</div>
-                    </div>
-                    {/* Status */}
-                    <div style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.04)', borderRadius: '10px' }}>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: statusColor, fontWeight: 700, fontSize: '0.9rem' }}>
-                        <StatusIcon size={16} />
-                        {statusLabel}
+                    {/* Mini stats */}
+                    <div style={{ paddingTop: '1.25rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px,1fr))', gap: '0.75rem', marginBottom: '1.25rem' }}>
+                      {[
+                        { label: 'Anggaran Ditetapkan', val: fmtIDR(budget.anggaran), color: ac },
+                        { label: 'Total Terserap',       val: fmtIDR(real),             color: 'var(--accent-emerald)' },
+                        { label: 'Sisa Anggaran',        val: fmtIDR(sisa),             color: 'var(--accent-rose)' },
+                      ].map((s, i) => (
+                        <div key={i} style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.04)', borderRadius: '10px' }}>
+                          <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{s.label}</div>
+                          <div style={{ fontWeight: 700, fontSize: '0.92rem', color: s.color }}>{s.val}</div>
+                        </div>
+                      ))}
+                      <div style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.04)', borderRadius: '10px' }}>
+                        <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: sc, fontWeight: 700, fontSize: '0.9rem' }}>
+                          <StIcon size={15}/> {stLabel}
+                        </div>
                       </div>
                     </div>
+
+                    {/* Transaction list */}
+                    <div style={{ marginBottom: '1rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                        <span style={{ fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <Receipt size={15} color={ac}/> Riwayat Realisasi
+                        </span>
+                        {canUpdate && (
+                          <button className="btn btn-primary"
+                            onClick={(e) => { e.stopPropagation(); handleAdd(budget.akun); }}
+                            style={{ fontSize: '0.78rem', padding: '0.4rem 0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                            <Plus size={13}/> Tambah
+                          </button>
+                        )}
+                      </div>
+
+                      {txList.length === 0 ? (
+                        <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem', background: 'rgba(255,255,255,0.02)', borderRadius: '10px', border: '1px dashed var(--border-subtle)' }}>
+                          Belum ada realisasi dicatat untuk akun ini.
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '320px', overflowY: 'auto' }}>
+                          {txList.map((tx, ti) => (
+                            <div key={tx.id}
+                              style={{ padding: '0.85rem 1rem', background: 'rgba(255,255,255,0.04)', borderRadius: '10px', display: 'flex', alignItems: 'flex-start', gap: '0.75rem', border: `1px solid ${ac}18` }}>
+                              <div style={{ padding: '6px', background: `${ac}15`, borderRadius: '8px', flexShrink: 0, color: ac }}>
+                                <FileText size={14}/>
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
+                                  {tx.deskripsiKegiatan}
+                                </div>
+                                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                                    <CalendarDays size={11}/> {fmtDate(tx.tanggal)}
+                                  </span>
+                                  {tx.keterangan && <span>• {tx.keterangan}</span>}
+                                  <span>• {tx.createdBy.split(',')[0]}</span>
+                                </div>
+                              </div>
+                              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                <div style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--accent-emerald)' }}>
+                                  {fmtIDR(tx.jumlah)}
+                                </div>
+                                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '2px' }}>#{ti + 1}</div>
+                              </div>
+                              {canUpdate && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleDelete(tx); }}
+                                  disabled={deletingId === tx.id}
+                                  style={{ background: 'none', border: 'none', color: 'var(--accent-rose)', cursor: 'pointer', padding: '4px', flexShrink: 0, opacity: deletingId === tx.id ? 0.5 : 1 }}>
+                                  {deletingId === tx.id ? <Loader2 size={14} className="animate-spin"/> : <Trash2 size={14}/>}
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
-                  {/* Keterangan */}
-                  {item.keterangan && (
-                    <div style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.03)', borderRadius: '10px', marginBottom: '1rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                      <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Catatan: </span>
-                      {item.keterangan}
-                    </div>
-                  )}
-
-                  {/* Update info */}
-                  {item.updatedAt && (
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-                      Terakhir diperbarui: {formatDisplayDate(item.updatedAt)} oleh {item.updatedBy}
-                    </div>
-                  )}
-
-                  {/* Edit button - only for Pimpinan */}
-                  {canUpdate && (
-                    <button
-                      className="btn btn-primary"
-                      onClick={(e) => { e.stopPropagation(); handleEditRealisasi(item); }}
-                      style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}
-                    >
-                      <Edit3 size={16} />
-                      Update Realisasi
-                    </button>
-                  )}
+      {/* ══════════════ TAB: TABLE ══════════════ */}
+      {activeTab === 'table' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {/* Summary table */}
+          <div className="glass-panel delay-100">
+            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <BarChart3 size={18} color="var(--accent-blue)"/>
+              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>Rekap RKA Investasi 2026</h3>
+              <span style={{ marginLeft: 'auto', fontSize: '0.7rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Yayasan Pendidikan Telkom — SMK Telkom Malang</span>
+            </div>
+            <div className="table-container">
+              {loading ? (
+                <div style={{ padding: '3rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', color: 'var(--text-secondary)' }}>
+                  <Loader2 className="animate-spin" size={20}/> Memuat data anggaran...
                 </div>
+              ) : (
+                <table>
+                  <thead>
+                    <tr style={{ background: 'rgba(59,130,246,0.12)' }}>
+                      <th style={{ width: '100px' }}>AKUN</th>
+                      <th>DESKRIPSI</th>
+                      <th style={{ textAlign: 'right' }}>ANGGARAN 2026</th>
+                      <th style={{ textAlign: 'right' }}>REALISASI</th>
+                      <th style={{ textAlign: 'right' }}>SISA</th>
+                      <th style={{ textAlign: 'center', width: '110px' }}>SERAPAN</th>
+                      <th style={{ textAlign: 'center', width: '70px' }}>TRX</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr style={{ background: 'rgba(30,144,255,0.08)' }}>
+                      <td colSpan={2} style={{ fontWeight: 800, color: 'var(--accent-blue)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>TANGIBLE ASSET</td>
+                      <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--accent-blue)' }}>{fmtIDR(totalAnggaran)}</td>
+                      <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--accent-emerald)' }}>{fmtIDR(totalRealisasi)}</td>
+                      <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--accent-rose)' }}>{fmtIDR(sisaTotal)}</td>
+                      <td style={{ textAlign: 'center', fontWeight: 800 }}><span style={{ color: clr(totalPct) }}>{totalPct.toFixed(2)}%</span></td>
+                      <td style={{ textAlign: 'center', fontWeight: 700, color: 'var(--text-secondary)' }}>{entries.length}</td>
+                    </tr>
+                    {BUDGET_MASTER.map(b => {
+                      const r  = realisasiByAkun(b.akun);
+                      const si = b.anggaran - r;
+                      const p  = pct(r, b.anggaran);
+                      const tx = entriesByAkun(b.akun).length;
+                      const ac = ACCOUNT_COLORS[b.akun];
+                      return (
+                        <tr className="ticket-row" key={b.id}>
+                          <td style={{ fontFamily: 'monospace', fontWeight: 600, color: ac, fontSize: '0.85rem' }}>{b.akun}</td>
+                          <td style={{ color: 'var(--text-secondary)' }}>{b.deskripsi}</td>
+                          <td style={{ textAlign: 'right', fontWeight: 600 }}>{fmtIDR(b.anggaran)}</td>
+                          <td style={{ textAlign: 'right', color: 'var(--accent-emerald)', fontWeight: 600 }}>
+                            {r > 0 ? fmtIDR(r) : <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>—</span>}
+                          </td>
+                          <td style={{ textAlign: 'right', color: 'var(--accent-rose)', fontWeight: 600 }}>{fmtIDR(si)}</td>
+                          <td style={{ textAlign: 'center' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
+                              <span style={{ fontWeight: 700, fontSize: '0.85rem', color: clr(p) }}>{p.toFixed(1)}%</span>
+                              <div style={{ height: '4px', width: '60px', background: 'rgba(255,255,255,0.08)', borderRadius: '4px', overflow: 'hidden' }}>
+                                <div style={{ height: '100%', width: `${p}%`, background: clr(p), borderRadius: '4px' }} />
+                              </div>
+                            </div>
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: tx > 0 ? ac : 'var(--text-muted)' }}>{tx}</span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    <tr style={{ background: 'rgba(30,144,255,0.08)', borderTop: '2px solid var(--accent-blue-ghost)' }}>
+                      <td colSpan={2} style={{ fontWeight: 800, color: 'var(--accent-blue)', textTransform: 'uppercase', fontSize: '0.85rem', letterSpacing: '0.05em' }}>TOTAL INVESTASI</td>
+                      <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--accent-blue)', fontSize: '1rem' }}>{fmtIDR(totalAnggaran)}</td>
+                      <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--accent-emerald)', fontSize: '1rem' }}>{fmtIDR(totalRealisasi)}</td>
+                      <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--accent-rose)', fontSize: '1rem' }}>{fmtIDR(sisaTotal)}</td>
+                      <td style={{ textAlign: 'center', fontWeight: 800 }}><span style={{ color: clr(totalPct), fontSize: '1rem' }}>{totalPct.toFixed(2)}%</span></td>
+                      <td style={{ textAlign: 'center', fontWeight: 700 }}>{entries.length}</td>
+                    </tr>
+                  </tbody>
+                </table>
               )}
             </div>
-          );
-        })}
-      </div>
+          </div>
 
-      {/* Table Summary (like the reference document) */}
-      <div className="glass-panel delay-400" style={{ marginBottom: '2rem' }}>
-        <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <BarChart3 size={18} color="var(--accent-blue)" />
-          <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>Rekap RKA Investasi 2026</h3>
-          <span style={{ marginLeft: 'auto', fontSize: '0.7rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-            Yayasan Pendidikan Telkom — SMK Telkom Malang
-          </span>
-        </div>
-        <div className="table-container">
-          {loading ? (
-            <div style={{ padding: '3rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', color: 'var(--text-secondary)' }}>
-              <Loader2 className="animate-spin" size={20} />
-              Memuat data anggaran...
+          {/* All transactions log */}
+          <div className="glass-panel delay-200">
+            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <Receipt size={18} color="var(--accent-emerald)"/>
+              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>Semua Entri Realisasi</h3>
+              <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'var(--text-muted)' }}>{entries.length} transaksi</span>
             </div>
-          ) : (
-            <table>
-              <thead>
-                <tr style={{ background: 'rgba(59,130,246,0.12)' }}>
-                  <th style={{ width: '100px' }}>AKUN</th>
-                  <th>DESKRIPSI</th>
-                  <th style={{ textAlign: 'right' }}>ANGGARAN 2026</th>
-                  <th style={{ textAlign: 'right' }}>REALISASI</th>
-                  <th style={{ textAlign: 'right' }}>SISA</th>
-                  <th style={{ textAlign: 'center', width: '110px' }}>KETERSERAPAN</th>
-                </tr>
-              </thead>
-              <tbody>
-                {/* Category header */}
-                <tr style={{ background: 'rgba(30,144,255,0.08)' }}>
-                  <td colSpan={2} style={{ fontWeight: 800, color: 'var(--accent-blue)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    TANGIBLE ASSET
-                  </td>
-                  <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--accent-blue)' }}>{formatIDR(totalAnggaran)}</td>
-                  <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--accent-emerald)' }}>{formatIDR(totalRealisasi)}</td>
-                  <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--accent-rose)' }}>{formatIDR(sisaAnggaran)}</td>
-                  <td style={{ textAlign: 'center', fontWeight: 800 }}>
-                    <span style={{ color: getStatusColor(totalPct) }}>{totalPct.toFixed(2)}%</span>
-                  </td>
-                </tr>
-                {items.map(item => {
-                  const pct = getAbsorptionPercent(item.realisasi, item.anggaran);
-                  const sisa = item.anggaran - item.realisasi;
-                  return (
-                    <tr className="ticket-row" key={item.id}>
-                      <td style={{ fontFamily: 'monospace', fontWeight: 600, color: ACCOUNT_COLORS[item.akun], fontSize: '0.85rem' }}>
-                        {item.akun}
-                      </td>
-                      <td style={{ color: 'var(--text-secondary)' }}>{item.deskripsi}</td>
-                      <td style={{ textAlign: 'right', fontWeight: 600 }}>{formatIDR(item.anggaran)}</td>
-                      <td style={{ textAlign: 'right', color: 'var(--accent-emerald)', fontWeight: 600 }}>
-                        {item.realisasi > 0 ? formatIDR(item.realisasi) : <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>—</span>}
-                      </td>
-                      <td style={{ textAlign: 'right', color: 'var(--accent-rose)', fontWeight: 600 }}>{formatIDR(sisa)}</td>
-                      <td style={{ textAlign: 'center' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
-                          <span style={{ fontWeight: 700, fontSize: '0.85rem', color: getStatusColor(pct) }}>
-                            {pct.toFixed(1)}%
-                          </span>
-                          <div style={{ height: '4px', width: '60px', background: 'rgba(255,255,255,0.08)', borderRadius: '4px', overflow: 'hidden' }}>
-                            <div style={{ height: '100%', width: `${pct}%`, background: getStatusColor(pct), borderRadius: '4px' }} />
-                          </div>
-                        </div>
-                      </td>
+            <div className="table-container">
+              {entries.length === 0 ? (
+                <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                  Belum ada entri realisasi.{canUpdate && ' Klik "Tambah Realisasi" untuk mulai mencatat.'}
+                </div>
+              ) : (
+                <table>
+                  <thead>
+                    <tr style={{ background: 'rgba(255,255,255,0.04)' }}>
+                      <th style={{ width: '95px' }}>TANGGAL</th>
+                      <th style={{ width: '90px' }}>AKUN</th>
+                      <th>DESKRIPSI KEGIATAN</th>
+                      <th style={{ textAlign: 'right' }}>JUMLAH</th>
+                      <th className="mobile-hide">DICATAT OLEH</th>
+                      {canUpdate && <th style={{ width: '50px' }}></th>}
                     </tr>
-                  );
-                })}
-                {/* Total Footer */}
-                <tr style={{ background: 'rgba(30,144,255,0.08)', borderTop: '2px solid var(--accent-blue-ghost)' }}>
-                  <td colSpan={2} style={{ fontWeight: 800, color: 'var(--accent-blue)', textTransform: 'uppercase', fontSize: '0.85rem', letterSpacing: '0.05em' }}>
-                    TOTAL INVESTASI
-                  </td>
-                  <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--accent-blue)', fontSize: '1rem' }}>{formatIDR(totalAnggaran)}</td>
-                  <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--accent-emerald)', fontSize: '1rem' }}>{formatIDR(totalRealisasi)}</td>
-                  <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--accent-rose)', fontSize: '1rem' }}>{formatIDR(sisaAnggaran)}</td>
-                  <td style={{ textAlign: 'center', fontWeight: 800 }}>
-                    <span style={{ color: getStatusColor(totalPct), fontSize: '1rem' }}>{totalPct.toFixed(2)}%</span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
-
-      {/* Info note for non-pimpinan */}
-      {!canUpdate && (
-        <div style={{
-          padding: '1rem 1.25rem',
-          background: 'rgba(59,130,246,0.08)',
-          border: '1px solid var(--accent-blue-ghost)',
-          borderRadius: '12px',
-          display: 'flex',
-          gap: '0.75rem',
-          alignItems: 'flex-start',
-          fontSize: '0.85rem',
-          color: 'var(--text-secondary)'
-        }}>
-          <AlertTriangle size={18} color="var(--accent-blue)" style={{ flexShrink: 0, marginTop: '1px' }} />
-          <div>
-            <strong style={{ color: 'var(--text-primary)' }}>Mode Baca Saja</strong>
-            <br />
-            Pembaruan realisasi anggaran CAPEX hanya dapat dilakukan oleh <strong>Pimpinan / Approver / Executive Viewer</strong>.
-            Hubungi Waka. Bidang IT, Lab., dan Sarpras untuk melakukan input realisasi.
+                  </thead>
+                  <tbody>
+                    {[...entries]
+                      .sort((a, b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime())
+                      .map(tx => {
+                        const ac = ACCOUNT_COLORS[tx.akun] || 'var(--accent-blue)';
+                        const bName = BUDGET_MASTER.find(b => b.akun === tx.akun)?.deskripsi || tx.akun;
+                        return (
+                          <tr className="ticket-row" key={tx.id}>
+                            <td style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{fmtDate(tx.tanggal)}</td>
+                            <td>
+                              <span style={{ fontFamily: 'monospace', fontSize: '0.75rem', background: `${ac}18`, color: ac, padding: '2px 6px', borderRadius: '4px', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                                {tx.akun}
+                              </span>
+                              <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '2px' }}>{bName}</div>
+                            </td>
+                            <td>
+                              <div style={{ fontWeight: 500 }}>{tx.deskripsiKegiatan}</div>
+                              {tx.keterangan && <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{tx.keterangan}</div>}
+                            </td>
+                            <td style={{ textAlign: 'right', color: 'var(--accent-emerald)', fontWeight: 700, whiteSpace: 'nowrap' }}>{fmtIDR(tx.jumlah)}</td>
+                            <td className="mobile-hide" style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{tx.createdBy.split(',')[0]}</td>
+                            {canUpdate && (
+                              <td style={{ textAlign: 'center' }}>
+                                <button onClick={() => handleDelete(tx)} disabled={deletingId === tx.id}
+                                  style={{ background: 'none', border: 'none', color: 'var(--accent-rose)', cursor: 'pointer', padding: '4px' }}>
+                                  {deletingId === tx.id ? <Loader2 size={14} className="animate-spin"/> : <Trash2 size={14}/>}
+                                </button>
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              )}
+            </div>
           </div>
         </div>
       )}
 
-      {/* Update Modal */}
-      {showModal && editingItem && (
-        <div style={{
-          position: 'fixed', inset: 0,
-          background: 'rgba(0,0,0,0.85)',
-          backdropFilter: 'blur(10px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 1000, padding: '1rem'
-        }}>
-          <div className="glass-panel" style={{
-            width: '100%', maxWidth: '500px',
-            border: `1px solid ${ACCOUNT_COLORS[editingItem.akun] || 'var(--accent-blue-ghost)'}40`
-          }}>
-            {/* Modal header */}
+      {/* ── Info note for non-pimpinan ── */}
+      {!canUpdate && (
+        <div style={{ padding: '1rem 1.25rem', background: 'rgba(59,130,246,0.08)', border: '1px solid var(--accent-blue-ghost)', borderRadius: '12px', display: 'flex', gap: '0.75rem', alignItems: 'flex-start', fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '1rem' }}>
+          <AlertTriangle size={18} color="var(--accent-blue)" style={{ flexShrink: 0, marginTop: '1px' }}/>
+          <div>
+            <strong style={{ color: 'var(--text-primary)' }}>Mode Baca Saja</strong><br />
+            Pencatatan realisasi anggaran CAPEX hanya dapat dilakukan oleh <strong>Pimpinan / Approver</strong>.
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════ MODAL: Tambah Realisasi ══════════════ */}
+      {showModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: '520px', border: `1px solid ${ACCOUNT_COLORS[formData.akun] || 'var(--accent-blue-ghost)'}40` }}>
+
+            {/* Modal Header */}
             <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <h2 style={{ fontSize: '1.1rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <Edit3 size={20} color={ACCOUNT_COLORS[editingItem.akun] || 'var(--accent-blue)'} />
-                  Update Realisasi Anggaran
+                <h2 style={{ fontSize: '1.1rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                  <Plus size={20} color="var(--accent-blue)"/> Tambah Entri Realisasi
                 </h2>
-                <p style={{ margin: '0.3rem 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                  <span style={{ fontFamily: 'monospace', color: ACCOUNT_COLORS[editingItem.akun] }}>{editingItem.akun}</span> — {editingItem.deskripsi}
+                <p style={{ margin: '0.3rem 0 0', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                  Setiap entri menambah serapan anggaran akun yang dipilih
                 </p>
               </div>
-              <button
-                onClick={() => setShowModal(false)}
-                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}
-              >
-                <X size={22} />
+              <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}>
+                <X size={22}/>
               </button>
             </div>
 
-            <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              {/* Anggaran info */}
-              <div style={{ padding: '0.75rem 1rem', background: 'rgba(255,255,255,0.04)', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Pagu / Anggaran Ditetapkan</span>
-                <span style={{ fontWeight: 700, color: ACCOUNT_COLORS[editingItem.akun] || 'var(--accent-blue)' }}>
-                  {formatIDR(editingItem.anggaran)}
-                </span>
+            <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+
+              {/* Akun selector */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', fontWeight: 600 }}>Akun Anggaran</label>
+                <select value={formData.akun} onChange={e => setFormData({ ...formData, akun: e.target.value })}
+                  style={{ width: '100%', background: '#1a1a1a', border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '0.75rem', color: 'white', outline: 'none', fontSize: '0.9rem' }}>
+                  {BUDGET_MASTER.map(b => (
+                    <option key={b.akun} value={b.akun}>{b.akun} — {b.deskripsi} (sisa: {fmtShort(b.anggaran - realisasiByAkun(b.akun))})</option>
+                  ))}
+                </select>
+                {/* Remaining budget info */}
+                <div style={{ marginTop: '0.4rem', display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  <span>Terserap: <strong style={{ color: 'var(--accent-emerald)' }}>{fmtIDR(realisasiByAkun(formData.akun))}</strong></span>
+                  <span>Sisa: <strong style={{ color: 'var(--accent-rose)' }}>{fmtIDR(BUDGET_MASTER.find(b => b.akun === formData.akun)!.anggaran - realisasiByAkun(formData.akun))}</strong></span>
+                </div>
               </div>
 
-              {/* Realisasi input */}
+              {/* Deskripsi Kegiatan */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', fontWeight: 600 }}>
-                  Jumlah Realisasi / Terserap (Rp)
-                </label>
-                <input
-                  type="number"
-                  value={formData.realisasi}
-                  onChange={(e) => setFormData({ ...formData, realisasi: e.target.value })}
-                  placeholder="0"
-                  min={0}
-                  max={editingItem.anggaran}
-                  style={{
-                    width: '100%', boxSizing: 'border-box',
-                    background: 'rgba(255,255,255,0.06)',
-                    border: '1px solid var(--border-subtle)',
-                    borderRadius: '10px', padding: '0.85rem',
-                    color: 'white', outline: 'none', fontSize: '1rem'
-                  }}
-                />
-                {Number(formData.realisasi) > 0 && (
-                  <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: 'var(--accent-emerald)' }}>
-                    = {getAbsorptionPercent(Number(formData.realisasi), editingItem.anggaran).toFixed(2)}% terserap
-                    ({formatIDR(editingItem.anggaran - Number(formData.realisasi))} sisa)
-                  </div>
-                )}
+                <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', fontWeight: 600 }}>Deskripsi Kegiatan / Pembayaran <span style={{ color: 'var(--accent-rose)' }}>*</span></label>
+                <input type="text" value={formData.deskripsiKegiatan}
+                  onChange={e => setFormData({ ...formData, deskripsiKegiatan: e.target.value })}
+                  placeholder="Contoh: Pembayaran termin 1 Gedung Workshop"
+                  style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '0.8rem', color: 'white', outline: 'none', fontSize: '0.9rem' }}/>
               </div>
+
+              {/* Tanggal & Jumlah side by side */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', fontWeight: 600 }}>Tanggal <span style={{ color: 'var(--accent-rose)' }}>*</span></label>
+                  <input type="date" value={formData.tanggal}
+                    onChange={e => setFormData({ ...formData, tanggal: e.target.value })}
+                    style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '0.8rem', color: 'white', outline: 'none', fontSize: '0.9rem' }}/>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', fontWeight: 600 }}>Jumlah (Rp) <span style={{ color: 'var(--accent-rose)' }}>*</span></label>
+                  <input type="number" value={formData.jumlah}
+                    onChange={e => setFormData({ ...formData, jumlah: e.target.value })}
+                    placeholder="0" min={1}
+                    style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '0.8rem', color: 'white', outline: 'none', fontSize: '0.9rem' }}/>
+                </div>
+              </div>
+
+              {/* Live preview baru setelah ditambah */}
+              {Number(formData.jumlah) > 0 && (() => {
+                const budget = BUDGET_MASTER.find(b => b.akun === formData.akun)!;
+                const newReal = realisasiByAkun(formData.akun) + Number(formData.jumlah);
+                const newPct  = pct(newReal, budget.anggaran);
+                return (
+                  <div style={{ padding: '0.75rem 1rem', background: `${ACCOUNT_COLORS[formData.akun]}12`, border: `1px solid ${ACCOUNT_COLORS[formData.akun]}30`, borderRadius: '10px', fontSize: '0.8rem' }}>
+                    <div style={{ fontWeight: 600, marginBottom: '0.3rem', color: 'var(--text-secondary)' }}>Preview setelah ditambahkan:</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Realisasi baru:</span>
+                      <strong style={{ color: 'var(--accent-emerald)' }}>{fmtIDR(newReal)}</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Keterserapan:</span>
+                      <strong style={{ color: clr(newPct) }}>{newPct.toFixed(2)}%</strong>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Keterangan */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', fontWeight: 600 }}>
-                  Catatan / Keterangan
-                </label>
-                <textarea
-                  value={formData.keterangan}
-                  onChange={(e) => setFormData({ ...formData, keterangan: e.target.value })}
-                  placeholder="Contoh: Pembayaran tahap 1 kontrak pembangunan Gedung X"
-                  rows={3}
-                  style={{
-                    width: '100%', boxSizing: 'border-box',
-                    background: 'rgba(255,255,255,0.06)',
-                    border: '1px solid var(--border-subtle)',
-                    borderRadius: '10px', padding: '0.85rem',
-                    color: 'white', outline: 'none',
-                    fontSize: '0.9rem', resize: 'vertical', fontFamily: 'inherit'
-                  }}
-                />
+                <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', fontWeight: 600 }}>Keterangan Tambahan</label>
+                <textarea value={formData.keterangan}
+                  onChange={e => setFormData({ ...formData, keterangan: e.target.value })}
+                  placeholder="Opsional — nomor SPJ, nomor kontrak, dsb."
+                  rows={2}
+                  style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '0.8rem', color: 'white', outline: 'none', fontSize: '0.9rem', resize: 'vertical', fontFamily: 'inherit' }}/>
               </div>
 
               {/* Recorded by */}
               <div style={{ padding: '0.5rem 0.75rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                Diperbarui oleh: <strong style={{ color: 'var(--text-secondary)' }}>{currentUser.nama}</strong>
+                Dicatat oleh: <strong style={{ color: 'var(--text-secondary)' }}>{currentUser.nama}</strong>
               </div>
 
               {/* Actions */}
               <div style={{ display: 'flex', gap: '0.75rem' }}>
-                <button
-                  onClick={() => setShowModal(false)}
-                  className="btn btn-outline"
-                  style={{ flex: 1 }}
-                >
-                  Batal
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={isSubmitting || formData.realisasi === ''}
+                <button onClick={() => setShowModal(false)} className="btn btn-outline" style={{ flex: 1 }}>Batal</button>
+                <button onClick={handleSave}
+                  disabled={isSubmitting || !formData.deskripsiKegiatan.trim() || !formData.jumlah}
                   className="btn btn-primary"
-                  style={{ flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
-                >
-                  {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                  style={{ flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                  {isSubmitting ? <Loader2 size={18} className="animate-spin"/> : <Save size={18}/>}
                   {isSubmitting ? 'Menyimpan...' : 'Simpan Realisasi'}
                 </button>
               </div>
