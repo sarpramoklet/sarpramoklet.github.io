@@ -1,4 +1,4 @@
-import { LayoutDashboard, Ticket, Server, Component, Building, Package, BookOpen, Bell, Presentation, Users, Briefcase, TrendingUp, BarChart3, Zap, Wallet, History as HistoryIcon, Coins, Wind } from 'lucide-react';
+import { LayoutDashboard, Ticket, Server, Component, Building, Package, BookOpen, Bell, Presentation, Users, Briefcase, TrendingUp, BarChart3, Zap, Wallet, History as HistoryIcon, Coins, Wind, Target } from 'lucide-react';
 
 export const NAVIGATION = [
   { path: '/', name: 'Dashboard', icon: LayoutDashboard, authRequired: false },
@@ -20,4 +20,5 @@ export const NAVIGATION = [
   { path: '/sop', name: 'SOP & Dokumen', icon: BookOpen, authRequired: true },
   { path: '/duty-notes', name: 'Catatan Piket', icon: BookOpen, authRequired: true },
   { path: '/notifications', name: 'Notifikasi', icon: Bell, authRequired: true },
+  { path: '/capex', name: 'Monitor CAPEX', icon: Target, authRequired: true, leaderOnly: true },
 ];

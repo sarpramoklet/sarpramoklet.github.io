@@ -191,9 +191,10 @@ const Tickets = () => {
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)',
-          display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 50
+          display: 'flex', justifyContent: 'center', alignItems: 'flex-start', 
+          zIndex: 50, padding: '1rem', paddingTop: '5rem', overflowY: 'auto'
         }}>
-          <div className="glass-panel animate-fade-in" style={{ width: '500px', padding: '2rem', background: 'var(--bg-secondary)' }}>
+          <div className="glass-panel animate-fade-in" style={{ width: '500px', maxWidth: '100%', padding: '2rem', background: 'var(--bg-secondary)', marginBottom: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h2 style={{ fontSize: '1.25rem', margin: 0 }}>Buat Tiket Baru</h2>
               <button 

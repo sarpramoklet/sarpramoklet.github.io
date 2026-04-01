@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { NAVIGATION } from '../navigation';
 import { UserCircle2, X, Sun, Moon, LogOut, LogIn } from 'lucide-react';
-import { getCurrentUser } from '../data/organization';
+import { getCurrentUser, ROLES } from '../data/organization';
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -143,7 +143,7 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
             const isPetugasPiket = piketEmails.includes(userEmail);
 
             // Filter logic
-            const filteredItems = NAVIGATION.filter(item => {
+            const filteredItems = NAVIGATION.filter((item: any) => {
               // Hide Performance for Petugas Piket as requested
               if (isPetugasPiket && item.name === 'Kinerja Personel') return false;
               
@@ -151,6 +151,12 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
               if (user.unit === 'Tata Kelola') {
                 const excludedPublic = ['IT Services', 'Laboratorium', 'Sarpras'];
                 if (excludedPublic.includes(item.name)) return false;
+              }
+
+              // leaderOnly items: hide from everyone except Pimpinan
+              if (item.leaderOnly) {
+                if (!isLoggedIn) return false;
+                return user.roleAplikasi === ROLES.PIMPINAN;
               }
 
               if (!item.authRequired) return true;
