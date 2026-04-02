@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Wind, Search, Edit3, Save, Loader2, X, RefreshCw, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Wind, Search, Edit3, Save, Loader2, X, RefreshCw, AlertTriangle, CheckCircle, CloudUpload } from 'lucide-react';
 import { getCurrentUser, ROLES } from '../data/organization';
 import { logAccess } from '../utils/logger';
 
@@ -26,6 +26,7 @@ const ACMonitor = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<ACData>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSyncingAll, setIsSyncingAll] = useState(false);
 
   const currentUser = getCurrentUser();
   const canUpdate = [ROLES.PIMPINAN, ROLES.KOORDINATOR_SARPRAS].includes(currentUser.roleAplikasi) || 
@@ -198,6 +199,60 @@ const ACMonitor = () => {
     }
   };
 
+  const handleSyncAll = async () => {
+    if (!confirm('Peringatan: Proses ini akan menyinkronkan (override) seluruh 40 data ke Database. Proses ini membutuhkan waktu beberapa saat. Lanjutkan?')) return;
+    setIsSyncingAll(true);
+    
+    const updatedAt = new Date().toISOString();
+    const updatedBy = currentUser.nama;
+    let successCount = 0;
+
+    // We process sequentially to avoid triggering too many simultaneous requests to GAS
+    for (const ac of acList) {
+      const payload = {
+        action: 'FINANCE_RECORD',
+        sheetName: SHEET_NAME,
+        sheet: SHEET_NAME,
+        id: ac.id,
+        ID: ac.id,
+        ruang: ac.ruang,
+        Ruang: ac.ruang,
+        status: ac.status,
+        Status: ac.status,
+        kondisi: ac.kondisi,
+        Kondisi: ac.kondisi,
+        merk: ac.merk,
+        Merk: ac.merk,
+        pk: ac.pk,
+        PK: ac.pk,
+        jumlah: ac.jumlah,
+        Jumlah: ac.jumlah,
+        updatedAt: updatedAt,
+        UpdatedAt: updatedAt,
+        updatedBy: updatedBy,
+        UpdatedBy: updatedBy
+      };
+
+      try {
+        await fetch(API_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify(payload)
+        });
+        successCount++;
+        // minimal delay to prevent overwhelming standard GAS deployment limits
+        await new Promise(r => setTimeout(r, 150));
+      } catch (error) {
+        console.error("Save failed for room:", ac.ruang);
+      }
+    }
+
+    setIsSyncingAll(false);
+    alert(`Berhasil sinkronisasi ${successCount} data ruangan ke database!`);
+    fetchData();
+  };
+
   const formatDate = (dateStr: string) => {
     if (!dateStr || dateStr === '-') return '-';
     try {
@@ -269,8 +324,19 @@ const ACMonitor = () => {
                 style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '0.6rem 0.6rem 0.6rem 2.5rem', color: 'white', outline: 'none' }}
               />
             </div>
-            <button onClick={fetchData} className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }} disabled={loading}>
-              <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Refresh
+            {canUpdate && (
+              <button 
+                onClick={handleSyncAll} 
+                className="btn btn-primary" 
+                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }} 
+                disabled={loading || isSyncingAll}
+              >
+                {isSyncingAll ? <Loader2 size={16} className="animate-spin" /> : <CloudUpload size={16} />}
+                {isSyncingAll ? 'Proses...' : 'Sinkron ke DB'}
+              </button>
+            )}
+            <button onClick={fetchData} className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }} disabled={loading || isSyncingAll}>
+              <RefreshCw size={16} className={loading || isSyncingAll ? 'animate-spin' : ''} /> Refresh
             </button>
           </div>
 
