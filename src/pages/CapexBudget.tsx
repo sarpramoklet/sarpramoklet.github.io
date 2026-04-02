@@ -3,7 +3,7 @@ import {
   Building2, FlaskConical, BookOpen, Monitor, TrendingUp, Edit3, X,
   Save, Loader2, RefreshCw, AlertTriangle, CheckCircle, Clock, BarChart3,
   ChevronDown, ChevronRight, DollarSign, Target, Activity, Plus, Trash2,
-  Receipt, CalendarDays, FileText, Briefcase, ListTodo
+  Receipt, CalendarDays, FileText, Briefcase
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from 'recharts';
 import { getCurrentUser, ROLES } from '../data/organization';
