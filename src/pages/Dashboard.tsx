@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, LabelList } from 'recharts';
-import { Activity, Clock10, CheckSquare, TriangleAlert, ArrowUpRight, ArrowDownRight, UserCircle2, TrendingUp, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, ShieldCheck, MessageSquare, AlertCircle, Edit3, Trash2 } from 'lucide-react';
+import { Activity, Clock10, CheckSquare, TriangleAlert, ArrowUpRight, ArrowDownRight, UserCircle2, TrendingUp, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, ShieldCheck, MessageSquare, AlertCircle, Edit3, Trash2, Wind } from 'lucide-react';
 import { getCurrentUser, ROLES } from '../data/organization';
 import { getUtilityChartData } from '../data/utilities';
 
@@ -44,6 +44,9 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   const [acFinance, setAcFinance] = useState({ balance: 0, expense: 0 });
   const [piketNotes, setPiketNotes] = useState<any[]>([]);
   const [piketLoading, setPiketLoading] = useState(false);
+  
+  const [acMonitorData, setAcMonitorData] = useState<any>(null);
+  const [acLoading, setAcLoading] = useState(false);
 
   useEffect(() => {
     const fetchFinanceData = async () => {
@@ -154,6 +157,49 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
     };
 
     if (isLoggedIn) fetchPiketNotes();
+
+    const fetchACMonitor = async () => {
+      setAcLoading(true);
+      try {
+        const resp = await fetch(`${FINANCE_API_URL}?sheetName=Monitor_AC`);
+        const data = await resp.json();
+        if (data && Array.isArray(data)) {
+          let terpasang = 0, belum = 0, baik = 0, perbaikan = 0, rusak = 0;
+          
+          let fetchedMap = new Map();
+          data.forEach(item => {
+            const ruang = parseInt(item.ruang || item.Ruang);
+            if (!isNaN(ruang)) fetchedMap.set(ruang, item);
+          });
+          
+          for (let i=1; i<=40; i++) {
+            let status = 'Belum Terpasang';
+            let kondisi = '-';
+            if (fetchedMap.has(i)) {
+              status = fetchedMap.get(i).status || fetchedMap.get(i).Status || 'Belum Terpasang';
+              kondisi = fetchedMap.get(i).kondisi || fetchedMap.get(i).Kondisi || '-';
+            } else {
+              if (i >= 1 && i <= 6) { status = 'Terpasang'; kondisi = 'Baik'; }
+              else if ((i >= 17 && i <= 20) || (i >= 25 && i <= 40)) { status = 'Terpasang'; kondisi = 'Baik'; }
+            }
+            
+            if (status === 'Terpasang') terpasang++; else belum++;
+            if (kondisi === 'Baik') baik++;
+            else if (kondisi === 'Perbaikan') perbaikan++;
+            else if (kondisi === 'Rusak') rusak++;
+          }
+          
+          setAcMonitorData({ terpasang, belum, baik, perbaikan, rusak, total: 40 });
+        }
+      } catch (e) {
+        console.error("Dashboard AC fetch error:", e);
+      } finally {
+        setAcLoading(false);
+      }
+    };
+    
+    if (isLoggedIn) fetchACMonitor();
+
   }, [isAuthorizedFinance, isLoggedIn]);
 
   const handleDeletePiket = async (id: string, keterangan: string) => {
@@ -254,10 +300,91 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
             Monitor penugasan, progres rutin, dan proyek tim IT, Lab & Sarana Prasarana.
           </p>
         </div>
-        <button className="btn btn-primary" style={{ alignSelf: 'flex-start' }}>
-          <Activity size={18} /> <span className="mobile-hide">Unduh Laporan PDF</span><span style={{ display: 'none' }} className="mobile-show">Laporan</span>
-        </button>
       </div>
+
+      {/* DASHBOARD AC MONITORING SECTION */}
+      {isLoggedIn && (
+        <div className="glass-panel delay-100" style={{ marginBottom: '2rem', background: 'linear-gradient(135deg, rgba(59,130,246,0.03), transparent)', borderLeft: '4px solid var(--accent-blue)' }}>
+          <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h3 style={{ fontSize: '1.05rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Wind size={18} color="var(--accent-blue)" /> Pemantauan Kondisi AC Kelas (R.1 - 40)
+              </h3>
+              <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Status ketersediaan dan kesiapan operasional pendingin ruangan</p>
+            </div>
+            <a href="#/ac-monitor" className="btn btn-outline" style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}>Detail AC Ruang</a>
+          </div>
+          
+          <div style={{ padding: '1.25rem' }}>
+            {acLoading ? (
+              <div style={{ padding: '3rem', display: 'flex', justifyContent: 'center' }}><Loader2 className="animate-spin" color="var(--accent-blue)" /></div>
+            ) : acMonitorData ? (
+              <div className="dashboard-grid">
+                {/* Stats Kiri */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div className="glass-panel" style={{ padding: '1rem', background: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Cakupan Terpasang</div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--accent-blue)' }}>{((acMonitorData.terpasang / 40) * 100).toFixed(0)}%</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '1rem', fontWeight: 700 }}>{acMonitorData.terpasang} Ruang</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--accent-rose)' }}>{acMonitorData.belum} Belum Ada</div>
+                    </div>
+                  </div>
+                  
+                  <div className="glass-panel" style={{ padding: '1rem', background: 'var(--bg-card)' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>Penanganan & Perbaikan Terkini</div>
+                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+                      <div style={{ flex: 1, padding: '0.75rem', background: 'var(--accent-rose-ghost)', borderRadius: '8px', borderLeft: '2px solid var(--accent-rose)' }}>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--accent-rose)' }}>{acMonitorData.perbaikan + acMonitorData.rusak}</div>
+                        <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>Mati / Perbaikan</div>
+                      </div>
+                      <div style={{ flex: 1, padding: '0.75rem', background: 'var(--accent-emerald-ghost)', borderRadius: '8px', borderLeft: '2px solid var(--accent-emerald)' }}>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--accent-emerald)' }}>{acMonitorData.baik}</div>
+                        <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>Normal / Baik</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Grafik Kanan */}
+                <div className="glass-panel" style={{ padding: '1rem', background: 'var(--bg-card)', height: '220px', display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Ratio Kondisi Fisik AC</div>
+                  <div style={{ flex: 1, position: 'relative' }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie 
+                          data={[
+                            { name: 'Baik', value: acMonitorData.baik, color: '#10b981' },
+                            { name: 'Perbaikan', value: acMonitorData.perbaikan, color: '#f59e0b' },
+                            { name: 'Rusak Total', value: acMonitorData.rusak, color: '#e11d48' },
+                          ].filter(d => d.value > 0)} 
+                          innerRadius={50} outerRadius={75} paddingAngle={2} dataKey="value"
+                        >
+                          { [
+                            { name: 'Baik', value: acMonitorData.baik, color: '#10b981' },
+                            { name: 'Perbaikan', value: acMonitorData.perbaikan, color: '#f59e0b' },
+                            { name: 'Rusak Total', value: acMonitorData.rusak, color: '#e11d48' },
+                          ].filter(d => d.value > 0).map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <RechartsTooltip contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-focus)', borderRadius: '8px', fontSize: '11px' }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', pointerEvents: 'none' }}>
+                      <Wind size={20} color="var(--text-muted)" style={{ opacity: 0.5 }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div style={{ padding: '1rem', color: 'var(--text-secondary)' }}>Data tidak tersedia.</div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Jadwal Piket Sarpras Section - Moved to Top */}
       <div className="glass-panel delay-300" style={{ marginBottom: '2rem', overflow: 'hidden' }}>
