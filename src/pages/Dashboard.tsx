@@ -1,26 +1,10 @@
 import { useState, useEffect } from 'react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, LabelList } from 'recharts';
-import { Activity, Clock10, CheckSquare, TriangleAlert, ArrowUpRight, ArrowDownRight, UserCircle2, TrendingUp, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, ShieldCheck, MessageSquare, AlertCircle, Edit3, Trash2, Wind, Briefcase } from 'lucide-react';
+import { XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, LabelList } from 'recharts';
+import { UserCircle2, TrendingUp, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, ShieldCheck, MessageSquare, AlertCircle, Edit3, Trash2, Wind, Briefcase, ArrowDownRight } from 'lucide-react';
 import { getCurrentUser, ROLES } from '../data/organization';
 import { getUtilityChartData } from '../data/utilities';
 
 const FINANCE_API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
-
-const areaData = [
-  { name: 'Jan', IT: 400, Lab: 240, Sarpras: 240 },
-  { name: 'Feb', IT: 300, Lab: 139, Sarpras: 221 },
-  { name: 'Mar', IT: 200, Lab: 400, Sarpras: 229 },
-  { name: 'Apr', IT: 278, Lab: 390, Sarpras: 200 },
-  { name: 'Mei', IT: 189, Lab: 480, Sarpras: 218 },
-  { name: 'Jun', IT: 239, Lab: 380, Sarpras: 250 },
-  { name: 'Jul', IT: 349, Lab: 430, Sarpras: 210 },
-];
-
-const pieData = [
-  { name: 'IT Helpdesk', value: 400, color: '#3b82f6' },
-  { name: 'Lab Practical', value: 300, color: '#8b5cf6' },
-  { name: 'Building Mgmt', value: 300, color: '#10b981' },
-];
 
 const kaurStats = [
   { name: 'Whyna Agustin', unit: 'IT', created: 45, completion: 92, avatar: 'W', color: 'var(--accent-blue)' },
@@ -631,118 +615,6 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         </div>
       </div>
 
-      <div className="stats-grid">
-        <div className="glass-panel stat-card delay-100">
-          <div className="stat-header">
-            <span className="stat-title">Pekerjaan Aktif</span>
-            <div className="stat-icon-wrapper" style={{ background: 'var(--accent-blue-ghost)', color: 'var(--accent-blue)' }}>
-              <Activity size={20} />
-            </div>
-          </div>
-          <div>
-            <div className="stat-value">142</div>
-            <div className="stat-trend trend-up">
-              <ArrowUpRight size={16} /> <span>12% dibanding bulan lalu</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="glass-panel stat-card delay-200">
-          <div className="stat-header">
-            <span className="stat-title">Rata-rata Penanganan</span>
-            <div className="stat-icon-wrapper" style={{ background: 'var(--accent-emerald-ghost)', color: 'var(--accent-emerald)' }}>
-              <Clock10 size={20} />
-            </div>
-          </div>
-          <div>
-            <div className="stat-value">2.4 <span style={{ fontSize: '1.25rem', color: 'var(--text-secondary)' }}>jam</span></div>
-            <div className="stat-trend trend-down">
-              <ArrowDownRight size={16} /> <span style={{ color: 'var(--accent-emerald)' }}>Menurun 15% (Lebih Cepat)</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="glass-panel stat-card delay-300">
-          <div className="stat-header">
-            <span className="stat-title">Pekerjaan Selesai</span>
-            <div className="stat-icon-wrapper" style={{ background: 'var(--accent-violet-ghost)', color: 'var(--accent-violet)' }}>
-              <CheckSquare size={20} />
-            </div>
-          </div>
-          <div>
-            <div className="stat-value">489</div>
-            <div className="stat-trend trend-up">
-              <ArrowUpRight size={16} /> <span>Tingkat Ketercapaian: 94%</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="glass-panel stat-card" style={{ animationDelay: '0.4s' }}>
-          <div className="stat-header">
-            <span className="stat-title">Tiket Overdue</span>
-            <div className="stat-icon-wrapper" style={{ background: 'var(--accent-rose-ghost)', color: 'var(--accent-rose)' }}>
-              <TriangleAlert size={20} />
-            </div>
-          </div>
-          <div>
-            <div className="stat-value" style={{ color: 'var(--accent-rose)' }}>14</div>
-            <div className="stat-trend trend-up" style={{ color: 'var(--accent-rose)' }}>
-              <ArrowUpRight size={16} /> <span>Perlu Perhatian Pimpinan</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="dashboard-grid delay-300">
-        <div className="glass-panel chart-container" style={{ minHeight: '300px' }}>
-          <div className="chart-header">
-            <h3 style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>Tren Permintaan Layanan</h3>
-            <div className="badge badge-info" style={{ fontSize: '0.65rem' }}>TAHUN INI</div>
-          </div>
-          <div style={{ flex: 1, minHeight: 0 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={areaData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
-                <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
-                <RechartsTooltip 
-                  contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-focus)', borderRadius: '8px', fontSize: '10px' }}
-                />
-                <Area type="monotone" dataKey="IT" stroke="#3b82f6" strokeWidth={2} fillOpacity={0.2} fill="#3b82f6" />
-                <Area type="monotone" dataKey="Lab" stroke="#8b5cf6" strokeWidth={2} fillOpacity={0.2} fill="#8b5cf6" />
-                <Area type="monotone" dataKey="Sarpras" stroke="#10b981" strokeWidth={2} fillOpacity={0.2} fill="#10b981" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <h3 style={{ fontSize: '0.9rem', color: 'var(--text-primary)', margin: 0 }}>Distribusi Pekerjaan SLA</h3>
-          <div style={{ height: '180px' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={pieData} innerRadius={50} outerRadius={70} paddingAngle={5} dataKey="value">
-                  {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <RechartsTooltip 
-                  contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-focus)', borderRadius: '8px' }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'center' }}>
-            {pieData.map(item => (
-              <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <div style={{ width: 8, height: 8, borderRadius: '50%', background: item.color }}></div>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{item.name.split(' ')[0]}</span>
-                <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{item.value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
 
       {isLoggedIn && isAuthorizedFinance && (
         <div className="stats-grid" style={{ marginBottom: '1.5rem', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
