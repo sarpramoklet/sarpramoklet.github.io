@@ -62,42 +62,63 @@ const ACMonitor = () => {
         });
       }
 
+      const getDefaultAC = (i: number): ACData => {
+        let status = 'Belum Terpasang';
+        let kondisi = '-';
+        let pk = '-';
+        let jumlah = 0;
+        
+        if (i >= 1 && i <= 6) {
+          status = 'Terpasang';
+          kondisi = 'Baik';
+          pk = '1.5 PK';
+          jumlah = 2;
+        } else if ((i >= 17 && i <= 20) || (i >= 25 && i <= 40)) {
+          status = 'Terpasang';
+          kondisi = 'Baik';
+          pk = '2 PK';
+          jumlah = 2;
+        }
+        
+        return {
+          id: `AC-${i}`,
+          ruang: i,
+          status,
+          kondisi,
+          merk: '-',
+          pk,
+          jumlah,
+          updatedAt: '',
+          updatedBy: '-'
+        };
+      };
+
       // Generate 1 to 40
       const list: ACData[] = [];
       for (let i = 1; i <= 40; i++) {
         if (fetchedMap.has(i)) {
           list.push(fetchedMap.get(i)!);
         } else {
-          list.push({
-            id: `AC-${i}`,
-            ruang: i,
-            status: 'Belum Terpasang',
-            kondisi: '-',
-            merk: '-',
-            pk: '-',
-            jumlah: 0,
-            updatedAt: '',
-            updatedBy: '-'
-          });
+          list.push(getDefaultAC(i));
         }
       }
       setAcList(list);
     } catch (error) {
       console.error("Error fetching AC data:", error);
       // Fallback local list
+      const getDefaultAC = (i: number): ACData => {
+        let status = 'Belum Terpasang';
+        let kondisi = '-';
+        let pk = '-';
+        let jumlah = 0;
+        if (i >= 1 && i <= 6) { status = 'Terpasang'; kondisi = 'Baik'; pk = '1.5 PK'; jumlah = 2; }
+        else if ((i >= 17 && i <= 20) || (i >= 25 && i <= 40)) { status = 'Terpasang'; kondisi = 'Baik'; pk = '2 PK'; jumlah = 2; }
+        return { id: `AC-${i}`, ruang: i, status, kondisi, merk: '-', pk, jumlah, updatedAt: '', updatedBy: '-' };
+      };
+
       const list: ACData[] = [];
       for (let i = 1; i <= 40; i++) {
-        list.push({
-          id: `AC-${i}`,
-          ruang: i,
-          status: 'Belum Terpasang',
-          kondisi: '-',
-          merk: '-',
-          pk: '-',
-          jumlah: 0,
-          updatedAt: '',
-          updatedBy: '-'
-        });
+        list.push(getDefaultAC(i));
       }
       setAcList(list);
     } finally {
