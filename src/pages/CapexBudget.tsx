@@ -3,12 +3,14 @@ import {
   Building2, FlaskConical, BookOpen, Monitor, TrendingUp, Edit3, X,
   Save, Loader2, RefreshCw, AlertTriangle, CheckCircle, Clock, BarChart3,
   ChevronDown, ChevronRight, DollarSign, Target, Activity, Plus, Trash2,
-  Receipt, CalendarDays, FileText
+  Receipt, CalendarDays, FileText, Briefcase, ListTodo
 } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from 'recharts';
 import { getCurrentUser, ROLES } from '../data/organization';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 const SHEET_REALISASI = 'Capex_Realisasi';
+const SHEET_PROYEK    = 'Progres_CAPEX';
 
 /* ─── Static budget master (RKA Investasi 2026) ─── */
 interface BudgetItem {
@@ -50,6 +52,25 @@ const ACCOUNT_COLORS: Record<string, string> = {
   '1234101': 'var(--accent-rose)',
 };
 
+/* ─── Projects ─── */
+interface CapexProject {
+  id: string;
+  nama: string;
+  progress: number;
+  lastUpdated: string;
+  updatedBy: string;
+}
+
+const DEFAULT_PROJECTS: CapexProject[] = [
+  { id: 'PRJ-1', nama: 'Peremajaan keramik pada 3 ruang kelas (R.1 – R.3)', progress: 0, lastUpdated: '', updatedBy: '-' },
+  { id: 'PRJ-2', nama: 'Peremajaan talang air pada dak beton lantai 3', progress: 0, lastUpdated: '', updatedBy: '-' },
+  { id: 'PRJ-3', nama: 'Peremajaan dak beton masjid', progress: 0, lastUpdated: '', updatedBy: '-' },
+  { id: 'PRJ-4', nama: 'Peremajaan cat dinding pada 10 ruang kelas (R.7 – R.16)', progress: 0, lastUpdated: '', updatedBy: '-' },
+  { id: 'PRJ-5', nama: 'Peremajaan beton lapangan olahraga (basket)', progress: 0, lastUpdated: '', updatedBy: '-' },
+  { id: 'PRJ-6', nama: 'Pengadaan interior Laboratorium TEFA (Lab. 3)', progress: 0, lastUpdated: '', updatedBy: '-' },
+  { id: 'PRJ-7', nama: 'Pembangunan Malang Techno Park (Lanjutan)', progress: 0, lastUpdated: '', updatedBy: '-' },
+];
+
 /* ──────────────────── Component ──────────────────── */
 const CapexBudget = () => {
   const [entries, setEntries]           = useState<RealisasiEntry[]>([]);
@@ -57,9 +78,15 @@ const CapexBudget = () => {
   const [showModal, setShowModal]       = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const [activeTab, setActiveTab]       = useState<'cards' | 'table'>('cards');
+  const [activeTab, setActiveTab]       = useState<'cards' | 'table' | 'projek'>('cards');
   const [deletingId, setDeletingId]     = useState<string | null>(null);
   const [editingEntry, setEditingEntry] = useState<RealisasiEntry | null>(null);
+
+  /* Tab Proyek state */
+  const [projects, setProjects] = useState<CapexProject[]>(DEFAULT_PROJECTS);
+  const [editingProject, setEditingProject] = useState<CapexProject | null>(null);
+  const [projectProgress, setProjectProgress] = useState(0);
+  const [isSavingProject, setIsSavingProject] = useState(false);
 
   const [formData, setFormData] = useState({
     akun: '1232101',
@@ -153,7 +180,33 @@ const CapexBudget = () => {
     }
   };
 
-  useEffect(() => { fetchData(); }, []);
+  const fetchProjects = async () => {
+    try {
+      const resp = await fetch(`${API_URL}?sheetName=${SHEET_PROYEK}`);
+      const data = await resp.json();
+      if (Array.isArray(data) && data.length > 0) {
+        setProjects(DEFAULT_PROJECTS.map(def => {
+          const found = data.find((d: any) => d.id === def.id || d.ID === def.id);
+          if (found) {
+            return {
+              ...def,
+              progress: Number(found.progress || found.Progress || 0),
+              lastUpdated: found.lastUpdated || found.LastUpdated || '',
+              updatedBy: found.updatedBy || found.UpdatedBy || '-'
+            };
+          }
+          return def;
+        }));
+      }
+    } catch (err) {
+      console.error('Error fetching projects:', err);
+    }
+  };
+
+  useEffect(() => { 
+    fetchData(); 
+    fetchProjects();
+  }, []);
 
   /* ── add entry ── */
   const handleAdd = (akunDefault?: string) => {
@@ -372,7 +425,7 @@ const CapexBudget = () => {
 
       {/* ── Tab selector ── */}
       <div className="glass-panel" style={{ padding: '0.4rem', marginBottom: '1.5rem', display: 'flex', gap: '0.4rem', background: 'rgba(255,255,255,0.03)' }}>
-        {([['cards','Per Akun (Detail)'], ['table','Tabel Rekap RKA']] as const).map(([key, label]) => (
+        {([['cards','Per Akun (Detail)'], ['table','Tabel Rekap RKA'], ['projek', 'Progres Proyek']] as const).map(([key, label]) => (
           <button key={key} onClick={() => setActiveTab(key)}
             style={{
               flex: 1, padding: '0.65rem', borderRadius: '8px', border: 'none',
@@ -381,11 +434,77 @@ const CapexBudget = () => {
               fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.25s',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem'
             }}>
-            {key === 'cards' ? <Target size={15}/> : <BarChart3 size={15}/>}
+            {key === 'cards' ? <Target size={15}/> : key === 'table' ? <BarChart3 size={15}/> : <Briefcase size={15}/>}
             {label}
           </button>
         ))}
       </div>
+
+      {/* ══════════════ TAB: PROJEK ══════════════ */}
+      {activeTab === 'projek' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '2rem' }}>
+          {/* Grafik Proyek */}
+          <div className="glass-panel" style={{ padding: '1.25rem' }}>
+             <h3 style={{ margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.05rem', color: 'var(--text-primary)' }}>
+               <BarChart3 size={18} color="var(--accent-blue)" /> Grafik Penyelesaian Proyek CAPEX
+             </h3>
+             <div style={{ width: '100%', height: '320px' }}>
+                <ResponsiveContainer>
+                  <BarChart data={projects.slice().sort((a,b)=> b.progress - a.progress)} layout="vertical" margin={{ left: 10, right: 30 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" horizontal={false} />
+                    <XAxis type="number" domain={[0, 100]} stroke="var(--text-muted)" fontSize={11} tickFormatter={v => `${v}%`} />
+                    <YAxis dataKey="nama" type="category" width={180} stroke="var(--text-muted)" fontSize={10} tickFormatter={(val) => val.length > 25 ? val.substring(0, 25) + '...' : val} />
+                    <RechartsTooltip formatter={(v: any) => [`${v}%`, 'Progres']} contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-focus)', borderRadius: '8px' }} />
+                    <Bar dataKey="progress" radius={[0, 4, 4, 0]} barSize={20}>
+                      {projects.map((ent, idx) => (
+                        <Cell key={`cell-${idx}`} fill={ent.progress >= 100 ? '#10b981' : ent.progress >= 50 ? '#3b82f6' : '#f59e0b'} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+             </div>
+          </div>
+
+          {/* List Proyek */}
+          <div className="table-container glass-panel">
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border-subtle)' }}>
+                  <th style={{ padding: '1rem', textAlign: 'left', fontWeight: 600, color: 'var(--text-secondary)' }}>Daftar Pekerjaan / Pengadaan</th>
+                  <th style={{ padding: '1rem', textAlign: 'left', fontWeight: 600, color: 'var(--text-secondary)', width: '250px' }}>Progres</th>
+                  <th style={{ padding: '1rem', textAlign: 'right', fontWeight: 600, color: 'var(--text-secondary)', width: '150px' }}>Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {projects.map(prj => (
+                  <tr key={prj.id} style={{ borderBottom: '1px solid var(--border-subtle)' }} className="hover-bg">
+                    <td style={{ padding: '1rem' }}>
+                      <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.2rem' }}>{prj.nama}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Updated: {prj.lastUpdated ? fmtDate(prj.lastUpdated) : '-'} oleh {prj.updatedBy}</div>
+                    </td>
+                    <td style={{ padding: '1rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem', fontSize: '0.8rem', fontWeight: 700, color: prj.progress >= 100 ? 'var(--accent-emerald)' : 'var(--text-primary)' }}>
+                        <span>{prj.progress}%</span>
+                        {prj.progress >= 100 && <CheckCircle size={14} color="var(--accent-emerald)" />}
+                      </div>
+                      <div style={{ height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${prj.progress}%`, background: prj.progress >= 100 ? 'var(--accent-emerald)' : 'var(--accent-blue)', transition: 'width 0.5s ease' }}></div>
+                      </div>
+                    </td>
+                    <td style={{ padding: '1rem', textAlign: 'right' }}>
+                      {canUpdate && (
+                        <button className="btn btn-outline" style={{ fontSize: '0.75rem', padding: '0.3rem 0.6rem' }} onClick={() => { setEditingProject(prj); setProjectProgress(prj.progress); }}>
+                          Update Target
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* ══════════════ TAB: CARDS ══════════════ */}
       {activeTab === 'cards' && (
@@ -849,6 +968,85 @@ const CapexBudget = () => {
           </div>
         </div>
       )}
+      {/* ══════════════ MODAL: UPDATE PROJECT ══════════════ */}
+      {editingProject && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(5px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: '400px', padding: '1.5rem', border: '1px solid var(--accent-blue-ghost)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: '1.1rem', margin: 0, color: 'var(--text-primary)' }}>Update Progres Mingguan</h2>
+              <button onClick={() => setEditingProject(null)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={20}/></button>
+            </div>
+            
+            <div style={{ marginBottom: '1.5rem' }}>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Pekerjaan / Pengadaan:</div>
+              <div style={{ fontWeight: 600, color: 'var(--text-primary)', lineHeight: '1.4' }}>{editingProject.nama}</div>
+            </div>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                 <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Progres Selesai (%)</label>
+                 <span style={{ fontWeight: 800, color: 'var(--accent-blue)', fontSize: '1.1rem' }}>{projectProgress}%</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <input 
+                  type="range" 
+                  min="0" max="100" step="5" 
+                  value={projectProgress} 
+                  onChange={(e) => setProjectProgress(Number(e.target.value))}
+                  style={{ flex: 1, cursor: 'pointer' }}
+                />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                <span>0% (Mulai)</span>
+                <span>100% (Selesai)</span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button className="btn btn-outline" style={{ flex: 1 }} onClick={() => setEditingProject(null)}>Batal</button>
+              <button 
+                className="btn btn-primary" 
+                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                onClick={async () => {
+                  setIsSavingProject(true);
+                  const updatedBy = currentUser.nama;
+                  const lastUpdated = new Date().toISOString();
+              
+                  const payload = {
+                    action: 'FINANCE_RECORD',
+                    sheetName: 'Progres_CAPEX',
+                    sheet: 'Progres_CAPEX',
+                    id: editingProject.id, ID: editingProject.id,
+                    nama: editingProject.nama, Nama: editingProject.nama,
+                    progress: projectProgress, Progress: projectProgress,
+                    lastUpdated: lastUpdated, LastUpdated: lastUpdated,
+                    updatedBy: updatedBy, UpdatedBy: updatedBy
+                  };
+              
+                  try {
+                    await fetch(API_URL, {
+                      method: 'POST', mode: 'no-cors',
+                      headers: { 'Content-Type': 'text/plain' },
+                      body: JSON.stringify(payload)
+                    });
+                    setProjects(prev => prev.map(p => p.id === editingProject.id ? { ...p, progress: projectProgress, updatedBy, lastUpdated } : p));
+                    setEditingProject(null);
+                  } catch(err) {
+                    alert("Gagal menyimpan progres. Periksa koneksi.");
+                  } finally {
+                    setIsSavingProject(false);
+                  }
+                }}
+                disabled={isSavingProject}
+              >
+                {isSavingProject ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                Simpan Target
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
