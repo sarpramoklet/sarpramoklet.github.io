@@ -29,7 +29,7 @@ const ACMonitor = () => {
   const [isSyncingAll, setIsSyncingAll] = useState(false);
 
   const currentUser = getCurrentUser();
-  const canUpdate = [ROLES.PIMPINAN, ROLES.KOORDINATOR_SARPRAS].includes(currentUser.roleAplikasi) || 
+  const canUpdate = [ROLES.PIMPINAN, ROLES.KOORDINATOR_SARPRAS, ROLES.PIC_IT_SUPPORT].includes(currentUser.roleAplikasi) || 
                     currentUser.unit === 'Sarpras';
 
   useEffect(() => {

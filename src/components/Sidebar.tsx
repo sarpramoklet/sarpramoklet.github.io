@@ -180,7 +180,7 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
                 return allowed.includes(item.name);
               }
               if (user.unit === 'IT') {
-                const allowed = [...alwaysVisible, 'IT Services', 'Permintaan Layanan', 'Penugasan', 'Kinerja Personel', 'Proyek & Pengembangan'];
+                const allowed = [...alwaysVisible, 'IT Services', 'Permintaan Layanan', 'Monitor AC', 'Penugasan', 'Kinerja Personel', 'Proyek & Pengembangan'];
                 return allowed.includes(item.name);
               }
               if (user.unit === 'Sarpras') {
