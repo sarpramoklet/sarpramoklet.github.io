@@ -846,7 +846,7 @@ const CapexBudget = () => {
 
       {/* ══════════════ MODAL: Tambah Realisasi ══════════════ */}
       {showModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 1000, padding: '1rem', paddingTop: '5rem', overflowY: 'auto' }}>
           <div className="glass-panel" style={{ width: '100%', maxWidth: '520px', border: `1px solid ${ACCOUNT_COLORS[formData.akun] || 'var(--accent-blue-ghost)'}40` }}>
 
             {/* Modal Header */}
@@ -971,7 +971,7 @@ const CapexBudget = () => {
       )}
       {/* ══════════════ MODAL: UPDATE PROJECT ══════════════ */}
       {editingProject && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(5px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(5px)', zIndex: 1000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '1rem', paddingTop: '5rem', overflowY: 'auto' }}>
           <div className="glass-panel" style={{ width: '100%', maxWidth: '400px', padding: '1.5rem', border: '1px solid var(--accent-blue-ghost)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h2 style={{ fontSize: '1.1rem', margin: 0, color: 'var(--text-primary)' }}>Update Progres Mingguan</h2>
