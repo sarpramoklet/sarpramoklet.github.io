@@ -97,7 +97,8 @@ const CapexBudget = () => {
   });
 
   const currentUser = getCurrentUser();
-  const canUpdate   = currentUser.roleAplikasi === ROLES.PIMPINAN;
+  const canUpdate   = currentUser.roleAplikasi === ROLES.PIMPINAN;  
+  const canUpdateProject = canUpdate || currentUser.roleAplikasi.includes('Koordinator') || currentUser.roleAplikasi.includes('PIC');
 
   /* ── helpers ── */
   const fmtIDR = (v: number) =>
@@ -492,7 +493,7 @@ const CapexBudget = () => {
                       </div>
                     </td>
                     <td style={{ padding: '1rem', textAlign: 'right' }}>
-                      {canUpdate && (
+                      {canUpdateProject && (
                         <button className="btn btn-outline" style={{ fontSize: '0.75rem', padding: '0.3rem 0.6rem' }} onClick={() => { setEditingProject(prj); setProjectProgress(prj.progress); }}>
                           Update Target
                         </button>
