@@ -213,6 +213,31 @@ const ACMonitor = () => {
         body: JSON.stringify(payload)
       });
 
+      const oldAC = acList.find(a => a.id === editingId);
+      if (oldAC && (oldAC.kondisi !== formData.kondisi || oldAC.status !== formData.status)) {
+        const autoHistId = `HIST-AUTO-${Date.now()}`;
+        const autoHistPayload = {
+          action: 'FINANCE_RECORD',
+          sheetName: SHEET_HISTORY,
+          sheet: SHEET_HISTORY,
+          id: autoHistId, ID: autoHistId,
+          ruang: formData.ruang, Ruang: formData.ruang,
+          tanggal: updatedAt.split('T')[0], Tanggal: updatedAt.split('T')[0],
+          jenis: 'Perubahan Status', Jenis: 'Perubahan Status',
+          teknisi: 'Sistem Otomatis', Teknisi: 'Sistem Otomatis',
+          keterangan: `Pembaruan status dari [${oldAC.status} - ${oldAC.kondisi}] menjadi [${formData.status} - ${formData.kondisi}]`,
+          Keterangan: `Pembaruan status dari [${oldAC.status} - ${oldAC.kondisi}] menjadi [${formData.status} - ${formData.kondisi}]`,
+          dibuatOleh: updatedBy, DibuatOleh: updatedBy,
+          waktuBuat: updatedAt, WaktuBuat: updatedAt
+        };
+        // asynchronously log the auto history without blocking
+        fetch(API_URL, {
+          method: 'POST', mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify(autoHistPayload)
+        }).catch(err => console.error("Auto history failed", err));
+      }
+
       // Update local state
       setAcList(prev => prev.map(item => {
         if (item.id === editingId) {
