@@ -6,11 +6,7 @@ import { getUtilityChartData } from '../data/utilities';
 
 const FINANCE_API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 
-const kaurStats = [
-  { name: 'Whyna Agustin', unit: 'IT', created: 45, completion: 92, avatar: 'W', color: 'var(--accent-blue)' },
-  { name: 'Chusni Agus', unit: 'Lab', created: 38, completion: 89, avatar: 'C', color: 'var(--accent-violet)' },
-  { name: 'Ekon Anjar', unit: 'Sarpras', created: 52, completion: 95, avatar: 'E', color: 'var(--accent-emerald)' },
-];
+
 
 interface DashboardProps {
   isLoggedIn?: boolean;
@@ -287,12 +283,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
     }
   };
 
-  const recentIssues = [
-    { id: 'TKT-1049', title: 'Server Database Down', unit: 'IT', time: '1 jam lalu', priority: 'High', status: 'Dikerjakan' },
-    { id: 'TKT-1048', title: 'AC Ruang Guru Bocor', unit: 'Sarpras', time: '3 jam lalu', priority: 'Medium', status: 'Direncanakan' },
-    { id: 'TKT-1047', title: 'Komputer Lab IoT Mati', unit: 'Lab', time: 'Kemarin', priority: 'High', status: 'Diverifikasi' },
-    { id: 'TKT-1046', title: 'Request Kabel LAN Tambahan', unit: 'IT', time: 'Kemarin', priority: 'Low', status: 'Selesai' },
-  ];
+
 
   return (
     <div className="animate-fade-in">
@@ -775,92 +766,6 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       </div>
 
 
-      {isLoggedIn && isPimpinan && (
-        <div className="glass-panel delay-300" style={{ marginBottom: '1.5rem' }}>
-          <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <TrendingUp size={18} color="var(--accent-blue)" /> Kinerja Koordinator
-            </h3>
-            <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Status progres pekerjaan per unit</p>
-          </div>
-          <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', padding: '1.25rem', gap: '1rem' }}>
-            {kaurStats.map((kaur) => (
-              <div key={kaur.name} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '1rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: kaur.color, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '0.8rem' }}>
-                      {kaur.avatar}
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{kaur.name.split(' ')[0]}</div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Kaur {kaur.unit}</div>
-                    </div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '1rem', fontWeight: 700 }}>{kaur.created}</div>
-                    <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>JOBS</div>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem' }}>
-                    <span>Completion</span>
-                    <span style={{ fontWeight: 600 }}>{kaur.completion}%</span>
-                  </div>
-                  <div className="progress-bar-bg" style={{ height: '4px' }}>
-                    <div className="progress-bar-fill" style={{ width: `${kaur.completion}%`, background: kaur.color }}></div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="glass-panel delay-300">
-        <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 style={{ fontSize: '0.9rem', color: 'var(--text-primary)', margin: 0 }}>Top Isu & Eskalasi</h3>
-          <button className="btn btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}>Semua</button>
-        </div>
-        <div className="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>Isu / Deskripsi</th>
-                <th className="mobile-hide">Unit</th>
-                <th className="mobile-hide">Prioritas</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentIssues.map((issue) => (
-                <tr className="ticket-row" key={issue.id}>
-                  <td>
-                    <div style={{ fontWeight: 600, color: 'var(--accent-blue)', fontSize: '0.75rem' }}>{issue.id}</div>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 500 }}>{issue.title}</div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }} className="mobile-show">
-                      {issue.unit} • {issue.priority} • {issue.time}
-                    </div>
-                  </td>
-                  <td className="mobile-hide">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <span style={{ fontSize: '0.8rem' }}>{issue.unit}</span>
-                    </div>
-                  </td>
-                  <td className="mobile-hide">
-                    <span className={`badge ${issue.priority === 'High' ? 'badge-danger' : 'badge-warning'}`} style={{ fontSize: '0.65rem' }}>
-                      {issue.priority}
-                    </span>
-                  </td>
-                  <td>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{issue.status}</div>
-                    <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }} className="mobile-hide">{issue.time}</div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
 
     </div>
   );
