@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, LabelList } from 'recharts';
-import { Activity, Clock10, CheckSquare, TriangleAlert, ArrowUpRight, ArrowDownRight, UserCircle2, TrendingUp, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, ShieldCheck, MessageSquare, AlertCircle, Edit3, Trash2, Wind } from 'lucide-react';
+import { Activity, Clock10, CheckSquare, TriangleAlert, ArrowUpRight, ArrowDownRight, UserCircle2, TrendingUp, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, ShieldCheck, MessageSquare, AlertCircle, Edit3, Trash2, Wind, Briefcase } from 'lucide-react';
 import { getCurrentUser, ROLES } from '../data/organization';
 import { getUtilityChartData } from '../data/utilities';
 
@@ -47,6 +47,9 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   
   const [acMonitorData, setAcMonitorData] = useState<any>(null);
   const [acLoading, setAcLoading] = useState(false);
+
+  const [capexProjects, setCapexProjects] = useState<any[]>([]);
+  const [capexLoading, setCapexLoading] = useState(false);
 
   useEffect(() => {
     const fetchFinanceData = async () => {
@@ -198,7 +201,39 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       }
     };
     
+    const fetchCapexProjects = async () => {
+      setCapexLoading(true);
+      try {
+        const resp = await fetch(`${FINANCE_API_URL}?sheetName=Progres_CAPEX`);
+        const data = await resp.json();
+        if (data && Array.isArray(data)) {
+          const defaults = [
+            { id: 'PRJ-1', nama: 'Peremajaan keramik pada 3 ruang kelas (R.1 – R.3)', progress: 0 },
+            { id: 'PRJ-2', nama: 'Peremajaan talang air pada dak beton lantai 3', progress: 0 },
+            { id: 'PRJ-3', nama: 'Peremajaan dak beton masjid', progress: 0 },
+            { id: 'PRJ-4', nama: 'Peremajaan cat dinding pada 10 ruang kelas (R.7 – R.16)', progress: 0 },
+            { id: 'PRJ-5', nama: 'Peremajaan beton lapangan olahraga (basket)', progress: 0 },
+            { id: 'PRJ-6', nama: 'Pengadaan interior Laboratorium TEFA (Lab. 3)', progress: 0 },
+            { id: 'PRJ-7', nama: 'Pembangunan Malang Techno Park (Lanjutan)', progress: 0 }
+          ];
+          const mapped = defaults.map(def => {
+            const found = data.find((d:any) => d.id === def.id || d.ID === def.id);
+            return {
+              ...def,
+              progress: found ? Number(found.progress || found.Progress || 0) : 0
+            };
+          });
+          setCapexProjects(mapped);
+        }
+      } catch (e) {
+        console.error("Capex fetch error:", e);
+      } finally {
+        setCapexLoading(false);
+      }
+    };
+    
     if (isLoggedIn) fetchACMonitor();
+    if (isLoggedIn) fetchCapexProjects();
 
   }, [isAuthorizedFinance, isLoggedIn]);
 
@@ -381,6 +416,45 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
               </div>
             ) : (
               <div style={{ padding: '1rem', color: 'var(--text-secondary)' }}>Data tidak tersedia.</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* DASHBOARD CAPEX PROJECTS SECTION */}
+      {isLoggedIn && (
+        <div className="glass-panel delay-200" style={{ marginBottom: '2rem', background: 'linear-gradient(135deg, rgba(245,158,11,0.03), transparent)', borderLeft: '4px solid var(--accent-amber)' }}>
+          <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h3 style={{ fontSize: '1.05rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                 <Briefcase size={18} color="var(--accent-amber)" /> Progres Pekerjaan & Pengadaan CAPEX
+              </h3>
+              <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Pemantauan target penyelesaian peremajaan dan pembangunan 2026</p>
+            </div>
+            <a href="#/capex" className="btn btn-outline" style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}>Monitor CAPEX &rarr;</a>
+          </div>
+          
+          <div style={{ padding: '1.25rem' }}>
+            {capexLoading ? (
+              <div style={{ padding: '3rem', display: 'flex', justifyContent: 'center' }}><Loader2 className="animate-spin" color="var(--accent-amber)" /></div>
+            ) : capexProjects.length > 0 ? (
+              <div style={{ width: '100%', height: '280px' }}>
+                <ResponsiveContainer>
+                  <BarChart data={capexProjects.slice().sort((a,b)=> b.progress - a.progress)} layout="vertical" margin={{ left: 10, right: 30 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" horizontal={false} />
+                    <XAxis type="number" domain={[0, 100]} stroke="var(--text-muted)" fontSize={11} tickFormatter={v => `${v}%`} />
+                    <YAxis dataKey="nama" type="category" width={180} stroke="var(--text-muted)" fontSize={10} tickFormatter={(val) => val.length > 25 ? val.substring(0, 25) + '...' : val} />
+                    <RechartsTooltip formatter={(v: any) => [`${v}%`, 'Progres']} contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-focus)', borderRadius: '8px' }} />
+                    <Bar dataKey="progress" radius={[0, 4, 4, 0]} barSize={20}>
+                      {capexProjects.map((ent, idx) => (
+                        <Cell key={`cell-${idx}`} fill={ent.progress >= 100 ? '#10b981' : ent.progress >= 50 ? '#3b82f6' : '#f59e0b'} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div style={{ padding: '1rem', color: 'var(--text-secondary)' }}>Data proyek belum tersedia.</div>
             )}
           </div>
         </div>
