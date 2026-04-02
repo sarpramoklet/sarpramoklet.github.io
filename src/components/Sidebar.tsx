@@ -184,7 +184,7 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
                 return allowed.includes(item.name);
               }
               if (user.unit === 'Sarpras') {
-                const allowed = [...alwaysVisible, 'Sarpras', 'Permintaan Layanan', 'Tagihan Utilitas', 'Aset & Inventaris', 'Penugasan', 'Kinerja Personel', 'Proyek & Pengembangan'];
+                const allowed = [...alwaysVisible, 'Sarpras', 'Permintaan Layanan', 'Tagihan Utilitas', 'Aset & Inventaris', 'Monitor AC', 'Penugasan', 'Kinerja Personel', 'Proyek & Pengembangan'];
                 return allowed.includes(item.name);
               }
               if (user.unit === 'Tata Kelola') {

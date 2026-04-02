@@ -14,6 +14,7 @@ import Personnel from './pages/Personnel';
 import Finance from './pages/Finance';
 import OperationalCash from './pages/OperationalCash';
 import ACCash from './pages/ACCash';
+import ACMonitor from './pages/ACMonitor';
 import Assignment from './pages/Assignment';
 import Performance from './pages/Performance';
 import Utilities from './pages/Utilities';
@@ -152,6 +153,7 @@ function App() {
               <Route path="/notifications" element={<ProtectedRoute isLoggedIn={isLoggedIn}><DummyPage title="Notifikasi Pribadi" /></ProtectedRoute>} />
               <Route path="/duty-notes" element={<ProtectedRoute isLoggedIn={isLoggedIn}><DutyNotes /></ProtectedRoute>} />
               <Route path="/maintenance" element={<ProtectedRoute isLoggedIn={isLoggedIn}><DummyPage title="Jadwal Maintenance" /></ProtectedRoute>} />
+              <Route path="/ac-monitor" element={<ProtectedRoute isLoggedIn={isLoggedIn}><ACMonitor /></ProtectedRoute>} />
               <Route path="/capex" element={<ProtectedRoute isLoggedIn={isLoggedIn}><CapexBudget /></ProtectedRoute>} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
