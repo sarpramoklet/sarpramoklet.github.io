@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Wind, Search, Edit3, Save, Loader2, X, RefreshCw, AlertTriangle, CheckCircle, CloudUpload } from 'lucide-react';
+import { Wind, Search, Edit3, Save, Loader2, X, RefreshCw, AlertTriangle, CheckCircle, CloudUpload, History as HistoryIcon, Plus } from 'lucide-react';
 import { getCurrentUser, ROLES } from '../data/organization';
 import { logAccess } from '../utils/logger';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 const SHEET_NAME = "Monitor_AC";
+const SHEET_HISTORY = "Riwayat_AC";
 
 export interface ACData {
   id: string;
@@ -18,10 +19,26 @@ export interface ACData {
   updatedBy: string;
 }
 
+export interface ACHistory {
+  id: string;
+  ruang: number;
+  tanggal: string;
+  jenis: string; // Cleaning, Perbaikan, Pemasangan Baru
+  teknisi: string;
+  keterangan: string;
+  dibuatOleh: string;
+  waktuBuat: string;
+}
+
 const ACMonitor = () => {
   const [acList, setAcList] = useState<ACData[]>([]);
+  const [historyList, setHistoryList] = useState<ACHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  const [historyRoom, setHistoryRoom] = useState<number | null>(null);
+  const [isAddingHistory, setIsAddingHistory] = useState(false);
+  const [formHistory, setFormHistory] = useState<Partial<ACHistory>>({});
   
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<ACData>>({});
@@ -40,12 +57,14 @@ const ACMonitor = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_URL}?sheetName=${SHEET_NAME}`);
-      const rawData = await response.json();
+      const [resAc, resHist] = await Promise.all([
+        fetch(`${API_URL}?sheetName=${SHEET_NAME}`).then(r => r.json()),
+        fetch(`${API_URL}?sheetName=${SHEET_HISTORY}`).then(r => r.json()).catch(() => [])
+      ]);
       
       let fetchedMap = new Map<number, ACData>();
-      if (rawData && Array.isArray(rawData)) {
-        rawData.forEach(item => {
+      if (resAc && Array.isArray(resAc)) {
+        resAc.forEach(item => {
           const ruang = parseInt(item.ruang || item.Ruang);
           if (!isNaN(ruang)) {
             fetchedMap.set(ruang, {
@@ -104,6 +123,23 @@ const ACMonitor = () => {
         }
       }
       setAcList(list);
+
+      const histList: ACHistory[] = [];
+      if (resHist && Array.isArray(resHist)) {
+        resHist.forEach(h => {
+          histList.push({
+            id: h.id || h.ID || '',
+            ruang: parseInt(h.ruang || h.Ruang) || 0,
+            tanggal: h.tanggal || h.Tanggal || '',
+            jenis: h.jenis || h.Jenis || '',
+            teknisi: h.teknisi || h.Teknisi || '',
+            keterangan: h.keterangan || h.Keterangan || '',
+            dibuatOleh: h.dibuatOleh || h.DibuatOleh || '',
+            waktuBuat: h.waktuBuat || h.WaktuBuat || ''
+          });
+        });
+      }
+      setHistoryList(histList);
     } catch (error) {
       console.error("Error fetching AC data:", error);
       // Fallback local list
@@ -194,6 +230,54 @@ const ACMonitor = () => {
     } catch (error) {
       console.error("Save failed:", error);
       alert("Gagal menyimpan. Periksa koneksi internet.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSaveHistory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!historyRoom || !formHistory.tanggal || !formHistory.jenis) return;
+
+    setIsSubmitting(true);
+    const savedEntry: ACHistory = {
+      id: `HIST-${Date.now()}`,
+      ruang: historyRoom,
+      tanggal: formHistory.tanggal || '',
+      jenis: formHistory.jenis || '',
+      teknisi: formHistory.teknisi || '',
+      keterangan: formHistory.keterangan || '',
+      dibuatOleh: currentUser.nama,
+      waktuBuat: new Date().toISOString()
+    };
+
+    const payload = {
+      action: 'FINANCE_RECORD',
+      sheetName: SHEET_HISTORY,
+      sheet: SHEET_HISTORY,
+      id: savedEntry.id, ID: savedEntry.id,
+      ruang: savedEntry.ruang, Ruang: savedEntry.ruang,
+      tanggal: savedEntry.tanggal, Tanggal: savedEntry.tanggal,
+      jenis: savedEntry.jenis, Jenis: savedEntry.jenis,
+      teknisi: savedEntry.teknisi, Teknisi: savedEntry.teknisi,
+      keterangan: savedEntry.keterangan, Keterangan: savedEntry.keterangan,
+      dibuatOleh: savedEntry.dibuatOleh, DibuatOleh: savedEntry.dibuatOleh,
+      waktuBuat: savedEntry.waktuBuat, WaktuBuat: savedEntry.waktuBuat
+    };
+
+    try {
+      await fetch(API_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(payload)
+      });
+      setHistoryList(prev => [savedEntry, ...prev]);
+      setIsAddingHistory(false);
+      setFormHistory({});
+      setTimeout(fetchData, 3000);
+    } catch (err) {
+      alert("Gagal menyimpan riwayat.");
     } finally {
       setIsSubmitting(false);
     }
@@ -397,11 +481,15 @@ const ACMonitor = () => {
                     </div>
                   )}
 
-                  <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', borderTop: '1px dashed var(--border-subtle)', paddingTop: '0.75rem', marginTop: 'auto' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span>Update: {formatDate(ac.updatedAt)}</span>
-                      <span>Oleh: {ac.updatedBy.split(',')[0]}</span>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', borderTop: '1px dashed var(--border-subtle)', paddingTop: '0.75rem', marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div>Update: {formatDate(ac.updatedAt)}</div>
+                      <div>Oleh: {ac.updatedBy.split(',')[0]}</div>
                     </div>
+                    <button onClick={() => setHistoryRoom(ac.ruang)} style={{ background: 'var(--accent-blue-ghost)', color: 'var(--accent-blue)', border: 'none', padding: '0.4rem 0.6rem', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.65rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}>
+                      <HistoryIcon size={12} />
+                      Riwayat AC
+                    </button>
                   </div>
                 </div>
               );
@@ -470,6 +558,96 @@ const ACMonitor = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* HISTORY MODAL */}
+      {historyRoom !== null && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(5px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: '550px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', padding: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h2 style={{ fontSize: '1.2rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <HistoryIcon size={20} color="var(--accent-blue)" /> Riwayat Ruang {historyRoom}
+              </h2>
+              <button onClick={() => { setHistoryRoom(null); setIsAddingHistory(false); }} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={20}/></button>
+            </div>
+
+            {!isAddingHistory ? (
+              <>
+                <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1rem' }}>
+                  {historyList.filter(h => h.ruang === historyRoom).length === 0 ? (
+                    <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem', fontStyle: 'italic', background: 'rgba(255,255,255,0.02)', borderRadius: '10px' }}>Belum ada riwayat tercatat.</div>
+                  ) : (
+                    historyList.filter(h => h.ruang === historyRoom)
+                    .sort((a,b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime())
+                    .map(hist => (
+                      <div key={hist.id} style={{ padding: '1rem', background: 'rgba(255,255,255,0.04)', borderRadius: '10px', borderLeft: `3px solid var(--accent-blue)` }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                          <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>{hist.jenis}</span>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{formatDate(hist.tanggal)}</span>
+                        </div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                          Teknisi: <strong style={{ color: 'var(--text-primary)' }}>{hist.teknisi}</strong>
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic', background: 'rgba(0,0,0,0.2)', padding: '0.5rem', borderRadius: '6px' }}>
+                          "{hist.keterangan}"
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+                {canUpdate && (
+                  <button onClick={() => {
+                    setIsAddingHistory(true);
+                    setFormHistory({ tanggal: new Date().toISOString().split('T')[0], jenis: 'Cleaning' });
+                  }} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', width: '100%' }}>
+                    <Plus size={18} /> Tambah Aktivitas Riwayat
+                  </button>
+                )}
+              </>
+            ) : (
+              <form onSubmit={handleSaveHistory} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '10px' }}>
+                <h3 style={{ fontSize: '0.95rem', margin: 0, color: 'var(--accent-blue)' }}>Tambah Riwayat Baru</h3>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>Tanggal</label>
+                    <input type="date" required value={formHistory.tanggal} onChange={e => setFormHistory({...formHistory, tanggal: e.target.value})}
+                      style={{ width: '100%', padding: '0.7rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-subtle)', color: 'white', borderRadius: '8px', outline: 'none' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>Jenis Aktivitas</label>
+                    <select value={formHistory.jenis} onChange={e => setFormHistory({...formHistory, jenis: e.target.value})}
+                      style={{ width: '100%', padding: '0.7rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-subtle)', color: 'white', borderRadius: '8px', outline: 'none' }}>
+                      <option value="Cleaning">Cleaning</option>
+                      <option value="Perbaikan">Perbaikan</option>
+                      <option value="Pemasangan Baru">Pemasangan Baru</option>
+                      <option value="Lainnya">Lainnya</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>Nama Teknisi / Pelaksana</label>
+                  <input type="text" required value={formHistory.teknisi || ''} onChange={e => setFormHistory({...formHistory, teknisi: e.target.value})} placeholder="Contoh: Bagus / Vendor AC"
+                    style={{ width: '100%', padding: '0.7rem', boxSizing: 'border-box', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-subtle)', color: 'white', borderRadius: '8px', outline: 'none' }} />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>Keterangan / Detail Tindakan</label>
+                  <textarea required value={formHistory.keterangan || ''} onChange={e => setFormHistory({...formHistory, keterangan: e.target.value})} placeholder="Misal: Tambah freon, cuci 2 unit, ganti kapasitor, dsb." rows={3}
+                    style={{ width: '100%', padding: '0.7rem', boxSizing: 'border-box', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-subtle)', color: 'white', borderRadius: '8px', outline: 'none', resize: 'vertical' }} />
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                  <button type="button" onClick={() => setIsAddingHistory(false)} className="btn btn-outline" style={{ flex: 1 }}>Batal</button>
+                  <button type="submit" disabled={isSubmitting} className="btn btn-primary" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                    {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Simpan Riwayat
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
