@@ -172,19 +172,19 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
               if (user.unit === 'Semua Unit') return true;
               
               // Common menus for all authenticated staff
-              const alwaysVisible = ['Dashboard', 'Rapat Bulanan', 'Notifikasi', 'Catatan Piket'];
+              const alwaysVisible = ['Dashboard', 'Rapat Bulanan', 'Catatan Piket'];
 
               // Unit based access
               if (user.unit === 'Laboratorium') {
-                const allowed = [...alwaysVisible, 'Laboratorium', 'Permintaan Layanan', 'Penugasan', 'Kinerja Personel', 'Proyek & Pengembangan'];
+                const allowed = [...alwaysVisible, 'Laboratorium', 'Permintaan Layanan', 'Penugasan', 'Kinerja Personel'];
                 return allowed.includes(item.name);
               }
               if (user.unit === 'IT') {
-                const allowed = [...alwaysVisible, 'IT Services', 'Permintaan Layanan', 'Monitor AC', 'Penugasan', 'Kinerja Personel', 'Proyek & Pengembangan'];
+                const allowed = [...alwaysVisible, 'IT Services', 'Permintaan Layanan', 'Monitor AC', 'Penugasan', 'Kinerja Personel'];
                 return allowed.includes(item.name);
               }
               if (user.unit === 'Sarpras') {
-                const allowed = [...alwaysVisible, 'Sarpras', 'Permintaan Layanan', 'Tagihan Utilitas', 'Aset & Inventaris', 'Monitor AC', 'Penugasan', 'Kinerja Personel', 'Proyek & Pengembangan'];
+                const allowed = [...alwaysVisible, 'Sarpras', 'Permintaan Layanan', 'Tagihan Utilitas', 'Aset & Inventaris', 'Monitor AC', 'Penugasan', 'Kinerja Personel'];
                 return allowed.includes(item.name);
               }
               if (user.unit === 'Tata Kelola') {
