@@ -30,13 +30,21 @@ const ITPage = () => {
       const resp = await fetch(`${API_URL}?sheetName=Monitor_Wifi`);
       const data = await resp.json();
       if (data && Array.isArray(data) && data.length > 0) {
-        const mapped = data.filter((d:any) => d.id || d.ID).map((item:any) => ({
-          id: item.id || item.ID,
-          date: item.tanggal || item.Tanggal,
-          count: parseInt(item.count || item.Count || 0),
-          overloads: parseInt(item.overloads || item.Overloads || 0),
-          note: item.note || item.Note || ""
-        }));
+        const mapped = data.filter((d:any) => d.id || d.ID).map((item:any) => {
+          let dateStr = String(item.tanggal || item.Tanggal || '');
+          // Coba bersihkan tahun 2026 atau 26 agar rapi
+          dateStr = dateStr.replace(/\s+2026|\s+26/g, '');
+          
+          return {
+            id: item.id || item.ID,
+            date: dateStr,
+            count: parseInt(item.count || item.Count || 0),
+            overloads: parseInt(item.overloads || item.Overloads || 0),
+            note: item.note || item.Note || ""
+          };
+        });
+        
+        // Pastikan sort berdasarkan ID atau urutan tanggal jika memungkinkan (opsional, karena Apps script biasanya dari atas ke bawah)
         setDeviceData(mapped);
       } else {
         setDeviceData([]); // Wait for seed

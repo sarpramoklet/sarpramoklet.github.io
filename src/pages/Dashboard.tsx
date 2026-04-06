@@ -228,11 +228,16 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         const resp = await fetch(`${FINANCE_API_URL}?sheetName=Monitor_Wifi`);
         const data = await resp.json();
         if (data && Array.isArray(data) && data.length > 0) {
-          const mapped = data.filter((d:any) => d.id || d.ID).map((item:any) => ({
-            id: item.id || item.ID,
-            date: item.tanggal || item.Tanggal,
-            count: parseInt(item.count || item.Count || 0)
-          }));
+          const mapped = data.filter((d:any) => d.id || d.ID).map((item:any) => {
+            let dateStr = String(item.tanggal || item.Tanggal || '');
+            dateStr = dateStr.replace(/\s+2026|\s+26/g, '');
+
+            return {
+              id: item.id || item.ID,
+              date: dateStr,
+              count: parseInt(item.count || item.Count || 0)
+            };
+          });
           setWifiData(mapped);
         } else {
            setWifiData(initialDeviceData); // Fallback to demo layout logic
