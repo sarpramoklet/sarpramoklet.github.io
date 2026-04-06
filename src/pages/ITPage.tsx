@@ -5,10 +5,10 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 
 const initialDeviceData = [
-  { id: 1, date: '31 Mar', count: 1529, overloads: 13, note: 'Hari Awal, banyak ruang > 50' },
-  { id: 2, date: '01 Apr', count: 1402, overloads: 8, note: 'Bertahap turun paska pengumuman' },
-  { id: 3, date: '02 Apr', count: 1371, overloads: 6, note: 'Mulai stabil di angka wajar' },
-  { id: 4, date: '06 Apr', count: 1359, overloads: 4, note: 'Rekor terendah, stabil' }
+  { id: 1, date: '31 Mar', count: 1529, overloads: 13, note: 'Hari Awal (13 Ruang Overload)' },
+  { id: 2, date: '1 Apr', count: 1402, overloads: 10, note: 'Bertahap Turun' },
+  { id: 3, date: '2 Apr', count: 1371, overloads: 7, note: 'Area R.11 - R.20 Sangat Stabil' },
+  { id: 4, date: '6 Apr', count: 1359, overloads: 4, note: 'Rekor Terendah! Sisa 4 Titik Kritis (R.7, R.23, R.37, R.1)' }
 ];
 
 const ITPage = () => {
