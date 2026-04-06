@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Server, Wifi, Shield, Edit2, Trash2, X, Activity, Smartphone, Loader2, DatabaseBackup, TrendingUp } from 'lucide-react';
-import { AreaChart, Area, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { LineChart, Line, BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, LabelList } from 'recharts';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 
@@ -460,14 +460,19 @@ const ITPage = () => {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         <div className="glass-panel" style={{ padding: '1.5rem', height: '350px' }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={deviceData}>
-              <XAxis dataKey="date" tickFormatter={(val) => val.replace(/\s+2026|\s+26/g, '')} />
-              <YAxis domain={['dataMin - 50', 'dataMax + 50']} />
-              <Tooltip content={<CustomTooltip />} />
-              <Area type="monotone" dataKey="count" stroke="var(--accent-blue)" fill="var(--accent-blue-ghost)" />
-            </AreaChart>
-          </ResponsiveContainer>
+           <ResponsiveContainer width="100%" height="100%">
+             <BarChart data={deviceData} margin={{ top: 20, right: 10, left: 0, bottom: 5 }} barCategoryGap="30%">
+               <XAxis dataKey="date" tick={{ fontSize: '0.72rem' }} />
+               <YAxis domain={['dataMin - 100', 'dataMax + 100']} tick={{ fontSize: '0.7rem' }} />
+               <Tooltip content={<CustomTooltip />} />
+               <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={60}>
+                 <LabelList dataKey="count" position="top" style={{ fontSize: '0.7rem', fill: 'var(--text-secondary)', fontWeight: 600 }} />
+                 {deviceData.map((_: any, i: number) => (
+                   <Cell key={i} fill={i === deviceData.length - 1 ? 'var(--accent-emerald)' : 'var(--accent-blue)'} fillOpacity={0.85} />
+                 ))}
+               </Bar>
+             </BarChart>
+           </ResponsiveContainer>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '1.5rem' }} className="grid-responsive">
