@@ -159,6 +159,34 @@ const ITPage = () => {
     }
   };
 
+  const handleSeedNetToDB = async () => {
+    if (!window.confirm("Kirim data contoh jaringan dari gambar ke DB? (Hanya klik sekali)")) return;
+    setNetLoading(true);
+    try {
+      const sampleItem = {
+        action: 'FINANCE_RECORD',
+        sheetName: 'Monitor_Net',
+        id: `NET-SAMPLE`,
+        tanggal: 'Senin, 06 Apr 2026',
+        i1_rx: '366', i1_tx: '21.8',
+        i2_rx: '253', i2_tx: '15.4',
+        i3_rx: '270', i3_tx: '18.7',
+        i4_rx: '101', i4_tx: '14.3',
+        i5_rx: '130', i5_tx: '5.44',
+        ast_rx: '28.9', ast_tx: '1.21',
+        dhcp_cpu: '12', dhcp_mem: '2', dhcp_disk: '18',
+        sang_cpu: '80', sang_mem: '48', sang_virt: '48', sang_disk: '45'
+      };
+      await fetch(API_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(sampleItem) });
+      alert('Berhasil seed data contoh jaringan!');
+      fetchNetData();
+    } catch (e) {
+      alert('Gagal seed');
+    } finally {
+      setNetLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchData();
     fetchNetData();
@@ -418,9 +446,16 @@ const ITPage = () => {
         <h2 style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <Activity color="var(--accent-emerald)" /> Monitoring Infrastruktur & Bandwidth
         </h2>
-        <button onClick={() => setIsNetFormOpen(true)} className="btn btn-outline" style={{ fontSize: '0.75rem' }}>
-          Update Status Harian
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          {!netData && !netLoading && (
+            <button onClick={handleSeedNetToDB} className="btn" style={{ background: 'var(--accent-blue-ghost)', color: 'var(--accent-blue)', fontSize: '0.75rem' }}>
+              <DatabaseBackup size={14} /> Seed Data Gambar
+            </button>
+          )}
+          <button onClick={() => setIsNetFormOpen(true)} className="btn btn-outline" style={{ fontSize: '0.75rem' }}>
+            Update Status Harian
+          </button>
+        </div>
       </div>
 
       <div className="glass-panel" style={{ padding: '2rem', minHeight: '300px', position: 'relative' }}>
