@@ -3,6 +3,9 @@ import { Server, Activity, Database, Loader2, DatabaseBackup, X, Plus, Camera } 
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 
+// ⚙️ Ganti dengan API Key ImgBB Anda → daftar gratis di https://imgbb.com/
+const IMGBB_API_KEY = "6d207e02198a847aa98d0a2a901485a5";
+
 // ─── Helper Components ────────────────────────────────────────────────────────
 
 const ISPNode = ({ name, rx, tx, active, type }: any) => (
@@ -206,27 +209,63 @@ const NetMonitorPage = () => {
     finally { setSubmitting(false); }
   };
 
-  // Upload foto untuk record yang sudah ada
+
+  // Upload foto ke ImgBB → dapat URL → simpan ke sheet
   const handlePhotoUpload = async (row: any, file: File) => {
     const reader = new FileReader();
     reader.onload = async (ev) => {
       try {
         const compressed = await compressImage(ev.target?.result as string);
+
+        // Hapus prefix "data:image/jpeg;base64," untuk ImgBB
+        const base64Data = compressed.split(',')[1];
+
+        // Upload ke ImgBB
+        const formData = new FormData();
+        formData.append('image', base64Data);
+        formData.append('name', `net_${row.tanggal?.replace(/[^a-zA-Z0-9]/g, '_') || Date.now()}.jpg`);
+
+        const imgRes = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+          method: 'POST',
+          body: formData
+        });
+        const imgJson = await imgRes.json();
+
+        if (!imgJson.success) {
+          alert('Gagal upload ke ImgBB. Pastikan API key valid.');
+          return;
+        }
+
+        const imageUrl = imgJson.data.url;         // URL gambar asli
+        const thumbUrl = imgJson.data.thumb?.url || imageUrl; // Thumbnail
+        const displayUrl = imgJson.data.display_url || imageUrl;
+
+        // Simpan URL ke Google Sheets (kolom snapshot & snapshot_url)
         await fetch(API_URL, {
           method: 'POST', mode: 'no-cors',
           body: JSON.stringify({
             action: 'FINANCE_RECORD',
             sheetName: 'Monitor_Net',
-            id: row.id,
+            id: row.id || row.ID,
             tanggal: row.tanggal,
-            snapshot: compressed
+            snapshot: displayUrl,          // URL gambar (menggantikan base64)
+            snapshot_url: imageUrl,        // URL asli untuk link
+            snapshot_thumb: thumbUrl       // Thumbnail URL
           })
         });
-        // Optimistic update
+
+        // Optimistic UI update  
         setHistoryData(prev => prev.map(r =>
-          (r.id === row.id || r.tanggal === row.tanggal) ? { ...r, snapshot: compressed } : r
+          (r.id === row.id || r.tanggal === row.tanggal)
+            ? { ...r, snapshot: displayUrl, snapshot_url: imageUrl, snapshot_thumb: thumbUrl }
+            : r
         ));
-      } catch { alert('Gagal upload foto.'); }
+
+        alert(`✅ Foto berhasil diupload!\n🔗 Link: ${imageUrl}`);
+      } catch (err: any) {
+        console.error(err);
+        alert('Gagal upload foto: ' + (err.message || ''));
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -362,18 +401,33 @@ const NetMonitorPage = () => {
                     {/* Kolom Foto */}
                     <td style={{ padding: '0.5rem 1rem', textAlign: 'center' }}>
                       {row.snapshot ? (
-                        <button
-                          onClick={() => setLightbox({ src: row.snapshot, tanggal: row.tanggal || '-' })}
-                          title="Lihat foto kondisi jaringan"
-                          style={{
-                            background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.3)',
-                            borderRadius: '8px', cursor: 'pointer', padding: '4px 10px',
-                            display: 'inline-flex', alignItems: 'center', gap: '5px', color: 'var(--accent-blue)'
-                          }}
-                        >
-                          <Camera size={13} />
-                          <span style={{ fontSize: '0.65rem', fontWeight: 600 }}>Lihat</span>
-                        </button>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                          {/* Tombol lihat preview */}
+                          <button
+                            onClick={() => setLightbox({ src: row.snapshot, tanggal: row.tanggal || '-' })}
+                            title="Lihat foto kondisi jaringan"
+                            style={{
+                              background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.3)',
+                              borderRadius: '8px', cursor: 'pointer', padding: '4px 10px',
+                              display: 'inline-flex', alignItems: 'center', gap: '5px', color: 'var(--accent-blue)'
+                            }}
+                          >
+                            <Camera size={13} />
+                            <span style={{ fontSize: '0.65rem', fontWeight: 600 }}>Lihat</span>
+                          </button>
+                          {/* Link URL langsung */}
+                          {(row.snapshot_url || row.snapshot?.startsWith('http')) && (
+                            <a
+                              href={row.snapshot_url || row.snapshot}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title="Buka link gambar di tab baru"
+                              style={{ fontSize: '0.6rem', color: 'var(--accent-emerald)', display: 'flex', alignItems: 'center', gap: '3px', textDecoration: 'none', opacity: 0.8 }}
+                            >
+                              🔗 Link
+                            </a>
+                          )}
+                        </div>
                       ) : (
                         <label title="Upload foto kondisi jaringan" style={{ cursor: 'pointer', display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '2px', color: 'var(--text-muted)', opacity: 0.55 }}>
                           <input
@@ -389,6 +443,7 @@ const NetMonitorPage = () => {
                         </label>
                       )}
                     </td>
+
                   </tr>
                 ))}
               </tbody>
