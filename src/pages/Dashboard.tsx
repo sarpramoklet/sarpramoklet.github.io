@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, LabelList, AreaChart, Area } from 'recharts';
-import { UserCircle2, TrendingUp, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, ShieldCheck, MessageSquare, AlertCircle, Edit3, Trash2, Wind, Briefcase, ArrowDownRight, Smartphone, Activity } from 'lucide-react';
+import { UserCircle2, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, ShieldCheck, MessageSquare, AlertCircle, Edit3, Trash2, Wind, Briefcase, Smartphone, Activity, Coins } from 'lucide-react';
 import { getCurrentUser, ROLES } from '../data/organization';
 import { getUtilityChartData } from '../data/utilities';
 
@@ -32,8 +32,8 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   
   const [financeLoading, setFinanceLoading] = useState(true);
   const [internalFinance, setInternalFinance] = useState({ balance: 0, expense: 0, categories: [] as any[] });
-  const [tuFinance, setTuFinance] = useState({ balance: 0, expense: 0 });
-  const [acFinance, setAcFinance] = useState({ balance: 0, expense: 0 });
+  const [tuFinance, setTuFinance] = useState<{ balance: number; expense: number }>({ balance: 0, expense: 0 });
+  const [acFinance, setAcFinance] = useState<{ balance: number; expense: number }>({ balance: 0, expense: 0 });
   const [piketNotes, setPiketNotes] = useState<any[]>([]);
   const [piketLoading, setPiketLoading] = useState(false);
   
@@ -78,51 +78,46 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         const dataTU = await respTU.json();
         
         if (dataTU && Array.isArray(dataTU) && dataTU.length > 0) {
-          // Get balance from last valid row for true sync with spreadsheet
-          const validRows = dataTU.filter((item: any) => (item.debit || item.Debit || item.kredit || item.Kredit));
-          const lastRow = validRows.length > 0 ? validRows[validRows.length - 1] : null;
-          
           let balance = 0;
-          let totalExpense = 0;
-          
-          if (lastRow) {
-            balance = Number(lastRow.saldo || lastRow.Saldo || 0);
-          } else {
-             dataTU.forEach((item: any) => {
-               balance += (Number(item.debit || item.Debit || 0) - Number(item.kredit || item.Kredit || 0));
-             });
-          }
-          
+          let totalDebit = 0;
+          let totalKredit = 0;
+          let txCount = 0;
+
           dataTU.forEach((item: any) => {
-            totalExpense += Number(item.kredit || item.Kredit || 0);
+            const d = Number(item.debit || item.Debit || 0);
+            const k = Number(item.kredit || item.Kredit || 0);
+            if (d > 0 || k > 0) {
+              totalDebit += d;
+              totalKredit += k;
+              txCount++;
+            }
           });
+          balance = totalDebit - totalKredit;
           
-          setTuFinance({ balance, expense: totalExpense });
+          setTuFinance({ balance, expense: totalKredit });
         }
 
         // Fetch Kas AC
         const respAC = await fetch(`${FINANCE_API_URL}?sheetName=Kas_AC`);
         const dataAC = await respAC.json();
         if (dataAC && Array.isArray(dataAC) && dataAC.length > 0) {
-          const validRows = dataAC.filter((item: any) => (item.debit || item.Debit || item.kredit || item.Kredit));
-          const lastRow = validRows.length > 0 ? validRows[validRows.length - 1] : null;
-          
           let balance = 0;
-          let totalExpense = 0;
-          
-          if (lastRow) {
-            balance = Number(lastRow.saldo || lastRow.Saldo || 0);
-          } else {
-            dataAC.forEach((item: any) => {
-              balance += (Number(item.debit || item.Debit || 0) - Number(item.kredit || item.Kredit || 0));
-            });
-          }
-          
+          let totalDebit = 0;
+          let totalKredit = 0;
+          let txCount = 0;
+
           dataAC.forEach((item: any) => {
-            totalExpense += Number(item.kredit || item.Kredit || 0);
+            const d = Number(item.debit || item.Debit || 0);
+            const k = Number(item.kredit || item.Kredit || 0);
+            if (d > 0 || k > 0) {
+              totalDebit += d;
+              totalKredit += k;
+              txCount++;
+            }
           });
+          balance = totalDebit - totalKredit;
           
-          setAcFinance({ balance, expense: totalExpense });
+          setAcFinance({ balance, expense: totalKredit });
         }
       } catch (error) {
         console.error("Dashboard monitor fetch error:", error);
@@ -769,12 +764,12 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
              <div className="flex-row-responsive" style={{ gap: '1rem', alignItems: 'flex-start' }}>
                <div style={{ flex: 1 }}>
                  <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: '0 0 0.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                   <TrendingUp size={18} color="var(--accent-rose)" /> Kas Operasional TU {financeLoading && <Loader2 size={14} className="animate-spin" />}
+                   <Coins size={18} color="var(--accent-rose)" /> Kas Operasional TU {financeLoading && <Loader2 size={14} className="animate-spin" />}
                  </h3>
-                 <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Dana operasional dari Bendahara</p>
+                 <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Dana operasional dari Bendahara TU</p>
                </div>
                <div style={{ textAlign: 'right' }}>
-                 <div style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--accent-rose)' }}>
+                 <div style={{ fontSize: '1.15rem', fontWeight: 700, color: tuFinance.balance >= 0 ? 'var(--accent-emerald)' : 'var(--accent-rose)' }}>
                    {financeLoading ? '---' : formatIDR(tuFinance.balance)}
                  </div>
                  <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Saldo TU</div>
@@ -785,7 +780,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                   <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Akumulasi Kredit (Keluar)</div>
                   <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--accent-rose)' }}>{financeLoading ? '---' : formatIDR(tuFinance.expense)}</div>
                </div>
-               <ArrowDownRight size={20} color="var(--accent-rose)" />
+               <a href="#/operational-cash" style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--accent-rose)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.3rem 0.6rem', background: 'rgba(244,63,94,0.1)', borderRadius: '8px', border: '1px solid rgba(244,63,94,0.2)' }}>Lihat Detail →</a>
              </div>
           </div>
 
@@ -794,12 +789,12 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
              <div className="flex-row-responsive" style={{ gap: '1rem', alignItems: 'flex-start' }}>
                <div style={{ flex: 1 }}>
                  <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: '0 0 0.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                   <Zap size={18} color="var(--accent-emerald)" /> Kas Pemeliharaan AC {financeLoading && <Loader2 size={14} className="animate-spin" />}
+                   <Wind size={18} color="var(--accent-emerald)" /> Kas Pemeliharaan AC {financeLoading && <Loader2 size={14} className="animate-spin" />}
                  </h3>
                  <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Monitoring dana perawatan AC</p>
                </div>
                <div style={{ textAlign: 'right' }}>
-                 <div style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--accent-emerald)' }}>
+                 <div style={{ fontSize: '1.15rem', fontWeight: 700, color: acFinance.balance >= 0 ? 'var(--accent-emerald)' : 'var(--accent-rose)' }}>
                    {financeLoading ? '---' : formatIDR(acFinance.balance)}
                  </div>
                  <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Saldo AC</div>
@@ -810,7 +805,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                   <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Akumulasi Kredit (Keluar)</div>
                   <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--accent-emerald)' }}>{financeLoading ? '---' : formatIDR(acFinance.expense)}</div>
                </div>
-               <TrendingUp size={20} color="var(--accent-emerald)" />
+               <a href="#/ac-cash" style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--accent-emerald)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.3rem 0.6rem', background: 'rgba(16,185,129,0.1)', borderRadius: '8px', border: '1px solid rgba(16,185,129,0.2)' }}>Lihat Detail →</a>
              </div>
           </div>
         </div>
