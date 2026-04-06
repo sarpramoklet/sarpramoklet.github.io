@@ -21,6 +21,7 @@ import Utilities from './pages/Utilities';
 import AccessLogs from './pages/AccessLogs';
 import DutyNotes from './pages/DutyNotes';
 import CapexBudget from './pages/CapexBudget';
+import NetMonitorPage from './pages/NetMonitorPage';
 import Login from './pages/Login';
 import { getCurrentUser } from './data/organization';
 import { logAccess } from './utils/logger';
@@ -135,6 +136,7 @@ function App() {
               <Route path="/meeting" element={<MeetingDashboard />} />
               <Route path="/it" element={<ITPage />} />
               <Route path="/it-net" element={<ProtectedRoute isLoggedIn={isLoggedIn}><ITPage /></ProtectedRoute>} />
+              <Route path="/net-monitor" element={<NetMonitorPage />} />
               <Route path="/lab" element={<LabPage />} />
               <Route path="/sarpras" element={<SarprasPage />} />
 
