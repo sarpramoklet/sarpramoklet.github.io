@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, LabelList, AreaChart, Area } from 'recharts';
+import { XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, LabelList } from 'recharts';
 import { UserCircle2, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, ShieldCheck, MessageSquare, AlertCircle, Edit3, Trash2, Wind, Briefcase, Smartphone, Activity, Coins } from 'lucide-react';
 import { getCurrentUser, ROLES } from '../data/organization';
 import { getUtilityChartData } from '../data/utilities';
@@ -479,33 +479,54 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
             ) : (
               <div style={{ width: '100%', height: '280px' }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={wifiData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="colorCountDash" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="var(--accent-blue)" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="var(--accent-blue)" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <XAxis 
-                      dataKey="date" 
-                      stroke="var(--text-muted)" 
-                      fontSize={12} 
-                      tickLine={false} 
-                      axisLine={false} 
-                      tickFormatter={(val) => val.replace(/\s+2026|\s+26/g, '')}
-                    />
-                    <YAxis domain={['dataMin - 50', 'dataMax + 50']} stroke="var(--text-muted)" fontSize={12} tickLine={false} axisLine={false} />
+                  <BarChart data={wifiData} margin={{ top: 28, right: 20, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                    <RechartsTooltip 
-                      contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-focus)', borderRadius: '8px', fontSize: '11px' }}
-                      formatter={(value: any) => [`${value} Perangkat`, 'Total Client']}
-                      labelFormatter={(label) => label.replace(/\s+2026|\s+26/g, '')}
+                    <XAxis
+                      dataKey="date"
+                      stroke="var(--text-muted)"
+                      fontSize={11}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(val) => {
+                        const parts = String(val).split('-');
+                        return parts.length === 3 ? `${parts[0]}/${parts[1]}` : String(val).replace(/\s+2026|\s+26/g, '');
+                      }}
                     />
-                    <Area type="monotone" dataKey="count" stroke="var(--accent-blue)" strokeWidth={3} fillOpacity={1} fill="url(#colorCountDash)" activeDot={{ r: 6, strokeWidth: 0, fill: 'var(--accent-blue)' }} />
-                  </AreaChart>
+                    <YAxis
+                      domain={['dataMin - 50', 'dataMax + 50']}
+                      stroke="var(--text-muted)"
+                      fontSize={11}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(1)}k` : v}
+                    />
+                    <RechartsTooltip
+                      contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-focus)', borderRadius: '8px', fontSize: '11px' }}
+                      formatter={(value: any) => [`${Number(value).toLocaleString()} Perangkat`, 'Total Client']}
+                      labelFormatter={(label) => {
+                        const parts = String(label).split('-');
+                        return parts.length === 3 ? `${parts[0]}-${parts[1]}-${parts[2]}` : String(label).replace(/\s+2026|\s+26/g, '');
+                      }}
+                    />
+                    <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={60}>
+                      {wifiData.map((entry: any, index: number) => {
+                        const counts = wifiData.map((d: any) => d.count);
+                        const min = Math.min(...counts);
+                        const max = Math.max(...counts);
+                        const prev = index > 0 ? wifiData[index - 1].count : entry.count;
+                        let color = '#3b82f6';
+                        if (entry.count === min) color = '#10b981';
+                        else if (entry.count === max) color = '#f43f5e';
+                        else color = entry.count < prev ? '#22c55e' : '#f87171';
+                        return <Cell key={`cell-${index}`} fill={color} fillOpacity={0.85} />;
+                      })}
+                      <LabelList dataKey="count" position="top" style={{ fontSize: '10px', fontWeight: 700, fill: 'var(--text-secondary)' }} formatter={(v: any) => Number(v).toLocaleString()} />
+                    </Bar>
+                  </BarChart>
                 </ResponsiveContainer>
               </div>
             )}
+
           </div>
         </div>
       )}
