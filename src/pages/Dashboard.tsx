@@ -14,11 +14,16 @@ interface DashboardProps {
 }
 
 const initialDeviceData = [
-  { id: 1, date: '31 Mar', count: 1529, overloads: 13, note: 'Hari Awal (13 Ruang Overload)' },
-  { id: 2, date: '1 Apr', count: 1402, overloads: 10, note: 'Bertahap Turun' },
-  { id: 3, date: '2 Apr', count: 1371, overloads: 7, note: 'Area R.11 - R.20 Sangat Stabil' },
-  { id: 4, date: '6 Apr', count: 1359, overloads: 4, note: 'Rekor Terendah! Sisa 4 Titik Kritis (R.7, R.23, R.37, R.1)' }
+  { id: 1, date: '31 Mar 2026', count: 1529, overloads: 13, note: 'Hari Awal (13 Ruang Overload)' },
+  { id: 2, date: '1 Apr 2026', count: 1402, overloads: 10, note: 'Bertahap Turun' },
+  { id: 3, date: '2 Apr 2026', count: 1371, overloads: 7, note: 'Area R.11 - R.20 Sangat Stabil' },
+  { id: 4, date: '6 Apr 2026', count: 1359, overloads: 4, note: 'Rekor Terendah! Sisa 4 Titik Kritis (R.7, R.23, R.37, R.1)' }
 ];
+
+const monthMap: any = { 
+  'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'Mei': 4, 'Jun': 5, 
+  'Jul': 6, 'Agt': 7, 'Sep': 8, 'Okt': 9, 'Nov': 10, 'Des': 11 
+};
 
 const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => {
   const currentUser = getCurrentUser();
@@ -228,9 +233,8 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         const resp = await fetch(`${FINANCE_API_URL}?sheetName=Monitor_Wifi`);
         const data = await resp.json();
         if (data && Array.isArray(data) && data.length > 0) {
-          const mapped = data.filter((d:any) => d.id || d.ID).map((item:any) => {
-            let dateStr = String(item.tanggal || item.Tanggal || '');
-            dateStr = dateStr.replace(/\s+2026|\s+26/g, '');
+          const mapped = data.filter((d:any) => (d.id || d.ID) && (d.tanggal || d.Tanggal)).map((item:any) => {
+            let dateStr = String(item.tanggal || item.Tanggal || '').trim();
 
             return {
               id: item.id || item.ID,
@@ -238,6 +242,19 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
               count: parseInt(item.count || item.Count || 0)
             };
           });
+
+          // Sorting Berdasarkan Tanggal
+          mapped.sort((a, b) => {
+            const parseDate = (s: string) => {
+              const p = s.split(' ');
+              const d = parseInt(p[0]) || 1;
+              const m = monthMap[p[1]] || 0;
+              const y = p[2] ? (p[2].length === 2 ? 2000 + parseInt(p[2]) : parseInt(p[2])) : 2026;
+              return new Date(y, m, d).getTime();
+            };
+            return parseDate(a.date) - parseDate(b.date);
+          });
+
           setWifiData(mapped);
         } else {
            setWifiData(initialDeviceData); // Fallback to demo layout logic
@@ -460,12 +477,20 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                         <stop offset="95%" stopColor="var(--accent-blue)" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
-                    <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={12} tickLine={false} axisLine={false} />
+                    <XAxis 
+                      dataKey="date" 
+                      stroke="var(--text-muted)" 
+                      fontSize={12} 
+                      tickLine={false} 
+                      axisLine={false} 
+                      tickFormatter={(val) => val.replace(/\s+2026|\s+26/g, '')}
+                    />
                     <YAxis domain={['dataMin - 50', 'dataMax + 50']} stroke="var(--text-muted)" fontSize={12} tickLine={false} axisLine={false} />
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
                     <RechartsTooltip 
                       contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-focus)', borderRadius: '8px', fontSize: '11px' }}
                       formatter={(value: any) => [`${value} Perangkat`, 'Total Client']}
+                      labelFormatter={(label) => label.replace(/\s+2026|\s+26/g, '')}
                     />
                     <Area type="monotone" dataKey="count" stroke="var(--accent-blue)" strokeWidth={3} fillOpacity={1} fill="url(#colorCountDash)" activeDot={{ r: 6, strokeWidth: 0, fill: 'var(--accent-blue)' }} />
                   </AreaChart>
