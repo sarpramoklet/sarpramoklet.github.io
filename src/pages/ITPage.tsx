@@ -18,7 +18,7 @@ const monthMap: any = {
   'Jul': 6, 'Agt': 7, 'Sep': 8, 'Okt': 9, 'Nov': 10, 'Des': 11 
 };
 
-// Format tanggal ke dd-mm-yy (dari berbagai format: ISO, "31 Mar 2026", dsb.)
+// Format tanggal ke dd-mm-yy (dari berbagai format: ISO, "31 Mar 2026", "6-04-2026", dsb.)
 const formatDate = (dateStr: string): string => {
   if (!dateStr) return '';
   const s = dateStr.trim();
@@ -31,6 +31,17 @@ const formatDate = (dateStr: string): string => {
       const yy = String(d.getFullYear()).slice(-2);
       return `${dd}-${mm}-${yy}`;
     }
+  }
+  // Format "Hari Senin Tanggal 6-04-2026" → ekstrak bagian tanggal
+  const tanggalMatch = s.match(/tanggal\s+(\d{1,2}[-/]\d{2}[-/]\d{4})/i);
+  if (tanggalMatch) return formatDate(tanggalMatch[1]);
+  // Format d-mm-yyyy atau d/mm/yyyy (misal: "6-04-2026", "1/04/2026")
+  const dmyMatch = s.match(/^(\d{1,2})[-/](\d{2})[-/](\d{4})$/);
+  if (dmyMatch) {
+    const dd = dmyMatch[1].padStart(2, '0');
+    const mm = dmyMatch[2];
+    const yy = dmyMatch[3].slice(-2);
+    return `${dd}-${mm}-${yy}`;
   }
   // Format: "31 Mar 2026" atau "31 Mar 26"
   const parts = s.split(' ');
@@ -140,41 +151,59 @@ const cleanAiResult = (raw: any): any => {
 
 // Analisis gambar traffic via Gemini Vision
 const analyzeTrafficImage = async (base64: string, mimeType: string): Promise<any> => {
-  const prompt = `You are an OCR system for school network infrastructure monitoring.
-Analyze this image which shows ISP/ONT nodes (Indibizz 1-5 and Astinet) and server health data.
+  const prompt = `You are an OCR system reading a network infrastructure monitoring screenshot from an Indonesian school.
 
-Extract ALL visible traffic values. Rules:
-- Return ONLY raw JSON, no markdown, no explanation, no code blocks
-- All Rx/Tx values: numbers only in Mbps (e.g. "366" not "366 Mbps")
-- All CPU/MEM/Disk values: numbers only as percentage (e.g. "80" not "80%")
-- If a value is not visible, use empty string ""
-- For date: look for any date text in the image (header, title, label). Format as dd-mm-yy if found.
+The image shows a NETWORK TOPOLOGY DIAGRAM with this EXACT structure:
+- TOP TITLE: "Hari [day name] Tanggal [d-mm-yyyy]" → extract the date part (e.g. "6-04-2026")
+- ISP NODES (boxes at top): Indibizz 1, Indibizz 2, Indibizz 3, Indibizz 4, Indibizz 5, Astinet
+  - Each node shows: "Rx: [number] Mbps" and "Tx: [number] Mbps" below it
+- SERVER BOXES (green boxes at bottom):
+  - "DHCP Server" → shows "cpu: [n]% mem: [n]% disk: [n]%"
+  - "SANGFOR" → shows "cpu: [n]% mem: [n]% virt: [n]% disk: [n]%"
 
-Return exactly this JSON structure:
+Example from a real screenshot:
+  Title: "Hari Senin Tanggal 6-04-2026"
+  Indibizz 5: Rx: 130 Mbps / Tx: 5.44 Mbps
+  Indibizz 4: Rx: 101 Mbps / Tx: 14.3 Mbps
+  Indibizz 1: Rx: 366 Mbps / Tx: 21.8 Mbps
+  Indibizz 2: Rx: 253 Mbps / Tx: 15.4 Mbps
+  Indibizz 3: Rx: 270 Mbps / Tx: 18.7 Mbps
+  Astinet: Rx: 28.9 Mbps / Tx: 1.21 Mbps
+  DHCP Server: cpu: 12% mem: 2% disk: 18%
+  SANGFOR: cpu: 80% mem: 48% virt: 48% disk: 45%
+
+RULES:
+- Extract ALL visible numbers from the image carefully
+- ALL Rx/Tx values: NUMBER ONLY without unit (e.g. "366" not "366 Mbps")
+- ALL CPU/MEM/Disk/Virt: NUMBER ONLY without % sign (e.g. "80" not "80%")
+- For tanggal: extract ONLY the date portion like "6-04-2026" then format as dd-mm-yy → "06-04-26"
+- If a value is truly not visible, use empty string ""
+- Return ONLY the JSON object below, NO other text, NO markdown:
+
 {
-  "tanggal": "dd-mm-yy or empty",
-  "i1_rx": "Rx Mbps for Indibizz 1, number only",
-  "i1_tx": "Tx Mbps for Indibizz 1, number only",
-  "i2_rx": "",
-  "i2_tx": "",
-  "i3_rx": "",
-  "i3_tx": "",
-  "i4_rx": "",
-  "i4_tx": "",
-  "i5_rx": "",
-  "i5_tx": "",
-  "ast_rx": "Rx Mbps for Astinet, number only",
-  "ast_tx": "",
-  "dhcp_cpu": "CPU% for DHCP Server, number only",
-  "dhcp_mem": "",
-  "dhcp_disk": "",
-  "sang_cpu": "CPU% for SANGFOR, number only",
-  "sang_mem": "",
-  "sang_virt": "",
-  "sang_disk": ""
+  "tanggal": "dd-mm-yy (e.g. 06-04-26)",
+  "i1_rx": "366",
+  "i1_tx": "21.8",
+  "i2_rx": "253",
+  "i2_tx": "15.4",
+  "i3_rx": "270",
+  "i3_tx": "18.7",
+  "i4_rx": "101",
+  "i4_tx": "14.3",
+  "i5_rx": "130",
+  "i5_tx": "5.44",
+  "ast_rx": "28.9",
+  "ast_tx": "1.21",
+  "dhcp_cpu": "12",
+  "dhcp_mem": "2",
+  "dhcp_disk": "18",
+  "sang_cpu": "80",
+  "sang_mem": "48",
+  "sang_virt": "48",
+  "sang_disk": "45"
 }
 
-IMPORTANT: Return ONLY the JSON object, nothing else.`;
+IMPORTANT: The values above are EXAMPLE values for the example image. Read the ACTUAL values from the provided image.`;
 
   const resp = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
