@@ -5,10 +5,10 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 
 const initialDeviceData = [
-  { id: 1, date: '31 Mar 2026', count: 1529, overloads: 13, note: 'Hari Awal (13 Ruang Overload)' },
-  { id: 2, date: '1 Apr 2026', count: 1402, overloads: 10, note: 'Bertahap Turun' },
-  { id: 3, date: '2 Apr 2026', count: 1371, overloads: 7, note: 'Area R.11 - R.20 Sangat Stabil' },
-  { id: 4, date: '6 Apr 2026', count: 1359, overloads: 4, note: 'Rekor Terendah! Sisa 4 Titik Kritis (R.7, R.23, R.37, R.1)' }
+  { id: 1, date: '31 Mar 2026', count: 1529, overloads: 13, note: '1.529 Client (13 Ruang Overload) - Hari Awal' },
+  { id: 2, date: '1 Apr 2026', count: 1402, overloads: 10, note: '1.402 Client (10 Ruang Overload) - Bertahap Turun' },
+  { id: 3, date: '2 Apr 2026', count: 1371, overloads: 7, note: '1.371 Client (7 Ruang Overload) - Area R.11 - R.20 Sangat Stabil' },
+  { id: 4, date: '6 Apr 2026', count: 1359, overloads: 4, note: '1.359 Client (4 Ruang Overload) - Rekor Terendah! Sisa 4 Titik Kritis (R.7, R.23, R.37, R.1)' }
 ];
 
 const monthMap: any = { 
