@@ -4,7 +4,7 @@ import { LineChart, Line, BarChart, Bar, Cell, XAxis, YAxis, Tooltip, Responsive
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 // Dapatkan API key gratis di https://aistudio.google.com/apikey
-const GEMINI_API_KEY = "AIzaSyC2j7PVLmqEYN0BdJJSiEXD2Qx9pqXw5Yk"; // Ganti dengan API key Anda
+const GEMINI_API_KEY = "AIzaSyD3XFX6ovEE0XhRvFg7nxxrC4Of9yEW6gE";
 
 const initialDeviceData = [
   { id: 1, date: '31 Mar 2026', count: 1529, overloads: 13, note: '1.529 Client (13 Ruang Overload) - Hari Awal' },
