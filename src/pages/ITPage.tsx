@@ -103,37 +103,78 @@ const NetInput = ({ label, name, onChange, value }: any) => (
   </div>
 );
 
+// Bersihkan nilai hasil AI: hilangkan satuan, ambil angka saja
+const cleanNum = (v: any): string => {
+  if (v === null || v === undefined || v === '') return '';
+  const s = String(v).replace(/[^0-9.]/g, '').trim();
+  return s || '';
+};
+
+// Normalisasi semua field numerik dari hasil AI
+const cleanAiResult = (raw: any): any => {
+  const numFields = [
+    'i1_rx','i1_tx','i2_rx','i2_tx','i3_rx','i3_tx',
+    'i4_rx','i4_tx','i5_rx','i5_tx','ast_rx','ast_tx',
+    'dhcp_cpu','dhcp_mem','dhcp_disk',
+    'sang_cpu','sang_mem','sang_virt','sang_disk'
+  ];
+  const cleaned: any = { ...raw };
+  numFields.forEach(f => { cleaned[f] = cleanNum(raw[f]); });
+  // Normalisasi tanggal
+  if (raw.tanggal) {
+    cleaned.tanggal = formatDate(String(raw.tanggal));
+    // formatDate kembalikan string kosong jika format tidak dikenal
+    if (!cleaned.tanggal || cleaned.tanggal === raw.tanggal) {
+      // Coba parse format lain: "Senin, 06 Apr 2026", "April 6, 2026", "6/4/2026" dll
+      const d = new Date(raw.tanggal);
+      if (!isNaN(d.getTime())) {
+        const dd = String(d.getDate()).padStart(2,'0');
+        const mm = String(d.getMonth()+1).padStart(2,'0');
+        const yy = String(d.getFullYear()).slice(-2);
+        cleaned.tanggal = `${dd}-${mm}-${yy}`;
+      }
+    }
+  }
+  return cleaned;
+};
+
 // Analisis gambar traffic via Gemini Vision
 const analyzeTrafficImage = async (base64: string, mimeType: string): Promise<any> => {
-  const prompt = `Kamu adalah sistem OCR untuk monitoring infrastruktur jaringan sekolah.
-Analisis gambar ini yang menampilkan dashboard/topologi jaringan dengan ISP/ONT (Indibizz dan Astinet) dan server.
-Ekstrak SEMUA nilai traffic yang terlihat di gambar.
+  const prompt = `You are an OCR system for school network infrastructure monitoring.
+Analyze this image which shows ISP/ONT nodes (Indibizz 1-5 and Astinet) and server health data.
 
-Kembalikan HANYA JSON murni tanpa markdown, tanpa penjelasan:
+Extract ALL visible traffic values. Rules:
+- Return ONLY raw JSON, no markdown, no explanation, no code blocks
+- All Rx/Tx values: numbers only in Mbps (e.g. "366" not "366 Mbps")
+- All CPU/MEM/Disk values: numbers only as percentage (e.g. "80" not "80%")
+- If a value is not visible, use empty string ""
+- For date: look for any date text in the image (header, title, label). Format as dd-mm-yy if found.
+
+Return exactly this JSON structure:
 {
-  "tanggal": "jika ada tanggal di gambar, format dd-mm-yy, jika tidak ada isi string kosong",
-  "i1_rx": "Rx Indibizz 1 dalam Mbps, angka saja tanpa satuan",
-  "i1_tx": "Tx Indibizz 1",
-  "i2_rx": "Rx Indibizz 2",
-  "i2_tx": "Tx Indibizz 2",
-  "i3_rx": "Rx Indibizz 3",
-  "i3_tx": "Tx Indibizz 3",
-  "i4_rx": "Rx Indibizz 4",
-  "i4_tx": "Tx Indibizz 4",
-  "i5_rx": "Rx Indibizz 5",
-  "i5_tx": "Tx Indibizz 5",
-  "ast_rx": "Rx Astinet",
-  "ast_tx": "Tx Astinet",
-  "dhcp_cpu": "CPU% DHCP Server, angka saja",
-  "dhcp_mem": "MEM% DHCP Server",
-  "dhcp_disk": "Disk% DHCP Server",
-  "sang_cpu": "CPU% SANGFOR",
-  "sang_mem": "MEM% SANGFOR",
-  "sang_virt": "Virt% SANGFOR",
-  "sang_disk": "Disk% SANGFOR"
+  "tanggal": "dd-mm-yy or empty",
+  "i1_rx": "Rx Mbps for Indibizz 1, number only",
+  "i1_tx": "Tx Mbps for Indibizz 1, number only",
+  "i2_rx": "",
+  "i2_tx": "",
+  "i3_rx": "",
+  "i3_tx": "",
+  "i4_rx": "",
+  "i4_tx": "",
+  "i5_rx": "",
+  "i5_tx": "",
+  "ast_rx": "Rx Mbps for Astinet, number only",
+  "ast_tx": "",
+  "dhcp_cpu": "CPU% for DHCP Server, number only",
+  "dhcp_mem": "",
+  "dhcp_disk": "",
+  "sang_cpu": "CPU% for SANGFOR, number only",
+  "sang_mem": "",
+  "sang_virt": "",
+  "sang_disk": ""
 }
 
-Hanya kembalikan JSON. Jika nilai tidak terlihat, isi dengan string kosong "".`;
+IMPORTANT: Return ONLY the JSON object, nothing else.`;
 
   const resp = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
@@ -144,15 +185,22 @@ Hanya kembalikan JSON. Jika nilai tidak terlihat, isi dengan string kosong "".`;
         contents: [{ parts: [
           { text: prompt },
           { inline_data: { mime_type: mimeType, data: base64 } }
-        ]}]
+        ]}],
+        generationConfig: { temperature: 0.1, topP: 0.8 }
       })
     }
   );
+  if (!resp.ok) {
+    const err = await resp.json();
+    throw new Error(err.error?.message || `HTTP ${resp.status}`);
+  }
   const result = await resp.json();
   const text = result.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-  // Bersihkan markdown code block jika ada
-  const clean = text.replace(/```json\n?|\n?```/g, '').trim();
-  return JSON.parse(clean);
+  // Cari JSON block dalam respons (antisipasi jika model masih tambah teks)
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  const jsonStr = jsonMatch ? jsonMatch[0] : '{}';
+  const raw = JSON.parse(jsonStr);
+  return cleanAiResult(raw);
 };
 
 const ONT_LIST = [
@@ -928,22 +976,45 @@ const ITPage = () => {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
                         <CheckCircle size={18} color="#10b981" />
                         <span style={{ fontWeight: 700, color: '#10b981' }}>Berhasil diekstrak oleh AI</span>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginLeft: 'auto' }}>Review & koreksi jika perlu di tab Manual</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginLeft: 'auto' }}>Koreksi jika ada yang salah lalu simpan</span>
                       </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.6rem' }}>
-                        {aiResult.tanggal && (
-                          <div style={{ padding: '0.6rem 0.8rem', background: 'rgba(0,0,0,0.2)', borderRadius: '8px' }}>
-                            <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', marginBottom: '2px' }}>TANGGAL</div>
-                            <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{aiResult.tanggal}</div>
-                          </div>
+
+                      {/* Tanggal — wajib diisi */}
+                      <div style={{ marginBottom: '1rem', padding: '0.75rem 1rem', background: 'rgba(0,0,0,0.25)', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', flexShrink: 0 }}>Tanggal</span>
+                        <input
+                          type="date"
+                          className="input-field"
+                          style={{ flex: 1, minWidth: '180px', padding: '0.4rem 0.75rem', fontSize: '0.85rem' }}
+                          value={(() => {
+                            // Konversi dd-mm-yy ke yyyy-mm-dd untuk input type=date
+                            const t = aiResult.tanggal;
+                            if (!t) return '';
+                            const p = t.split('-');
+                            if (p.length === 3) return `20${p[2]}-${p[1]}-${p[0]}`;
+                            return '';
+                          })()}
+                          onChange={e => {
+                            setAiResult((prev: any) => ({ ...prev, tanggal: formatDate(e.target.value) }));
+                          }}
+                        />
+                        {!aiResult.tanggal && (
+                          <span style={{ fontSize: '0.75rem', color: '#f59e0b' }}>⚠️ AI tidak menemukan tanggal — pilih manual</span>
                         )}
+                        {aiResult.tanggal && (
+                          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#10b981' }}>{aiResult.tanggal}</span>
+                        )}
+                      </div>
+
+                      {/* Grid data ONT */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(175px, 1fr))', gap: '0.6rem', marginBottom: '1rem' }}>
                         {ONT_LIST.map(ont => (
                           <div key={ont.key} style={{ padding: '0.6rem 0.8rem', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', borderLeft: `3px solid ${ont.color}` }}>
                             <div style={{ fontSize: '0.65rem', color: ont.color, marginBottom: '4px', fontWeight: 700 }}>{ont.label}</div>
                             <div style={{ fontSize: '0.82rem' }}>
-                              <span style={{ color: '#60a5fa' }}>↓ {aiResult[`${ont.key}_rx`] || '--'} Mbps</span>
+                              <span style={{ color: '#60a5fa' }}>↓ {aiResult[`${ont.key}_rx`] || <span style={{color:'#f59e0b'}}>?</span>} Mbps</span>
                               <span style={{ color: 'var(--text-secondary)', margin: '0 6px' }}>/</span>
-                              <span style={{ color: '#f87171' }}>↑ {aiResult[`${ont.key}_tx`] || '--'} Mbps</span>
+                              <span style={{ color: '#f87171' }}>↑ {aiResult[`${ont.key}_tx`] || <span style={{color:'#f59e0b'}}>?</span>} Mbps</span>
                             </div>
                           </div>
                         ))}
@@ -957,23 +1028,62 @@ const ITPage = () => {
                           </div>
                         )}
                       </div>
+
+                      {/* Tombol Simpan */}
                       <button
+                        disabled={!aiResult.tanggal || netLoading}
                         onClick={async () => {
+                          if (!aiResult.tanggal) {
+                            alert('Pilih tanggal terlebih dahulu.');
+                            return;
+                          }
                           setNetLoading(true);
                           try {
-                            const payload = { action: 'FINANCE_RECORD', sheetName: 'Monitor_Net', id: `NET-${Date.now()}`, tanggal: aiResult.tanggal || formatDate(new Date().toISOString()), ...aiResult };
+                            const newId = `NET-${Date.now()}`;
+                            const { tanggal, ...fields } = aiResult;
+                            const payload = {
+                              action: 'FINANCE_RECORD',
+                              sheetName: 'Monitor_Net',
+                              id: newId,
+                              tanggal,
+                              ...fields
+                            };
                             await fetch(API_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
+                            // Update histori langsung tanpa reload
+                            const newRecord = {
+                              id: newId, tanggal,
+                              i1_rx: parseFloat(fields.i1_rx||0), i1_tx: parseFloat(fields.i1_tx||0),
+                              i2_rx: parseFloat(fields.i2_rx||0), i2_tx: parseFloat(fields.i2_tx||0),
+                              i3_rx: parseFloat(fields.i3_rx||0), i3_tx: parseFloat(fields.i3_tx||0),
+                              i4_rx: parseFloat(fields.i4_rx||0), i4_tx: parseFloat(fields.i4_tx||0),
+                              i5_rx: parseFloat(fields.i5_rx||0), i5_tx: parseFloat(fields.i5_tx||0),
+                              ast_rx: parseFloat(fields.ast_rx||0), ast_tx: parseFloat(fields.ast_tx||0),
+                              dhcp_cpu: fields.dhcp_cpu, dhcp_mem: fields.dhcp_mem, dhcp_disk: fields.dhcp_disk,
+                              sang_cpu: fields.sang_cpu, sang_mem: fields.sang_mem, sang_virt: fields.sang_virt, sang_disk: fields.sang_disk,
+                            };
+                            setNetHistory(prev => [...prev, newRecord]);
+                            setNetData(newRecord);
+                            setIsNetFormOpen(false);
+                            setUploadImage(null);
+                            setAiResult(null);
                             alert('✅ Data traffic berhasil disimpan!');
-                            setIsNetFormOpen(false); setUploadImage(null); setAiResult(null);
-                            fetchNetData();
-                          } catch { alert('Gagal menyimpan.'); }
-                          finally { setNetLoading(false); }
+                          } catch (err: any) {
+                            alert('Gagal menyimpan: ' + (err.message || ''));
+                          } finally { setNetLoading(false); }
                         }}
                         className="btn"
-                        style={{ width: '100%', marginTop: '1rem', background: '#10b981', color: 'white', fontWeight: 700, padding: '0.8rem', borderRadius: '8px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                        style={{
+                          width: '100%', marginTop: '0.5rem',
+                          background: aiResult.tanggal ? '#10b981' : '#6b7280',
+                          color: 'white', fontWeight: 700, padding: '0.85rem',
+                          borderRadius: '8px', border: 'none',
+                          cursor: aiResult.tanggal ? 'pointer' : 'not-allowed',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                          opacity: aiResult.tanggal ? 1 : 0.6
+                        }}
                       >
                         {netLoading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
-                        Simpan Data Hasil Analisis
+                        Simpan Data Hasil Analisis ke Histori
                       </button>
                     </div>
                   )}
