@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, LabelList } from 'recharts';
-import { UserCircle2, TrendingUp, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, ShieldCheck, MessageSquare, AlertCircle, Edit3, Trash2, Wind, Briefcase, ArrowDownRight } from 'lucide-react';
+import { XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, LabelList, AreaChart, Area } from 'recharts';
+import { UserCircle2, TrendingUp, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, ShieldCheck, MessageSquare, AlertCircle, Edit3, Trash2, Wind, Briefcase, ArrowDownRight, Smartphone } from 'lucide-react';
 import { getCurrentUser, ROLES } from '../data/organization';
 import { getUtilityChartData } from '../data/utilities';
 
@@ -12,6 +12,13 @@ interface DashboardProps {
   isLoggedIn?: boolean;
   userPicture?: string;
 }
+
+const initialDeviceData = [
+  { id: 1, date: '31 Mar', count: 1529, overloads: 13, note: 'Hari Awal, banyak ruang > 50' },
+  { id: 2, date: '01 Apr', count: 1402, overloads: 8, note: 'Bertahap turun paska pengumuman' },
+  { id: 3, date: '02 Apr', count: 1371, overloads: 6, note: 'Mulai stabil di angka wajar' },
+  { id: 4, date: '06 Apr', count: 1359, overloads: 4, note: 'Rekor terendah, stabil' }
+];
 
 const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => {
   const currentUser = getCurrentUser();
@@ -392,6 +399,44 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
             ) : (
               <div style={{ padding: '1rem', color: 'var(--text-secondary)' }}>Data tidak tersedia.</div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* DASHBOARD WIFI MONITORING SECTION */}
+      {isLoggedIn && (
+        <div className="glass-panel delay-150" style={{ marginBottom: '2rem', background: 'linear-gradient(135deg, rgba(59,130,246,0.03), transparent)', borderLeft: '4px solid var(--accent-blue)' }}>
+          <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h3 style={{ fontSize: '1.05rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Smartphone size={18} color="var(--accent-blue)" /> Pemantauan Trend Perangkat (WiFi Client)
+              </h3>
+              <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Grafik total riwayat perangkat terhubung harian</p>
+            </div>
+            <a href="#/it" className="btn btn-outline" style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}>Detail & Update &rarr;</a>
+          </div>
+          
+          <div style={{ padding: '1.25rem' }}>
+            <div style={{ width: '100%', height: '280px' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={initialDeviceData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorCountDash" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--accent-blue)" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="var(--accent-blue)" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={12} tickLine={false} axisLine={false} />
+                  <YAxis domain={['dataMin - 50', 'dataMax + 50']} stroke="var(--text-muted)" fontSize={12} tickLine={false} axisLine={false} />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                  <RechartsTooltip 
+                    contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-focus)', borderRadius: '8px', fontSize: '11px' }}
+                    formatter={(value: any) => [`${value} Perangkat`, 'Total Client']}
+                  />
+                  <Area type="monotone" dataKey="count" stroke="var(--accent-blue)" strokeWidth={3} fillOpacity={1} fill="url(#colorCountDash)" activeDot={{ r: 6, strokeWidth: 0, fill: 'var(--accent-blue)' }} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
       )}
