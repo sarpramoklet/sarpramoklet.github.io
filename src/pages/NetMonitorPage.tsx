@@ -3,8 +3,6 @@ import { Server, Activity, Database, Loader2, DatabaseBackup, X, Plus, Camera } 
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 
-// ⚙️ Ganti dengan API Key ImgBB Anda → daftar gratis di https://imgbb.com/
-const IMGBB_API_KEY = "6d207e02198a847aa98d0a2a901485a5";
 
 // ─── Helper Components ────────────────────────────────────────────────────────
 
@@ -210,61 +208,66 @@ const NetMonitorPage = () => {
   };
 
 
-  // Upload foto ke ImgBB → dapat URL → simpan ke sheet
+  // Upload foto ke Google Drive via Apps Script → dapat URL → simpan ke sheet
   const handlePhotoUpload = async (row: any, file: File) => {
     const reader = new FileReader();
     reader.onload = async (ev) => {
       try {
         const compressed = await compressImage(ev.target?.result as string);
 
-        // Hapus prefix "data:image/jpeg;base64," untuk ImgBB
+        // Hapus prefix "data:image/jpeg;base64,"
         const base64Data = compressed.split(',')[1];
+        const fileName = `net_${(row.tanggal || Date.now().toString()).replace(/[^a-zA-Z0-9]/g, '_')}.jpg`;
 
-        // Upload ke ImgBB
-        const formData = new FormData();
-        formData.append('image', base64Data);
-        formData.append('name', `net_${row.tanggal?.replace(/[^a-zA-Z0-9]/g, '_') || Date.now()}.jpg`);
-
-        const imgRes = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+        // ── Step 1: Upload ke Google Drive via Apps Script ──────────────
+        // Content-Type: text/plain → "simple request" → tidak perlu mode:no-cors
+        const driveRes = await fetch(API_URL, {
           method: 'POST',
-          body: formData
-        });
-        const imgJson = await imgRes.json();
-
-        if (!imgJson.success) {
-          alert('Gagal upload ke ImgBB. Pastikan API key valid.');
-          return;
-        }
-
-        const imageUrl = imgJson.data.url;         // URL gambar asli
-        const thumbUrl = imgJson.data.thumb?.url || imageUrl; // Thumbnail
-        const displayUrl = imgJson.data.display_url || imageUrl;
-
-        // Simpan URL ke Google Sheets (kolom snapshot & snapshot_url)
-        await fetch(API_URL, {
-          method: 'POST', mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
           body: JSON.stringify({
-            action: 'FINANCE_RECORD',
-            sheetName: 'Monitor_Net',
-            id: row.id || row.ID,
-            tanggal: row.tanggal,
-            snapshot: displayUrl,          // URL gambar (menggantikan base64)
-            snapshot_url: imageUrl,        // URL asli untuk link
-            snapshot_thumb: thumbUrl       // Thumbnail URL
+            action   : 'UPLOAD_TO_DRIVE',
+            base64   : base64Data,
+            mimeType : 'image/jpeg',
+            fileName : fileName,
+            folder   : 'Sarpramoklet_NetSnapshots'
           })
         });
 
-        // Optimistic UI update  
+        const driveJson = await driveRes.json();
+
+        if (!driveJson.success) {
+          throw new Error(driveJson.error || 'Upload ke Drive gagal. Pastikan Apps Script sudah di-update.');
+        }
+
+        const imageUrl = driveJson.url;       // https://drive.google.com/uc?export=view&id=...
+        const driveUrl = driveJson.driveUrl;  // https://drive.google.com/file/d/.../view
+
+        // ── Step 2: Simpan URL ke Google Sheets ─────────────────────────
+        await fetch(API_URL, {
+          method: 'POST',
+          mode  : 'no-cors',
+          body  : JSON.stringify({
+            action       : 'FINANCE_RECORD',
+            sheetName    : 'Monitor_Net',
+            id           : row.id || row.ID,
+            tanggal      : row.tanggal,
+            snapshot     : imageUrl,   // URL embed/display
+            snapshot_url : driveUrl    // URL link langsung ke Drive
+          })
+        });
+
+        // ── Step 3: Update UI langsung (optimistic) ──────────────────────
         setHistoryData(prev => prev.map(r =>
           (r.id === row.id || r.tanggal === row.tanggal)
-            ? { ...r, snapshot: displayUrl, snapshot_url: imageUrl, snapshot_thumb: thumbUrl }
+            ? { ...r, snapshot: imageUrl, snapshot_url: driveUrl }
             : r
         ));
 
-        alert(`✅ Foto berhasil diupload!\n🔗 Link: ${imageUrl}`);
+        alert(`✅ Foto berhasil disimpan ke Google Drive!\n🔗 ${driveUrl}`);
+
       } catch (err: any) {
-        console.error(err);
-        alert('Gagal upload foto: ' + (err.message || ''));
+        console.error('Upload error:', err);
+        alert('❌ Gagal upload: ' + (err.message || 'Unknown error'));
       }
     };
     reader.readAsDataURL(file);
