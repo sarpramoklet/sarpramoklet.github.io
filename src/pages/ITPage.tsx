@@ -16,6 +16,31 @@ const monthMap: any = {
   'Jul': 6, 'Agt': 7, 'Sep': 8, 'Okt': 9, 'Nov': 10, 'Des': 11 
 };
 
+// Format tanggal ke dd-mm-yy (dari berbagai format: ISO, "31 Mar 2026", dsb.)
+const formatDate = (dateStr: string): string => {
+  if (!dateStr) return '';
+  const s = dateStr.trim();
+  // ISO format: 2026-03-30T17:00:00.000Z atau 2026-03-30
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) {
+      const dd = String(d.getDate()).padStart(2, '0');
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const yy = String(d.getFullYear()).slice(-2);
+      return `${dd}-${mm}-${yy}`;
+    }
+  }
+  // Format: "31 Mar 2026" atau "31 Mar 26"
+  const parts = s.split(' ');
+  if (parts.length >= 3) {
+    const dd = String(parseInt(parts[0])).padStart(2, '0');
+    const mm = String((monthMap[parts[1]] ?? 0) + 1).padStart(2, '0');
+    const year = parts[2].length === 2 ? parts[2] : String(parseInt(parts[2])).slice(-2);
+    return `${dd}-${mm}-${year}`;
+  }
+  return s;
+};
+
 // Helper Components
 const ISPNode = ({ name, rx, tx, active, type }: any) => (
   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
@@ -114,7 +139,7 @@ const ITPage = () => {
           let dateStr = String(item.tanggal || item.Tanggal || '').trim();
           return {
             id: item.id || item.ID,
-            date: dateStr,
+            date: formatDate(dateStr),
             count: parseInt(item.count || item.Count || 0),
             overloads: parseInt(item.overloads || item.Overloads || 0),
             note: item.note || item.Note || "",
