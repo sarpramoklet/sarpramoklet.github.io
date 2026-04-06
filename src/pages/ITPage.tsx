@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Server, Wifi, Shield, Edit2, Trash2, X, Activity, Smartphone, Loader2, DatabaseBackup, TrendingUp, Upload, Sparkles, CheckCircle, AlertCircle, Image } from 'lucide-react';
+import { Server, Wifi, Shield, Edit2, Trash2, X, Activity, Smartphone, Loader2, DatabaseBackup, TrendingUp, Upload, Sparkles, CheckCircle, AlertCircle, Image, Camera } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, LabelList } from 'recharts';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
@@ -260,6 +260,7 @@ const ITPage = () => {
   const [aiError, setAiError] = useState('');
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [snapshotLightbox, setSnapshotLightbox] = useState<{ src: string; tanggal: string } | null>(null);
 
   
   const [formData, setFormData] = useState({
@@ -326,6 +327,22 @@ const ITPage = () => {
     }
   };
 
+  // Kompres gambar via Canvas → JPEG ~40% quality agar muat di GSheets cell
+  const compressImage = (dataUrl: string): Promise<string> =>
+    new Promise((resolve) => {
+      const img = document.createElement('img');
+      img.onload = () => {
+        const MAX = 800;
+        let w = img.width, h = img.height;
+        if (w > MAX) { h = Math.round((h * MAX) / w); w = MAX; }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.4));
+      };
+      img.src = dataUrl;
+    });
+
   const fetchNetData = async () => {
     setNetLoading(true);
     try {
@@ -346,6 +363,7 @@ const ITPage = () => {
             ast_rx: parseFloat(d.ast_rx || 0), ast_tx: parseFloat(d.ast_tx || 0),
             dhcp_cpu: d.dhcp_cpu, dhcp_mem: d.dhcp_mem, dhcp_disk: d.dhcp_disk,
             sang_cpu: d.sang_cpu, sang_mem: d.sang_mem, sang_virt: d.sang_virt, sang_disk: d.sang_disk,
+            snapshot: d.snapshot || d.Snapshot || '',
           }));
         setNetHistory(mapped);
         setNetData(mapped[mapped.length - 1]);
@@ -839,6 +857,10 @@ const ITPage = () => {
       {/* Tabel Histori */}
       {netHistory.length > 0 && (
         <div className="glass-panel" style={{ overflow: 'auto', marginBottom: '2rem' }}>
+          <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>Riwayat Update ({Math.min(netHistory.length, 7)} Terakhir)</span>
+            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>📸 Klik ikon kamera untuk lihat foto kondisi jaringan</span>
+          </div>
           <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse', fontSize: '0.78rem', minWidth: '900px' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
@@ -846,6 +868,7 @@ const ITPage = () => {
                 {ONT_LIST.map(ont => (
                   <th key={ont.key} style={{ padding: '0.75rem 0.5rem', color: ont.color, fontWeight: 600, textAlign: 'center' }}>{ont.label}</th>
                 ))}
+                <th style={{ padding: '0.75rem 0.5rem', color: 'var(--text-secondary)', fontWeight: 600, textAlign: 'center' }}>FOTO</th>
                 <th style={{ padding: '0.75rem 1rem' }}></th>
               </tr>
               <tr style={{ borderBottom: '2px solid var(--border-subtle)', background: 'rgba(0,0,0,0.2)' }}>
@@ -855,13 +878,14 @@ const ITPage = () => {
                     <span style={{ color: '#60a5fa' }}>↓Rx</span> / <span style={{ color: '#f87171' }}>↑Tx</span> (Mbps)
                   </td>
                 ))}
+                <td style={{ textAlign: 'center', fontSize: '0.65rem', color: 'var(--text-secondary)' }}>Snapshot</td>
                 <td></td>
               </tr>
             </thead>
             <tbody>
-              {[...netHistory].reverse().map((row) => (
+              {[...netHistory].reverse().slice(0, 7).map((row) => (
                 <tr key={row.id} style={{ borderTop: '1px solid var(--border-subtle)' }}>
-                  <td style={{ padding: '0.75rem 1rem', fontWeight: 600, whiteSpace: 'nowrap' }}>{row.tanggal}</td>
+                  <td style={{ padding: '0.75rem 1rem', fontWeight: 600, whiteSpace: 'nowrap' }}>{row.tanggal || '-'}</td>
                   {ONT_LIST.map(ont => (
                     <td key={ont.key} style={{ padding: '0.75rem 0.5rem', textAlign: 'center' }}>
                       <span style={{ color: '#60a5fa', fontWeight: 600 }}>{row[`${ont.key}_rx`]}</span>
@@ -869,6 +893,41 @@ const ITPage = () => {
                       <span style={{ color: '#f87171' }}>{row[`${ont.key}_tx`]}</span>
                     </td>
                   ))}
+                  {/* Kolom Foto */}
+                  <td style={{ padding: '0.5rem', textAlign: 'center' }}>
+                    {row.snapshot ? (
+                      <button
+                        onClick={() => setSnapshotLightbox({ src: row.snapshot, tanggal: row.tanggal || '-' })}
+                        title="Lihat foto kondisi jaringan"
+                        style={{ background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: '8px', cursor: 'pointer', padding: '4px 8px', display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--accent-blue)' }}
+                      >
+                        <Camera size={14} />
+                        <span style={{ fontSize: '0.65rem', fontWeight: 600 }}>Lihat</span>
+                      </button>
+                    ) : (
+                      <label title="Upload foto kondisi jaringan untuk tanggal ini" style={{ cursor: 'pointer', display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '2px', color: 'var(--text-muted)', opacity: 0.5 }}>
+                        <input type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const reader = new FileReader();
+                          reader.onload = async (ev) => {
+                            const compressed = await compressImage(ev.target?.result as string);
+                            // Simpan ke DB
+                            try {
+                              await fetch(API_URL, {
+                                method: 'POST', mode: 'no-cors',
+                                body: JSON.stringify({ action: 'FINANCE_RECORD', sheetName: 'Monitor_Net', id: row.id, tanggal: row.tanggal, snapshot: compressed })
+                              });
+                              setNetHistory(prev => prev.map(r => r.id === row.id ? { ...r, snapshot: compressed } : r));
+                            } catch { alert('Gagal upload foto.'); }
+                          };
+                          reader.readAsDataURL(file);
+                        }} />
+                        <Camera size={14} />
+                        <span style={{ fontSize: '0.6rem' }}>Upload</span>
+                      </label>
+                    )}
+                  </td>
                   <td style={{ padding: '0.75rem 1rem' }}>
                     <button onClick={() => handleDeleteTraffic(row.id)} title="Hapus" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent-rose)', opacity: 0.6 }}>
                       <Trash2 size={14} />
@@ -878,6 +937,31 @@ const ITPage = () => {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* ── Lightbox Foto Jaringan ── */}
+      {snapshotLightbox && (
+        <div
+          onClick={() => setSnapshotLightbox(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', zIndex: 2000, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', cursor: 'zoom-out' }}
+        >
+          <div style={{ position: 'absolute', top: '1rem', right: '1rem' }}>
+            <button onClick={() => setSnapshotLightbox(null)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', color: 'white', cursor: 'pointer', padding: '8px', display: 'flex' }}>
+              <X size={20} />
+            </button>
+          </div>
+          <div style={{ marginBottom: '0.75rem', fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Camera size={14} />
+            <span>Kondisi Jaringan — {snapshotLightbox.tanggal}</span>
+          </div>
+          <img
+            src={snapshotLightbox.src}
+            alt={`Kondisi Jaringan ${snapshotLightbox.tanggal}`}
+            onClick={e => e.stopPropagation()}
+            style={{ maxWidth: '100%', maxHeight: '80vh', borderRadius: '12px', boxShadow: '0 25px 60px rgba(0,0,0,0.5)', objectFit: 'contain', cursor: 'default' }}
+          />
+          <p style={{ marginTop: '0.75rem', fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>Klik di luar gambar untuk menutup</p>
         </div>
       )}
 
@@ -1070,17 +1154,20 @@ const ITPage = () => {
                           try {
                             const newId = `NET-${Date.now()}`;
                             const { tanggal, ...fields } = aiResult;
+                            // Kompres gambar upload (yang dipakai AI) jadi snapshot
+                            const snapshotData = uploadImage ? await compressImage(uploadImage) : '';
                             const payload = {
                               action: 'FINANCE_RECORD',
                               sheetName: 'Monitor_Net',
                               id: newId,
                               tanggal,
+                              snapshot: snapshotData,
                               ...fields
                             };
                             await fetch(API_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
                             // Update histori langsung tanpa reload
                             const newRecord = {
-                              id: newId, tanggal,
+                              id: newId, tanggal, snapshot: snapshotData,
                               i1_rx: parseFloat(fields.i1_rx||0), i1_tx: parseFloat(fields.i1_tx||0),
                               i2_rx: parseFloat(fields.i2_rx||0), i2_tx: parseFloat(fields.i2_tx||0),
                               i3_rx: parseFloat(fields.i3_rx||0), i3_tx: parseFloat(fields.i3_tx||0),
