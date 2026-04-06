@@ -38,6 +38,9 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   const [capexProjects, setCapexProjects] = useState<any[]>([]);
   const [capexLoading, setCapexLoading] = useState(false);
 
+  const [wifiData, setWifiData] = useState<any[]>([]);
+  const [wifiLoading, setWifiLoading] = useState(false);
+
   useEffect(() => {
     const fetchFinanceData = async () => {
       setFinanceLoading(true);
@@ -219,8 +222,31 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       }
     };
     
+    const fetchWifiMonitor = async () => {
+      setWifiLoading(true);
+      try {
+        const resp = await fetch(`${FINANCE_API_URL}?sheetName=Monitor_Wifi`);
+        const data = await resp.json();
+        if (data && Array.isArray(data) && data.length > 0) {
+          const mapped = data.filter((d:any) => d.id || d.ID).map((item:any) => ({
+            id: item.id || item.ID,
+            date: item.tanggal || item.Tanggal,
+            count: parseInt(item.count || item.Count || 0)
+          }));
+          setWifiData(mapped);
+        } else {
+           setWifiData(initialDeviceData); // Fallback to demo layout logic
+        }
+      } catch (e) {
+        setWifiData(initialDeviceData);
+      } finally {
+        setWifiLoading(false);
+      }
+    };
+
     if (isLoggedIn) fetchACMonitor();
     if (isLoggedIn) fetchCapexProjects();
+    if (isLoggedIn) fetchWifiMonitor();
 
   }, [isAuthorizedFinance, isLoggedIn]);
 
@@ -417,26 +443,30 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           </div>
           
           <div style={{ padding: '1.25rem' }}>
-            <div style={{ width: '100%', height: '280px' }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={initialDeviceData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorCountDash" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--accent-blue)" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="var(--accent-blue)" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis domain={['dataMin - 50', 'dataMax + 50']} stroke="var(--text-muted)" fontSize={12} tickLine={false} axisLine={false} />
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                  <RechartsTooltip 
-                    contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-focus)', borderRadius: '8px', fontSize: '11px' }}
-                    formatter={(value: any) => [`${value} Perangkat`, 'Total Client']}
-                  />
-                  <Area type="monotone" dataKey="count" stroke="var(--accent-blue)" strokeWidth={3} fillOpacity={1} fill="url(#colorCountDash)" activeDot={{ r: 6, strokeWidth: 0, fill: 'var(--accent-blue)' }} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
+            {wifiLoading ? (
+               <div style={{ padding: '3rem', display: 'flex', justifyContent: 'center' }}><Loader2 className="animate-spin" color="var(--accent-blue)" /></div>
+            ) : (
+              <div style={{ width: '100%', height: '280px' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={wifiData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorCountDash" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="var(--accent-blue)" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="var(--accent-blue)" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={12} tickLine={false} axisLine={false} />
+                    <YAxis domain={['dataMin - 50', 'dataMax + 50']} stroke="var(--text-muted)" fontSize={12} tickLine={false} axisLine={false} />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                    <RechartsTooltip 
+                      contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-focus)', borderRadius: '8px', fontSize: '11px' }}
+                      formatter={(value: any) => [`${value} Perangkat`, 'Total Client']}
+                    />
+                    <Area type="monotone" dataKey="count" stroke="var(--accent-blue)" strokeWidth={3} fillOpacity={1} fill="url(#colorCountDash)" activeDot={{ r: 6, strokeWidth: 0, fill: 'var(--accent-blue)' }} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </div>
         </div>
       )}

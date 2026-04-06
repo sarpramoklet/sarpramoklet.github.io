@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { Server, Wifi, Shield, Database, TriangleAlert, Edit2, Trash2, Plus, Save, X, Activity, Smartphone } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Server, Wifi, Shield, Database, TriangleAlert, Edit2, Trash2, Plus, Save, X, Activity, Smartphone, Loader2, DatabaseBackup } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+
+const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 
 const initialDeviceData = [
   { id: 1, date: '31 Mar', count: 1529, overloads: 13, note: 'Hari Awal, banyak ruang > 50' },
@@ -10,9 +12,10 @@ const initialDeviceData = [
 ];
 
 const ITPage = () => {
-  const [deviceData, setDeviceData] = useState(initialDeviceData);
+  const [deviceData, setDeviceData] = useState<any[]>([]);
   const [isEditing, setIsEditing] = useState(false);
-  const [currentId, setCurrentId] = useState<number | null>(null);
+  const [currentId, setCurrentId] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   
   const [formData, setFormData] = useState({
     date: '',
@@ -20,6 +23,70 @@ const ITPage = () => {
     overloads: '',
     note: ''
   });
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const resp = await fetch(`${API_URL}?sheetName=Monitor_Wifi`);
+      const data = await resp.json();
+      if (data && Array.isArray(data) && data.length > 0) {
+        const mapped = data.filter((d:any) => d.id || d.ID).map((item:any) => ({
+          id: item.id || item.ID,
+          date: item.tanggal || item.Tanggal,
+          count: parseInt(item.count || item.Count || 0),
+          overloads: parseInt(item.overloads || item.Overloads || 0),
+          note: item.note || item.Note || ""
+        }));
+        setDeviceData(mapped);
+      } else {
+        setDeviceData([]); // Wait for seed
+      }
+    } catch (e) {
+      console.log('Error fetching wifi monitor', e);
+      // Fallback
+      setDeviceData(initialDeviceData);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleSeedToDB = async () => {
+    if (!window.confirm("Kirim data statis sementara ini ke Spreadsheet? (Hanya klik sekali agar tidak ganda)")) return;
+    setLoading(true);
+    try {
+      for (const item of initialDeviceData) {
+        await fetch(API_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "text/plain" },
+          body: JSON.stringify({
+            action: 'FINANCE_RECORD',
+            sheetName: 'Monitor_Wifi',
+            sheet: 'Monitor_Wifi',
+            id: `WIFI-${item.id}`,
+            ID: `WIFI-${item.id}`,
+            tanggal: item.date,
+            Tanggal: item.date,
+            count: item.count.toString(),
+            Count: item.count.toString(),
+            overloads: item.overloads.toString(),
+            Overloads: item.overloads.toString(),
+            note: item.note,
+            Note: item.note
+          })
+        });
+      }
+      alert('Berhasil Seed! Mereload dari Cloud...');
+      setTimeout(fetchData, 2000);
+    } catch (e) {
+      alert('Error seeding');
+      setLoading(false);
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -35,13 +102,30 @@ const ITPage = () => {
       overloads: item.overloads.toString(),
       note: item.note
     });
-    // Scroll to form or just let it be naturally
     document.getElementById('crud-form')?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const handleDelete = (id: number) => {
-    if (window.confirm('Hapus data monitoring harian ini?')) {
-      setDeviceData(deviceData.filter(d => d.id !== id));
+  const handleDelete = async (id: any) => {
+    if (!window.confirm('Hapus data monitoring harian ini dari Cloud Database?')) return;
+    
+    setDeviceData(prev => prev.filter(d => d.id !== id)); // Optimistic UI
+    
+    try {
+      await fetch(API_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({
+          action: 'DELETE_RECORD',
+          sheetName: 'Monitor_Wifi',
+          sheet: 'Monitor_Wifi',
+          id: id,
+          ID: id
+        })
+      });
+    } catch (e) {
+      alert("Hapus ke Cloud gagal.");
+      fetchData(); // Rollback
     }
   };
 
@@ -51,36 +135,54 @@ const ITPage = () => {
     setFormData({ date: '', count: '', overloads: '', note: '' });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.date || !formData.count) return;
+    
+    const newId = (isEditing && currentId !== null) ? currentId : `WIFI-${Date.now()}`;
+    const newItem = {
+      id: newId,
+      date: formData.date,
+      count: parseInt(formData.count),
+      overloads: parseInt(formData.overloads) || 0,
+      note: formData.note
+    };
 
-    if (isEditing && currentId !== null) {
-      setDeviceData(deviceData.map(d => 
-        d.id === currentId 
-          ? { 
-              ...d, 
-              date: formData.date, 
-              count: parseInt(formData.count), 
-              overloads: parseInt(formData.overloads) || 0, 
-              note: formData.note 
-            } 
-          : d
-      ));
+    // Optimistic Update
+    if (isEditing) {
+      setDeviceData(prev => prev.map(d => d.id === newId ? newItem : d));
     } else {
-      const newId = deviceData.length > 0 ? Math.max(...deviceData.map(d => d.id)) + 1 : 1;
-      setDeviceData([...deviceData, {
-        id: newId,
-        date: formData.date,
-        count: parseInt(formData.count),
-        overloads: parseInt(formData.overloads) || 0,
-        note: formData.note
-      }]);
+      setDeviceData(prev => [...prev, newItem]);
     }
     resetForm();
+
+    try {
+      await fetch(API_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({
+          action: 'FINANCE_RECORD',
+          sheetName: 'Monitor_Wifi',
+          sheet: 'Monitor_Wifi',
+          id: newId,
+          ID: newId,
+          tanggal: formData.date,
+          Tanggal: formData.date,
+          count: formData.count,
+          Count: formData.count,
+          overloads: formData.overloads,
+          Overloads: formData.overloads,
+          note: formData.note,
+          Note: formData.note
+        })
+      });
+    } catch(e) {
+      alert("Gagal simpan ke DB");
+      fetchData(); // Rollback
+    }
   };
 
-  // Custom Tooltip for Chart
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
@@ -146,30 +248,46 @@ const ITPage = () => {
       </div>
 
       {/* DEVICE MONITORING SECTION */}
-      <h2 style={{ fontSize: '1.2rem', marginTop: '3rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-        <Smartphone color="var(--accent-blue)" /> Pemantauan Trend Perangkat (WiFi Client)
-      </h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '3rem', marginBottom: '1.5rem' }}>
+        <h2 style={{ fontSize: '1.2rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <Smartphone color="var(--accent-blue)" /> Pemantauan Trend Perangkat (WiFi Client)
+        </h2>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          {deviceData.length === 0 && !loading && (
+            <button onClick={handleSeedToDB} className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem' }}>
+              <DatabaseBackup size={14} /> Seed Sample Data ke DB
+            </button>
+          )}
+          {loading && <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}><Loader2 size={16} className="animate-spin" /> Sinkronisasi DB...</span>}
+        </div>
+      </div>
       
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         {/* CHART ROW */}
         <div className="glass-panel" style={{ padding: '1.5rem', width: '100%', height: '350px' }}>
           <h3 style={{ fontSize: '1rem', color: 'var(--text-secondary)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Activity size={16} /> Grafik Total Client Harian
+            <Activity size={16} /> Grafik Total Client Harian (Cloud Sync)
           </h3>
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={deviceData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--accent-blue)" stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor="var(--accent-blue)" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={12} tickLine={false} axisLine={false} />
-              <YAxis domain={['dataMin - 50', 'dataMax + 50']} stroke="var(--text-muted)" fontSize={12} tickLine={false} axisLine={false} />
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-              <Tooltip content={<CustomTooltip />} />
-              <Area type="monotone" dataKey="count" stroke="var(--accent-blue)" strokeWidth={3} fillOpacity={1} fill="url(#colorCount)" activeDot={{ r: 6, strokeWidth: 0, fill: 'var(--accent-blue)' }} />
-            </AreaChart>
+            {deviceData.length > 0 ? (
+              <AreaChart data={deviceData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--accent-blue)" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="var(--accent-blue)" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis domain={['dataMin - 50', 'dataMax + 50']} stroke="var(--text-muted)" fontSize={12} tickLine={false} axisLine={false} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                <Tooltip content={<CustomTooltip />} />
+                <Area type="monotone" dataKey="count" stroke="var(--accent-blue)" strokeWidth={3} fillOpacity={1} fill="url(#colorCount)" activeDot={{ r: 6, strokeWidth: 0, fill: 'var(--accent-blue)' }} />
+              </AreaChart>
+            ) : (
+               <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+                 {loading ? 'Mengambil data dari Cloud...' : 'Belum ada data visualisasi. Tambahkan data!'}
+               </div>
+            )}
           </ResponsiveContainer>
         </div>
 
@@ -219,7 +337,7 @@ const ITPage = () => {
                   ))}
                   {deviceData.length === 0 && (
                     <tr>
-                      <td colSpan={5} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>Mulai tambahkan data harian.</td>
+                      <td colSpan={5} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>Belum ada data di Spreadsheet. Silakan Seed atau Tambah baru.</td>
                     </tr>
                   )}
                 </tbody>
@@ -235,7 +353,7 @@ const ITPage = () => {
                 {isEditing ? 'Edit Data Harian' : 'Input Data Baru'}
               </h3>
               {isEditing && (
-                <button onClick={resetForm} className="icon-btn" style={{ padding: '0.25rem', background: 'transparent' }}>
+                <button type="button" onClick={resetForm} className="icon-btn" style={{ padding: '0.25rem', background: 'transparent' }}>
                   <X size={16} />
                 </button>
               )}
@@ -288,7 +406,7 @@ const ITPage = () => {
                   name="note" 
                   value={formData.note} 
                   onChange={handleInputChange} 
-                  placeholder="Catatan analisis, area overload..."
+                  placeholder="Catatan analisis..."
                   style={{ width: '100%', padding: '0.75rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-subtle)', borderRadius: '8px', color: 'var(--text-primary)' }}
                 />
               </div>
