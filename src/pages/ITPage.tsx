@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Server, Wifi, Shield, Database, TriangleAlert, Edit2, Trash2, Plus, Save, X, Activity, Smartphone, Loader2, DatabaseBackup } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Server, Wifi, Shield, Edit2, Trash2, Plus, X, Activity, Smartphone, Loader2, DatabaseBackup } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 
@@ -16,17 +16,92 @@ const monthMap: any = {
   'Jul': 6, 'Agt': 7, 'Sep': 8, 'Okt': 9, 'Nov': 10, 'Des': 11 
 };
 
+// Helper Components
+const ISPNode = ({ name, rx, tx, active, type }: any) => (
+  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+    <div className={`badge ${active || type === 'astinet' ? 'badge-success' : ''}`} style={{ 
+      padding: '0.5rem 1rem', 
+      borderRadius: '8px', 
+      background: active ? '#22c55e' : (type === 'astinet' ? 'white' : '#e5e7eb'), 
+      color: type === 'astinet' ? 'black' : 'white',
+      fontWeight: 700,
+      fontSize: '0.75rem',
+      boxShadow: active ? '0 4px 12px rgba(34, 197, 94, 0.3)' : 'none'
+    }}>
+      {name}
+    </div>
+    <div className="glass-panel" style={{ padding: '0.4rem 0.6rem', fontSize: '0.65rem', textAlign: 'center', border: '1px solid var(--border-subtle)' }}>
+      <div>Rx: {rx} Mbps</div>
+      <div>Tx: {tx} Mbps</div>
+    </div>
+  </div>
+);
+
+const ServerNode = ({ name, cpu, mem, disk, virt, urgent }: any) => (
+  <div className="glass-panel" style={{ 
+    padding: '1rem', 
+    width: '200px', 
+    textAlign: 'center', 
+    border: urgent ? '2px solid var(--accent-rose)' : '1px solid var(--border-subtle)',
+    background: urgent ? 'var(--accent-rose-ghost)' : 'linear-gradient(to bottom, rgba(34, 197, 94, 0.1), transparent)'
+  }}>
+    <div style={{ fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+      <Server size={14} color={urgent ? 'var(--accent-rose)' : 'var(--accent-emerald)'} /> {name}
+    </div>
+    <div style={{ fontSize: '0.7rem', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0.5rem', color: 'var(--text-secondary)' }}>
+      <span>cpu: <b style={{ color: parseInt(cpu) > 70 ? 'var(--accent-rose)' : 'inherit' }}>{cpu}%</b></span>
+      <span>mem: {mem}%</span>
+      {virt && <span>virt: {virt}%</span>}
+      <span>disk: {disk}%</span>
+    </div>
+  </div>
+);
+
+const GroupTitle = ({ title }: any) => (
+  <div style={{ gridColumn: '1 / -1', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.25rem', marginTop: '0.5rem' }}>
+    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-blue)', textTransform: 'uppercase' }}>{title}</span>
+  </div>
+);
+
+const NetInput = ({ label, name, onChange }: any) => (
+  <div>
+    <label style={{ fontSize: '0.7rem', display: 'block', marginBottom: '0.25rem' }}>{label}</label>
+    <input 
+      type="text" 
+      placeholder="0.0" 
+      style={{ width: '100%', padding: '0.5rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-subtle)', borderRadius: '6px', color: 'white', fontSize: '0.8rem' }}
+      onChange={e => onChange((prev: any) => ({ ...prev, [name]: e.target.value }))}
+    />
+  </div>
+);
+
 const ITPage = () => {
   const [deviceData, setDeviceData] = useState<any[]>([]);
+  const [netData, setNetData] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [currentId, setCurrentId] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [netLoading, setNetLoading] = useState(false);
+  
+  const [isNetFormOpen, setIsNetFormOpen] = useState(false);
   
   const [formData, setFormData] = useState({
     date: '',
     count: '',
     overloads: '',
     note: ''
+  });
+
+  const [netFormData, setNetFormData] = useState({
+    date: '',
+    i1_rx: '', i1_tx: '',
+    i2_rx: '', i2_tx: '',
+    i3_rx: '', i3_tx: '',
+    i4_rx: '', i4_tx: '',
+    i5_rx: '', i5_tx: '',
+    ast_rx: '', ast_tx: '',
+    dhcp_cpu: '', dhcp_mem: '', dhcp_disk: '',
+    sang_cpu: '', sang_mem: '', sang_virt: '', sang_disk: ''
   });
 
   const fetchData = async () => {
@@ -37,7 +112,6 @@ const ITPage = () => {
       if (data && Array.isArray(data) && data.length > 0) {
         const mapped = data.filter((d:any) => (d.id || d.ID) && (d.tanggal || d.Tanggal)).map((item:any) => {
           let dateStr = String(item.tanggal || item.Tanggal || '').trim();
-          
           return {
             id: item.id || item.ID,
             date: dateStr,
@@ -48,7 +122,6 @@ const ITPage = () => {
           };
         });
         
-        // Sorting Berdasarkan Tanggal
         mapped.sort((a, b) => {
           const parseDate = (s: string) => {
             const p = s.split(' ');
@@ -62,26 +135,39 @@ const ITPage = () => {
 
         setDeviceData(mapped);
       } else {
-        // Tampilkan Initial Data sebagai PREVIEW jika DB Kosong
         setDeviceData(initialDeviceData.map(d => ({ ...d, isPreview: true })));
       }
     } catch (e) {
-      console.log('Error fetching wifi monitor', e);
       setDeviceData(initialDeviceData.map(d => ({ ...d, isPreview: true })));
     } finally {
       setLoading(false);
     }
   };
 
+  const fetchNetData = async () => {
+    setNetLoading(true);
+    try {
+      const resp = await fetch(`${API_URL}?sheetName=Monitor_Net`);
+      const data = await resp.json();
+      if (data && Array.isArray(data) && data.length > 0) {
+        setNetData(data[data.length - 1]);
+      }
+    } catch (e) {
+      console.log('Error fetching net monitor', e);
+    } finally {
+      setNetLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchData();
+    fetchNetData();
   }, []);
 
   const handleSyncPreviewToDB = async () => {
     if (!window.confirm("Kirim data PREVIEW ini ke Cloud Spreadsheet sekarang?")) return;
     setLoading(true);
     try {
-      // Loop hanya data yang isPreview: true
       const previews = deviceData.filter(d => d.isPreview);
       for (const item of previews) {
         await fetch(API_URL, {
@@ -105,7 +191,7 @@ const ITPage = () => {
           })
         });
       }
-      alert('Sinkronisasi Berhasil! Data preview telah dimasukkan ke DB.');
+      alert('Sinkronisasi Berhasil!');
       setTimeout(fetchData, 1000);
     } catch (e) {
       alert('Gagal sinkronisasi');
@@ -131,26 +217,20 @@ const ITPage = () => {
   };
 
   const handleDelete = async (id: any) => {
-    if (!window.confirm('Hapus data monitoring harian ini dari Cloud Database?')) return;
-    
-    setDeviceData(prev => prev.filter(d => d.id !== id)); // Optimistic UI
-    
+    if (!window.confirm('Hapus data monitoring harian ini?')) return;
+    setDeviceData(prev => prev.filter(d => d.id !== id));
     try {
       await fetch(API_URL, {
         method: "POST",
         mode: "no-cors",
-        headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({
           action: 'DELETE_RECORD',
           sheetName: 'Monitor_Wifi',
-          sheet: 'Monitor_Wifi',
-          id: id,
-          ID: id
+          id: id
         })
       });
     } catch (e) {
-      alert("Hapus ke Cloud gagal.");
-      fetchData(); // Rollback
+      fetchData();
     }
   };
 
@@ -163,17 +243,16 @@ const ITPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.date || !formData.count) return;
-    
     const newId = (isEditing && currentId !== null) ? currentId : `WIFI-${Date.now()}`;
     const newItem = {
       id: newId,
       date: formData.date,
       count: parseInt(formData.count),
       overloads: parseInt(formData.overloads) || 0,
-      note: formData.note
+      note: formData.note,
+      isPreview: false
     };
 
-    // Optimistic Update
     if (isEditing) {
       setDeviceData(prev => prev.map(d => d.id === newId ? newItem : d));
     } else {
@@ -185,26 +264,18 @@ const ITPage = () => {
       await fetch(API_URL, {
         method: "POST",
         mode: "no-cors",
-        headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({
           action: 'FINANCE_RECORD',
           sheetName: 'Monitor_Wifi',
-          sheet: 'Monitor_Wifi',
           id: newId,
-          ID: newId,
           tanggal: formData.date,
-          Tanggal: formData.date,
           count: formData.count,
-          Count: formData.count,
           overloads: formData.overloads,
-          Overloads: formData.overloads,
-          note: formData.note,
-          Note: formData.note
+          note: formData.note
         })
       });
     } catch(e) {
-      alert("Gagal simpan ke DB");
-      fetchData(); // Rollback
+      fetchData();
     }
   };
 
@@ -213,9 +284,9 @@ const ITPage = () => {
       const cleanLabel = label.replace(/\s+2026|\s+26/g, '');
       return (
         <div className="glass-panel" style={{ padding: '10px 15px', border: '1px solid var(--accent-blue)', borderRadius: '8px' }}>
-          <p style={{ margin: '0 0 5px 0', fontWeight: 'bold', color: 'var(--text-primary)' }}>{cleanLabel}</p>
+          <p style={{ margin: '0 0 5px 0', fontWeight: 'bold' }}>{cleanLabel}</p>
           <p style={{ margin: 0, color: 'var(--accent-blue)', fontSize: '1.2rem', fontWeight: 600 }}>
-            {payload[0].value} <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Perangkat</span>
+            {payload[0].value} <span style={{ fontSize: '0.8rem' }}>Perangkat</span>
           </p>
         </div>
       );
@@ -233,7 +304,7 @@ const ITPage = () => {
       </div>
 
       <div className="stats-grid">
-        <div className="glass-panel stat-card delay-100">
+        <div className="glass-panel stat-card">
           <div className="stat-header">
             <span className="stat-title">Uptime Jaringan</span>
             <div className="stat-icon-wrapper" style={{ background: 'var(--accent-emerald-ghost)', color: 'var(--accent-emerald)' }}>
@@ -246,7 +317,7 @@ const ITPage = () => {
           </div>
         </div>
 
-        <div className="glass-panel stat-card delay-200">
+        <div className="glass-panel stat-card">
           <div className="stat-header">
             <span className="stat-title">Tiket Baru</span>
             <div className="stat-icon-wrapper" style={{ background: 'var(--accent-blue-ghost)', color: 'var(--accent-blue)' }}>
@@ -259,7 +330,7 @@ const ITPage = () => {
           </div>
         </div>
 
-        <div className="glass-panel stat-card delay-300">
+        <div className="glass-panel stat-card">
           <div className="stat-header">
             <span className="stat-title">Insiden Keamanan</span>
             <div className="stat-icon-wrapper" style={{ background: 'var(--accent-rose-ghost)', color: 'var(--accent-rose)' }}>
@@ -273,238 +344,160 @@ const ITPage = () => {
         </div>
       </div>
 
-      {/* DEVICE MONITORING SECTION */}
+      {/* WIFI MONITOR SECTION */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '3rem', marginBottom: '1.5rem' }}>
         <h2 style={{ fontSize: '1.2rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <Smartphone color="var(--accent-blue)" /> Pemantauan Trend Perangkat (WiFi Client)
         </h2>
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
           {deviceData.some(d => d.isPreview) && !loading && (
-            <button onClick={handleSyncPreviewToDB} className="btn" style={{ background: 'var(--accent-emerald)', color: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem' }}>
+            <button onClick={handleSyncPreviewToDB} className="btn" style={{ background: 'var(--accent-emerald)', color: 'white', fontSize: '0.75rem' }}>
               <DatabaseBackup size={14} /> Sinkronkan Preview ke DB
             </button>
           )}
-          {loading && <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}><Loader2 size={16} className="animate-spin" /> Sinkronisasi DB...</span>}
+          {loading && <Loader2 size={16} className="animate-spin" />}
         </div>
       </div>
-      
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-        {/* CHART ROW */}
-        <div className="glass-panel" style={{ padding: '1.5rem', width: '100%', height: '350px' }}>
-          <h3 style={{ fontSize: '1rem', color: 'var(--text-secondary)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Activity size={16} /> Grafik Total Client Harian (Cloud Sync)
-          </h3>
+        <div className="glass-panel" style={{ padding: '1.5rem', height: '350px' }}>
           <ResponsiveContainer width="100%" height="100%">
-            {deviceData.length > 0 ? (
-              <AreaChart data={deviceData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--accent-blue)" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="var(--accent-blue)" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <XAxis 
-                  dataKey="date" 
-                  stroke="var(--text-muted)" 
-                  fontSize={12} 
-                  tickLine={false} 
-                  axisLine={false} 
-                  tickFormatter={(val) => val.replace(/\s+2026|\s+26/g, '')}
-                />
-                <YAxis domain={['dataMin - 50', 'dataMax + 50']} stroke="var(--text-muted)" fontSize={12} tickLine={false} axisLine={false} />
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                <Tooltip content={<CustomTooltip />} />
-                <Area type="monotone" dataKey="count" stroke="var(--accent-blue)" strokeWidth={3} fillOpacity={1} fill="url(#colorCount)" activeDot={{ r: 6, strokeWidth: 0, fill: 'var(--accent-blue)' }} />
-              </AreaChart>
-            ) : (
-               <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
-                 {loading ? 'Mengambil data dari Cloud...' : 'Belum ada data visualisasi. Tambahkan data!'}
-               </div>
-            )}
+            <AreaChart data={deviceData}>
+              <XAxis dataKey="date" tickFormatter={(val) => val.replace(/\s+2026|\s+26/g, '')} />
+              <YAxis domain={['dataMin - 50', 'dataMax + 50']} />
+              <Tooltip content={<CustomTooltip />} />
+              <Area type="monotone" dataKey="count" stroke="var(--accent-blue)" fill="var(--accent-blue-ghost)" />
+            </AreaChart>
           </ResponsiveContainer>
         </div>
 
-        {/* CRUD & TABLE ROW */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 350px', gap: '1.5rem' }} className="grid-responsive">
-          
-          {/* Table */}
-          <div className="glass-panel" style={{ overflow: 'hidden' }}>
-            <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.02)' }}>
-              <h3 style={{ margin: 0, fontSize: '1rem' }}>Data Rekapitulasi Harian</h3>
-            </div>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                <thead>
-                  <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid var(--border-subtle)' }}>
-                    <th style={{ padding: '1rem 1.5rem', color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.85rem' }}>Tanggal</th>
-                    <th style={{ padding: '1rem 1.5rem', color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.85rem' }}>Total Client</th>
-                    <th style={{ padding: '1rem 1.5rem', color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.85rem' }}>Ruang &gt; 50</th>
-                    <th style={{ padding: '1rem 1.5rem', color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.85rem' }}>Catatan</th>
-                    <th style={{ padding: '1rem 1.5rem', color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.85rem', textAlign: 'right' }}>Aksi</th>
-                  </tr>
-                </thead>
-                <tbody>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '1.5rem' }} className="grid-responsive">
+          <div className="glass-panel" style={{ overflow: 'auto' }}>
+            <table style={{ width: '100%', textAlign: 'left' }}>
+               <thead>
+                 <tr>
+                    <th style={{ padding: '1rem' }}>Tanggal</th>
+                    <th style={{ padding: '1rem' }}>Client</th>
+                    <th style={{ padding: '1rem' }}>Overload</th>
+                    <th style={{ padding: '1rem' }}>Catatan</th>
+                    <th style={{ padding: '1rem' }}>Aksi</th>
+                 </tr>
+               </thead>
+               <tbody>
                   {deviceData.map((item) => (
-                    <tr key={item.id} style={{ borderBottom: '1px solid var(--border-subtle)', transition: 'background 0.2s ease', background: item.isPreview ? 'rgba(245, 158, 11, 0.05)' : (currentId === item.id ? 'var(--accent-blue-ghost)' : 'transparent') }}>
-                      <td style={{ padding: '1rem 1.5rem', fontWeight: 500 }}>
-                        {item.date} 
-                        {item.isPreview && <span style={{ marginLeft: '8px', fontSize: '10px', color: 'var(--accent-amber)', fontWeight: 700 }}> (PREVIEW)</span>}
-                      </td>
-                      <td style={{ padding: '1rem 1.5rem', color: 'var(--accent-blue)', fontWeight: 600 }}>{item.count}</td>
-                      <td style={{ padding: '1rem 1.5rem' }}>
-                        <span className={`badge ${item.overloads > 10 ? 'badge-danger' : item.overloads > 5 ? 'badge-warning' : 'badge-success'}`}>
-                          {item.overloads} Ruang
-                        </span>
-                      </td>
-                      <td style={{ padding: '1rem 1.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)', maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {item.note}
-                      </td>
-                      <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
-                        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                          <button onClick={() => handleEdit(item)} className="icon-btn" style={{ background: 'rgba(0,0,0,0.2)', color: 'var(--text-primary)' }}>
-                            <Edit2 size={14} />
-                          </button>
-                          <button onClick={() => handleDelete(item.id)} className="icon-btn" style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-rose)' }}>
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
+                    <tr key={item.id} style={{ borderTop: '1px solid var(--border-subtle)' }}>
+                      <td style={{ padding: '1rem' }}>{item.date} {item.isPreview && <small style={{ color: 'var(--accent-amber)' }}>(PREVIEW)</small>}</td>
+                      <td style={{ padding: '1rem' }}>{item.count}</td>
+                      <td style={{ padding: '1rem' }}>{item.overloads}</td>
+                      <td style={{ padding: '1rem', fontSize: '0.8rem' }}>{item.note}</td>
+                      <td style={{ padding: '1rem' }}>
+                        <button onClick={() => handleEdit(item)}><Edit2 size={14} /></button>
+                        <button onClick={() => handleDelete(item.id)}><Trash2 size={14} /></button>
                       </td>
                     </tr>
                   ))}
-                  {deviceData.length === 0 && (
-                    <tr>
-                      <td colSpan={5} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>Belum ada data di Spreadsheet. Silakan Seed atau Tambah baru.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+               </tbody>
+            </table>
           </div>
 
-          {/* Form */}
           <div id="crud-form" className="glass-panel" style={{ padding: '1.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h3 style={{ margin: 0, fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                {isEditing ? <Edit2 size={16} color="var(--accent-blue)" /> : <Plus size={16} color="var(--accent-emerald)" />}
-                {isEditing ? 'Edit Data Harian' : 'Input Data Baru'}
-              </h3>
-              {isEditing && (
-                <button type="button" onClick={resetForm} className="icon-btn" style={{ padding: '0.25rem', background: 'transparent' }}>
-                  <X size={16} />
-                </button>
-              )}
-            </div>
-            
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Tanggal (Contoh: 07 Apr)</label>
-                <input 
-                  type="text" 
-                  name="date" 
-                  value={formData.date} 
-                  onChange={handleInputChange} 
-                  required
-                  placeholder="Mis: 08 Apr"
-                  style={{ width: '100%', padding: '0.75rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-subtle)', borderRadius: '8px', color: 'var(--text-primary)' }}
-                />
-              </div>
-              
+             <h3 style={{ marginBottom: '1rem' }}>{isEditing ? 'Edit Data' : 'Tambah Data'}</h3>
+             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <input className="input-field" name="date" value={formData.date} onChange={handleInputChange} placeholder="Tanggal" required />
+                <input className="input-field" name="count" value={formData.count} onChange={handleInputChange} placeholder="Total Client" type="number" required />
+                <input className="input-field" name="overloads" value={formData.overloads} onChange={handleInputChange} placeholder="Overload" type="number" />
+                <input className="input-field" name="note" value={formData.note} onChange={handleInputChange} placeholder="Catatan" />
+                <button type="submit" className="btn" style={{ background: 'var(--accent-blue)', color: 'white' }}>Simpan</button>
+             </form>
+          </div>
+        </div>
+      </div>
+
+      {/* NETWORK SECTION */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '4rem', marginBottom: '1.5rem' }}>
+        <h2 style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <Activity color="var(--accent-emerald)" /> Monitoring Infrastruktur & Bandwidth
+        </h2>
+        <button onClick={() => setIsNetFormOpen(true)} className="btn btn-outline" style={{ fontSize: '0.75rem' }}>
+          Update Status Harian
+        </button>
+      </div>
+
+      <div className="glass-panel" style={{ padding: '2rem', minHeight: '300px', position: 'relative' }}>
+         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+            <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Status Update: </span>
+            <span style={{ fontWeight: 600 }}>{netData?.tanggal || 'Senin, 06 Apr 2026 (Sample)'}</span>
+         </div>
+         
+         <div style={{ display: 'flex', justifyContent: 'space-around', flexWrap: 'wrap', gap: '2rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem' }}>
               <div style={{ display: 'flex', gap: '1rem' }}>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Total Client</label>
-                  <input 
-                    type="number" 
-                    name="count" 
-                    value={formData.count} 
-                    onChange={handleInputChange} 
-                    required
-                    placeholder="Mis: 1350"
-                    style={{ width: '100%', padding: '0.75rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-subtle)', borderRadius: '8px', color: 'var(--text-primary)' }}
-                  />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Ruang &gt;50</label>
-                  <input 
-                    type="number" 
-                    name="overloads" 
-                    value={formData.overloads} 
-                    onChange={handleInputChange} 
-                    placeholder="Mis: 4"
-                    style={{ width: '100%', padding: '0.75rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-subtle)', borderRadius: '8px', color: 'var(--text-primary)' }}
-                  />
-                </div>
+                <ISPNode name="Indibizz 5" rx={netData?.i5_rx || "130"} tx={netData?.i5_tx || "5.44"} active />
+                <ISPNode name="Indibizz 4" rx={netData?.i4_rx || "101"} tx={netData?.i4_tx || "14.3"} active />
               </div>
+              <ServerNode name="DHCP Server" cpu={netData?.dhcp_cpu || "12"} mem={netData?.dhcp_mem || "2"} disk={netData?.dhcp_disk || "18"} />
+            </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Catatan Tambahan</label>
-                <input 
-                  type="text" 
-                  name="note" 
-                  value={formData.note} 
-                  onChange={handleInputChange} 
-                  placeholder="Catatan analisis..."
-                  style={{ width: '100%', padding: '0.75rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-subtle)', borderRadius: '8px', color: 'var(--text-primary)' }}
-                />
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem' }}>
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <ISPNode name="Indibizz 1" rx={netData?.i1_rx || "366"} tx={netData?.i1_tx || "21.8"} />
+                <ISPNode name="Indibizz 2" rx={netData?.i2_rx || "253"} tx={netData?.i2_tx || "15.4"} />
+                <ISPNode name="Indibizz 3" rx={netData?.i3_rx || "270"} tx={netData?.i3_tx || "18.7"} />
               </div>
+              <ServerNode name="SANGFOR" cpu={netData?.sang_cpu || "80"} mem={netData?.sang_mem || "48"} disk={netData?.sang_disk || "45"} virt={netData?.sang_virt || "48"} urgent={parseInt(netData?.sang_cpu || "0") > 75} />
+            </div>
 
-              <button 
-                type="submit" 
-                style={{ 
-                  marginTop: '0.5rem',
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  gap: '0.5rem', 
-                  padding: '0.75rem', 
-                  background: isEditing ? 'var(--accent-blue)' : 'var(--accent-emerald)', 
-                  color: 'white', 
-                  border: 'none', 
-                  borderRadius: '8px', 
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'opacity 0.2s ease'
-                }}
-              >
-                <Save size={16} />
-                {isEditing ? 'Simpan Perubahan' : 'Tambah Data'}
-              </button>
+            <ISPNode name="Astinet" rx={netData?.ast_rx || "28.9"} tx={netData?.ast_tx || "1.21"} type="astinet" />
+         </div>
+      </div>
+
+      {isNetFormOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: '800px', maxHeight: '90vh', overflow: 'auto', padding: '2rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+              <h3>Update Status Network Harian</h3>
+              <button onClick={() => setIsNetFormOpen(false)}><X /></button>
+            </div>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              setNetLoading(true);
+              try {
+                await fetch(API_URL, {
+                  method: 'POST',
+                  mode: 'no-cors',
+                  body: JSON.stringify({
+                    action: 'FINANCE_RECORD',
+                    sheetName: 'Monitor_Net',
+                    id: `NET-${Date.now()}`,
+                    tanggal: netFormData.date || 'Update Hari ini',
+                    ...netFormData
+                  })
+                });
+                alert('Berhasil Update!');
+                setIsNetFormOpen(false);
+                fetchNetData();
+              } catch (err) { alert('Gagal'); }
+              finally { setNetLoading(false); }
+            }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '1rem' }}>
+                <input className="input-field" style={{ gridColumn: '1 / -1' }} placeholder="Tanggal (Contoh: Senin, 06 Apr 2026)" onChange={e => setNetFormData({...netFormData, date: e.target.value})} />
+                <GroupTitle title="Indibizz 1" /><NetInput label="Rx" name="i1_rx" onChange={setNetFormData} /><NetInput label="Tx" name="i1_tx" onChange={setNetFormData} />
+                <GroupTitle title="Indibizz 2" /><NetInput label="Rx" name="i2_rx" onChange={setNetFormData} /><NetInput label="Tx" name="i2_tx" onChange={setNetFormData} />
+                <GroupTitle title="Indibizz 3" /><NetInput label="Rx" name="i3_rx" onChange={setNetFormData} /><NetInput label="Tx" name="i3_tx" onChange={setNetFormData} />
+                <GroupTitle title="Indibizz 4" /><NetInput label="Rx" name="i4_rx" onChange={setNetFormData} /><NetInput label="Tx" name="i4_tx" onChange={setNetFormData} />
+                <GroupTitle title="Indibizz 5" /><NetInput label="Rx" name="i5_rx" onChange={setNetFormData} /><NetInput label="Tx" name="i5_tx" onChange={setNetFormData} />
+                <GroupTitle title="Astinet" /><NetInput label="Rx" name="ast_rx" onChange={setNetFormData} /><NetInput label="Tx" name="ast_tx" onChange={setNetFormData} />
+                <GroupTitle title="Server Health" />
+                <NetInput label="DHCP CPU" name="dhcp_cpu" onChange={setNetFormData} />
+                <NetInput label="DHCP MEM" name="dhcp_mem" onChange={setNetFormData} />
+                <NetInput label="SANG CPU" name="sang_cpu" onChange={setNetFormData} />
+                <NetInput label="SANG MEM" name="sang_mem" onChange={setNetFormData} />
+              </div>
+              <button type="submit" className="btn" style={{ background: 'var(--accent-emerald)', color: 'white', width: '100%', marginTop: '2rem' }}>Simpan Update</button>
             </form>
           </div>
         </div>
-      </div>
-
-      <div className="dashboard-grid delay-300" style={{ marginTop: '2.5rem' }}>
-        <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)' }}>Status Sistem & Server</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {['E-Learning Moodle', 'SIAKAD', 'Database Keuangan', 'Web Profile Utama'].map((sys, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
-                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                  <Database size={16} color="var(--accent-blue)" />
-                  <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>{sys}</span>
-                </div>
-                <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>Online</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <h3 style={{ fontSize: '1rem', marginBottom: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <TriangleAlert color="var(--accent-amber)" size={18} /> Peringatan Sistem
-          </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div style={{ padding: '1rem', borderLeft: '3px solid var(--accent-rose)', background: 'var(--accent-rose-ghost)', borderRadius: '0 8px 8px 0' }}>
-              <h4 style={{ fontSize: '0.9rem', marginBottom: '0.25rem', color: 'var(--text-primary)' }}>Storage Server Backup Kritis</h4>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>Kapasitas storage backup harian mencapai 92% (Purge segera).</p>
-            </div>
-            <div style={{ padding: '1rem', borderLeft: '3px solid var(--accent-amber)', background: 'var(--accent-amber-ghost)', borderRadius: '0 8px 8px 0' }}>
-              <h4 style={{ fontSize: '0.9rem', marginBottom: '0.25rem', color: 'var(--text-primary)' }}>SSL Kadaluarsa (14 Hari)</h4>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>Sertifikat SSL siakad.telkom.sch.id segera berakhir.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
+      )}
     </div>
   );
 };

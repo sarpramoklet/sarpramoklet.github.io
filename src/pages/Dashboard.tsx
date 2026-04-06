@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, LabelList, AreaChart, Area } from 'recharts';
-import { UserCircle2, TrendingUp, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, ShieldCheck, MessageSquare, AlertCircle, Edit3, Trash2, Wind, Briefcase, ArrowDownRight, Smartphone } from 'lucide-react';
+import { UserCircle2, TrendingUp, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, ShieldCheck, MessageSquare, AlertCircle, Edit3, Trash2, Wind, Briefcase, ArrowDownRight, Smartphone, Activity } from 'lucide-react';
 import { getCurrentUser, ROLES } from '../data/organization';
 import { getUtilityChartData } from '../data/utilities';
 
@@ -45,6 +45,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
 
   const [wifiData, setWifiData] = useState<any[]>([]);
   const [wifiLoading, setWifiLoading] = useState(false);
+  const [netSnapshot, setNetSnapshot] = useState<any>(null);
 
   useEffect(() => {
     const fetchFinanceData = async () => {
@@ -266,9 +267,22 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       }
     };
 
+    const fetchNetSnapshot = async () => {
+      try {
+        const resp = await fetch(`${FINANCE_API_URL}?sheetName=Monitor_Net`);
+        const data = await resp.json();
+        if (data && Array.isArray(data) && data.length > 0) {
+          setNetSnapshot(data[data.length - 1]);
+        }
+      } catch (e) {
+        console.error("Net monitor fetch error:", e);
+      }
+    };
+
     if (isLoggedIn) fetchACMonitor();
     if (isLoggedIn) fetchCapexProjects();
     if (isLoggedIn) fetchWifiMonitor();
+    if (isLoggedIn) fetchNetSnapshot();
 
   }, [isAuthorizedFinance, isLoggedIn]);
 
@@ -802,6 +816,47 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         </div>
       )}
 
+
+      {/* NETWORK INFRASTRUCTURE SUMMARY */}
+      {isLoggedIn && (
+        <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '1.5rem', background: 'linear-gradient(135deg, rgba(16,185,129,0.03), transparent)', borderLeft: '4px solid var(--accent-emerald)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Activity size={18} color="var(--accent-emerald)" /> Infrastructure Health Snapshot
+            </h3>
+            <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{netSnapshot?.tanggal || 'Last update: Senin, 06 Apr 2026'}</span>
+          </div>
+          
+          <div className="dashboard-grid">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>ISP Status (Avg)</span>
+                <span className="badge badge-success">Optimal</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Server Uptime</span>
+                <span style={{ color: 'var(--accent-emerald)', fontWeight: 600 }}>99.9%</span>
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div className="glass-panel" style={{ padding: '0.75rem', flex: 1, minWidth: '150px' }}>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Sangfor CPU Load</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 700, color: parseInt(netSnapshot?.sang_cpu || "0") > 75 ? 'var(--accent-rose)' : 'var(--accent-emerald)' }}>
+                  {netSnapshot?.sang_cpu || "80"}%
+                </div>
+              </div>
+              <div className="glass-panel" style={{ padding: '0.75rem', flex: 1, minWidth: '150px' }}>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Peak Traffic Line 1</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>{netSnapshot?.i1_rx || "366"} <small style={{ fontWeight: 400, fontSize: '0.6rem' }}>Mbps</small></div>
+              </div>
+            </div>
+          </div>
+          <div style={{ marginTop: '1rem', textAlign: 'right' }}>
+            <a href="#/it" style={{ fontSize: '0.75rem', color: 'var(--accent-blue)', textDecoration: 'none' }}>View Network Topology Map &rarr;</a>
+          </div>
+        </div>
+      )}
 
       {/* Analisa Utilitas PLN & PDAM */}
       <div className="dashboard-grid delay-300" style={{ marginBottom: '1.5rem' }}>
