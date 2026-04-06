@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Server, Activity, Database, Loader2, DatabaseBackup, X, Plus, Camera } from 'lucide-react';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
@@ -135,6 +135,18 @@ const NetMonitorPage = () => {
       if (data && Array.isArray(data) && data.length > 0) {
         setNetData(data[data.length - 1]);
         setHistoryData([...data].reverse().slice(0, 7));
+      } else {
+        // Fallback sample agar tabel tetap tampil
+        const sample = [{
+          id: 'NET-SAMPLE', tanggal: 'Senin, 06 Apr 2026',
+          i1_rx: '366', i1_tx: '21.8', i2_rx: '253', i2_tx: '15.4',
+          i3_rx: '270', i3_tx: '18.7', i4_rx: '101', i4_tx: '14.3',
+          i5_rx: '130', i5_tx: '5.44', ast_rx: '28.9', ast_tx: '1.21',
+          dhcp_cpu: '12', dhcp_mem: '2', dhcp_disk: '18',
+          sang_cpu: '80', sang_mem: '48', sang_virt: '48', sang_disk: '45',
+          snapshot: ''
+        }];
+        setHistoryData(sample);
       }
     } catch (e) {
       console.error('Fetch net error', e);
