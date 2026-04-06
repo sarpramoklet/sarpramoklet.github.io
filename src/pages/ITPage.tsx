@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { Server, Wifi, Shield, Edit2, Trash2, X, Activity, Smartphone, Loader2, DatabaseBackup, TrendingUp } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Server, Wifi, Shield, Edit2, Trash2, X, Activity, Smartphone, Loader2, DatabaseBackup, TrendingUp, Upload, Sparkles, CheckCircle, AlertCircle, Image } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, LabelList } from 'recharts';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
+// Dapatkan API key gratis di https://aistudio.google.com/apikey
+const GEMINI_API_KEY = "AIzaSyC2j7PVLmqEYN0BdJJSiEXD2Qx9pqXw5Yk"; // Ganti dengan API key Anda
 
 const initialDeviceData = [
   { id: 1, date: '31 Mar 2026', count: 1529, overloads: 13, note: '1.529 Client (13 Ruang Overload) - Hari Awal' },
@@ -88,17 +90,70 @@ const GroupTitle = ({ title }: any) => (
   </div>
 );
 
-const NetInput = ({ label, name, onChange }: any) => (
+const NetInput = ({ label, name, onChange, value }: any) => (
   <div>
-    <label style={{ fontSize: '0.7rem', display: 'block', marginBottom: '0.25rem' }}>{label}</label>
+    <label style={{ fontSize: '0.7rem', display: 'block', marginBottom: '0.25rem', color: 'var(--text-secondary)' }}>{label}</label>
     <input 
-      type="text" 
+      type="text"
+      value={value ?? ''}
       placeholder="0.0" 
       style={{ width: '100%', padding: '0.5rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-subtle)', borderRadius: '6px', color: 'white', fontSize: '0.8rem' }}
       onChange={e => onChange((prev: any) => ({ ...prev, [name]: e.target.value }))}
     />
   </div>
 );
+
+// Analisis gambar traffic via Gemini Vision
+const analyzeTrafficImage = async (base64: string, mimeType: string): Promise<any> => {
+  const prompt = `Kamu adalah sistem OCR untuk monitoring infrastruktur jaringan sekolah.
+Analisis gambar ini yang menampilkan dashboard/topologi jaringan dengan ISP/ONT (Indibizz dan Astinet) dan server.
+Ekstrak SEMUA nilai traffic yang terlihat di gambar.
+
+Kembalikan HANYA JSON murni tanpa markdown, tanpa penjelasan:
+{
+  "tanggal": "jika ada tanggal di gambar, format dd-mm-yy, jika tidak ada isi string kosong",
+  "i1_rx": "Rx Indibizz 1 dalam Mbps, angka saja tanpa satuan",
+  "i1_tx": "Tx Indibizz 1",
+  "i2_rx": "Rx Indibizz 2",
+  "i2_tx": "Tx Indibizz 2",
+  "i3_rx": "Rx Indibizz 3",
+  "i3_tx": "Tx Indibizz 3",
+  "i4_rx": "Rx Indibizz 4",
+  "i4_tx": "Tx Indibizz 4",
+  "i5_rx": "Rx Indibizz 5",
+  "i5_tx": "Tx Indibizz 5",
+  "ast_rx": "Rx Astinet",
+  "ast_tx": "Tx Astinet",
+  "dhcp_cpu": "CPU% DHCP Server, angka saja",
+  "dhcp_mem": "MEM% DHCP Server",
+  "dhcp_disk": "Disk% DHCP Server",
+  "sang_cpu": "CPU% SANGFOR",
+  "sang_mem": "MEM% SANGFOR",
+  "sang_virt": "Virt% SANGFOR",
+  "sang_disk": "Disk% SANGFOR"
+}
+
+Hanya kembalikan JSON. Jika nilai tidak terlihat, isi dengan string kosong "".`;
+
+  const resp = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [
+          { text: prompt },
+          { inline_data: { mime_type: mimeType, data: base64 } }
+        ]}]
+      })
+    }
+  );
+  const result = await resp.json();
+  const text = result.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+  // Bersihkan markdown code block jika ada
+  const clean = text.replace(/```json\n?|\n?```/g, '').trim();
+  return JSON.parse(clean);
+};
 
 const ONT_LIST = [
   { key: 'i1', label: 'Indibizz 1', color: '#3b82f6' },
@@ -120,6 +175,15 @@ const ITPage = () => {
   const [trafficView, setTrafficView] = useState<'rx'|'tx'>('rx');
   
   const [isNetFormOpen, setIsNetFormOpen] = useState(false);
+  const [netFormTab, setNetFormTab] = useState<'upload'|'manual'>('upload');
+  const [uploadImage, setUploadImage] = useState<string | null>(null);
+  const [uploadMime, setUploadMime] = useState('image/png');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResult, setAiResult] = useState<any>(null);
+  const [aiError, setAiError] = useState('');
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   
   const [formData, setFormData] = useState({
     date: '',
@@ -741,49 +805,251 @@ const ITPage = () => {
       )}
 
       {isNetFormOpen && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-          <div className="glass-panel" style={{ width: '100%', maxWidth: '800px', maxHeight: '90vh', overflow: 'auto', padding: '2rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-              <h3>Update Status Network Harian</h3>
-              <button onClick={() => setIsNetFormOpen(false)}><X /></button>
-            </div>
-            <form onSubmit={async (e) => {
-              e.preventDefault();
-              setNetLoading(true);
-              try {
-                await fetch(API_URL, {
-                  method: 'POST',
-                  mode: 'no-cors',
-                  body: JSON.stringify({
-                    action: 'FINANCE_RECORD',
-                    sheetName: 'Monitor_Net',
-                    id: `NET-${Date.now()}`,
-                    tanggal: netFormData.date || 'Update Hari ini',
-                    ...netFormData
-                  })
-                });
-                alert('Berhasil Update!');
-                setIsNetFormOpen(false);
-                fetchNetData();
-              } catch (err) { alert('Gagal'); }
-              finally { setNetLoading(false); }
-            }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '1rem' }}>
-                <input className="input-field" style={{ gridColumn: '1 / -1' }} placeholder="Tanggal (Contoh: Senin, 06 Apr 2026)" onChange={e => setNetFormData({...netFormData, date: e.target.value})} />
-                <GroupTitle title="Indibizz 1" /><NetInput label="Rx" name="i1_rx" onChange={setNetFormData} /><NetInput label="Tx" name="i1_tx" onChange={setNetFormData} />
-                <GroupTitle title="Indibizz 2" /><NetInput label="Rx" name="i2_rx" onChange={setNetFormData} /><NetInput label="Tx" name="i2_tx" onChange={setNetFormData} />
-                <GroupTitle title="Indibizz 3" /><NetInput label="Rx" name="i3_rx" onChange={setNetFormData} /><NetInput label="Tx" name="i3_tx" onChange={setNetFormData} />
-                <GroupTitle title="Indibizz 4" /><NetInput label="Rx" name="i4_rx" onChange={setNetFormData} /><NetInput label="Tx" name="i4_tx" onChange={setNetFormData} />
-                <GroupTitle title="Indibizz 5" /><NetInput label="Rx" name="i5_rx" onChange={setNetFormData} /><NetInput label="Tx" name="i5_tx" onChange={setNetFormData} />
-                <GroupTitle title="Astinet" /><NetInput label="Rx" name="ast_rx" onChange={setNetFormData} /><NetInput label="Tx" name="ast_tx" onChange={setNetFormData} />
-                <GroupTitle title="Server Health" />
-                <NetInput label="DHCP CPU" name="dhcp_cpu" onChange={setNetFormData} />
-                <NetInput label="DHCP MEM" name="dhcp_mem" onChange={setNetFormData} />
-                <NetInput label="SANG CPU" name="sang_cpu" onChange={setNetFormData} />
-                <NetInput label="SANG MEM" name="sang_mem" onChange={setNetFormData} />
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: '900px', maxHeight: '92vh', overflow: 'auto', padding: '0' }}>
+            
+            {/* Modal Header */}
+            <div style={{ padding: '1.5rem 2rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, background: 'var(--surface-glass)', backdropFilter: 'blur(20px)', zIndex: 10 }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Update Status Network Harian</h3>
+                <p style={{ margin: '0.25rem 0 0', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Upload screenshot traffic atau input manual</p>
               </div>
-              <button type="submit" className="btn" style={{ background: 'var(--accent-emerald)', color: 'white', width: '100%', marginTop: '2rem' }}>Simpan Update</button>
-            </form>
+              <button onClick={() => { setIsNetFormOpen(false); setUploadImage(null); setAiResult(null); setAiError(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '4px' }}><X size={20} /></button>
+            </div>
+
+            {/* Tabs */}
+            <div style={{ display: 'flex', borderBottom: '1px solid var(--border-subtle)' }}>
+              {(['upload', 'manual'] as const).map(tab => (
+                <button key={tab} onClick={() => setNetFormTab(tab)} style={{
+                  flex: 1, padding: '0.85rem', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem',
+                  background: netFormTab === tab ? 'rgba(59,130,246,0.1)' : 'transparent',
+                  color: netFormTab === tab ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                  borderBottom: netFormTab === tab ? '2px solid var(--accent-blue)' : '2px solid transparent',
+                  transition: 'all 0.2s'
+                }}>
+                  {tab === 'upload' ? '🤖  Upload & Analisis AI' : '✏️  Input Manual'}
+                </button>
+              ))}
+            </div>
+
+            <div style={{ padding: '2rem' }}>
+              {/* === TAB UPLOAD === */}
+              {netFormTab === 'upload' && (
+                <div>
+                  {/* Dropzone */}
+                  <div
+                    onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+                    onDragLeave={() => setDragOver(false)}
+                    onDrop={e => {
+                      e.preventDefault(); setDragOver(false);
+                      const file = e.dataTransfer.files[0];
+                      if (file && file.type.startsWith('image/')) {
+                        setUploadMime(file.type);
+                        const reader = new FileReader();
+                        reader.onload = ev => { setUploadImage(ev.target?.result as string); setAiResult(null); setAiError(''); };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    onClick={() => fileInputRef.current?.click()}
+                    style={{
+                      border: `2px dashed ${dragOver ? 'var(--accent-blue)' : uploadImage ? 'var(--accent-emerald)' : 'var(--border-subtle)'}`,
+                      borderRadius: '12px',
+                      padding: uploadImage ? '1rem' : '3rem 2rem',
+                      textAlign: 'center',
+                      cursor: 'pointer',
+                      background: dragOver ? 'rgba(59,130,246,0.08)' : uploadImage ? 'rgba(16,185,129,0.05)' : 'rgba(0,0,0,0.1)',
+                      transition: 'all 0.2s',
+                      marginBottom: '1.5rem'
+                    }}
+                  >
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setUploadMime(file.type);
+                          const reader = new FileReader();
+                          reader.onload = ev => { setUploadImage(ev.target?.result as string); setAiResult(null); setAiError(''); };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                    {uploadImage ? (
+                      <div>
+                        <img src={uploadImage} alt="preview" style={{ maxHeight: '280px', maxWidth: '100%', borderRadius: '8px', objectFit: 'contain' }} />
+                        <p style={{ margin: '0.75rem 0 0', fontSize: '0.78rem', color: 'var(--accent-emerald)' }}>✓ Gambar siap dianalisis — klik untuk ganti</p>
+                      </div>
+                    ) : (
+                      <div>
+                        <Upload size={40} style={{ opacity: 0.4, marginBottom: '1rem', display: 'block', margin: '0 auto 1rem' }} />
+                        <p style={{ margin: 0, fontWeight: 600 }}>Drag & drop screenshot traffic di sini</p>
+                        <p style={{ margin: '0.5rem 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>atau klik untuk pilih gambar • PNG, JPG, WebP</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Analyze Button */}
+                  {uploadImage && !aiResult && (
+                    <button
+                      disabled={aiLoading}
+                      onClick={async () => {
+                        setAiLoading(true); setAiError('');
+                        try {
+                          const base64 = uploadImage.split(',')[1];
+                          const extracted = await analyzeTrafficImage(base64, uploadMime);
+                          setAiResult(extracted);
+                          // Otomatis isi form manual juga
+                          setNetFormData(prev => ({ ...prev, ...extracted, date: extracted.tanggal || prev.date }));
+                        } catch (err: any) {
+                          setAiError('Gagal menganalisis gambar. Pastikan API key Gemini sudah diset. ' + (err.message || ''));
+                        } finally { setAiLoading(false); }
+                      }}
+                      className="btn"
+                      style={{ width: '100%', padding: '0.9rem', background: 'linear-gradient(135deg, #6366f1, #3b82f6)', color: 'white', fontWeight: 700, fontSize: '0.95rem', borderRadius: '10px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}
+                    >
+                      {aiLoading ? <><Loader2 size={18} className="animate-spin" /> Menganalisis dengan AI...</> : <><Sparkles size={18} /> Analisis Otomatis dengan Gemini AI</>}
+                    </button>
+                  )}
+
+                  {/* Error */}
+                  {aiError && (
+                    <div style={{ padding: '1rem', background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.3)', borderRadius: '10px', marginBottom: '1.5rem', display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                      <AlertCircle size={16} color="#f43f5e" style={{ flexShrink: 0, marginTop: '2px' }} />
+                      <p style={{ margin: 0, fontSize: '0.82rem', color: '#f43f5e' }}>{aiError}</p>
+                    </div>
+                  )}
+
+                  {/* Result Preview */}
+                  {aiResult && (
+                    <div style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: '12px', padding: '1.5rem', marginBottom: '1.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                        <CheckCircle size={18} color="#10b981" />
+                        <span style={{ fontWeight: 700, color: '#10b981' }}>Berhasil diekstrak oleh AI</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginLeft: 'auto' }}>Review & koreksi jika perlu di tab Manual</span>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.6rem' }}>
+                        {aiResult.tanggal && (
+                          <div style={{ padding: '0.6rem 0.8rem', background: 'rgba(0,0,0,0.2)', borderRadius: '8px' }}>
+                            <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', marginBottom: '2px' }}>TANGGAL</div>
+                            <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{aiResult.tanggal}</div>
+                          </div>
+                        )}
+                        {ONT_LIST.map(ont => (
+                          <div key={ont.key} style={{ padding: '0.6rem 0.8rem', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', borderLeft: `3px solid ${ont.color}` }}>
+                            <div style={{ fontSize: '0.65rem', color: ont.color, marginBottom: '4px', fontWeight: 700 }}>{ont.label}</div>
+                            <div style={{ fontSize: '0.82rem' }}>
+                              <span style={{ color: '#60a5fa' }}>↓ {aiResult[`${ont.key}_rx`] || '--'} Mbps</span>
+                              <span style={{ color: 'var(--text-secondary)', margin: '0 6px' }}>/</span>
+                              <span style={{ color: '#f87171' }}>↑ {aiResult[`${ont.key}_tx`] || '--'} Mbps</span>
+                            </div>
+                          </div>
+                        ))}
+                        {(aiResult.dhcp_cpu || aiResult.sang_cpu) && (
+                          <div style={{ padding: '0.6rem 0.8rem', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', gridColumn: 'span 2' }}>
+                            <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>SERVER HEALTH</div>
+                            <div style={{ fontSize: '0.78rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                              {aiResult.dhcp_cpu && <span>DHCP cpu: <b>{aiResult.dhcp_cpu}%</b> mem: {aiResult.dhcp_mem}%</span>}
+                              {aiResult.sang_cpu && <span>SANGFOR cpu: <b style={{ color: parseInt(aiResult.sang_cpu) > 75 ? '#f43f5e' : 'inherit' }}>{aiResult.sang_cpu}%</b> mem: {aiResult.sang_mem}%</span>}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        onClick={async () => {
+                          setNetLoading(true);
+                          try {
+                            const payload = { action: 'FINANCE_RECORD', sheetName: 'Monitor_Net', id: `NET-${Date.now()}`, tanggal: aiResult.tanggal || formatDate(new Date().toISOString()), ...aiResult };
+                            await fetch(API_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
+                            alert('✅ Data traffic berhasil disimpan!');
+                            setIsNetFormOpen(false); setUploadImage(null); setAiResult(null);
+                            fetchNetData();
+                          } catch { alert('Gagal menyimpan.'); }
+                          finally { setNetLoading(false); }
+                        }}
+                        className="btn"
+                        style={{ width: '100%', marginTop: '1rem', background: '#10b981', color: 'white', fontWeight: 700, padding: '0.8rem', borderRadius: '8px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                      >
+                        {netLoading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
+                        Simpan Data Hasil Analisis
+                      </button>
+                    </div>
+                  )}
+
+                  {!uploadImage && (
+                    <div style={{ padding: '1.5rem', background: 'rgba(99,102,241,0.07)', borderRadius: '12px', border: '1px solid rgba(99,102,241,0.2)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                        <Image size={16} color="#6366f1" />
+                        <span style={{ fontWeight: 600, fontSize: '0.85rem', color: '#6366f1' }}>Cara Kerja</span>
+                      </div>
+                      <ol style={{ margin: 0, paddingLeft: '1.2rem', fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.8 }}>
+                        <li>Screenshot tampilan monitoring traffic Anda (MikroTik, WhatsApp Info, dll)</li>
+                        <li>Upload gambar di sini (drag & drop atau klik)</li>
+                        <li>AI <b style={{ color: '#6366f1' }}>Gemini</b> akan otomatis membaca dan mengekstrak nilai Rx/Tx tiap ONT + server health</li>
+                        <li>Review hasil, lalu simpan sebagai record harian</li>
+                      </ol>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* === TAB MANUAL === */}
+              {netFormTab === 'manual' && (
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  setNetLoading(true);
+                  try {
+                    const tanggal = netFormData.date ? formatDate(netFormData.date) : formatDate(new Date().toISOString());
+                    await fetch(API_URL, {
+                      method: 'POST', mode: 'no-cors',
+                      body: JSON.stringify({ action: 'FINANCE_RECORD', sheetName: 'Monitor_Net', id: `NET-${Date.now()}`, tanggal, ...netFormData })
+                    });
+                    alert('Berhasil Update!');
+                    setIsNetFormOpen(false); fetchNetData();
+                  } catch { alert('Gagal'); }
+                  finally { setNetLoading(false); }
+                }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.5rem', marginBottom: '1rem' }}>
+                    <div>
+                      <label style={{ fontSize: '0.7rem', display: 'block', marginBottom: '0.3rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Tanggal</label>
+                      <input type="date" className="input-field" style={{ width: '100%' }} value={netFormData.date || ''} onChange={e => setNetFormData({...netFormData, date: e.target.value})} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.85rem' }}>
+                    <GroupTitle title="Indibizz 1" />
+                    <NetInput label="Rx (Mbps)" name="i1_rx" onChange={setNetFormData} value={netFormData.i1_rx} />
+                    <NetInput label="Tx (Mbps)" name="i1_tx" onChange={setNetFormData} value={netFormData.i1_tx} />
+                    <GroupTitle title="Indibizz 2" />
+                    <NetInput label="Rx (Mbps)" name="i2_rx" onChange={setNetFormData} value={netFormData.i2_rx} />
+                    <NetInput label="Tx (Mbps)" name="i2_tx" onChange={setNetFormData} value={netFormData.i2_tx} />
+                    <GroupTitle title="Indibizz 3" />
+                    <NetInput label="Rx (Mbps)" name="i3_rx" onChange={setNetFormData} value={netFormData.i3_rx} />
+                    <NetInput label="Tx (Mbps)" name="i3_tx" onChange={setNetFormData} value={netFormData.i3_tx} />
+                    <GroupTitle title="Indibizz 4" />
+                    <NetInput label="Rx (Mbps)" name="i4_rx" onChange={setNetFormData} value={netFormData.i4_rx} />
+                    <NetInput label="Tx (Mbps)" name="i4_tx" onChange={setNetFormData} value={netFormData.i4_tx} />
+                    <GroupTitle title="Indibizz 5" />
+                    <NetInput label="Rx (Mbps)" name="i5_rx" onChange={setNetFormData} value={netFormData.i5_rx} />
+                    <NetInput label="Tx (Mbps)" name="i5_tx" onChange={setNetFormData} value={netFormData.i5_tx} />
+                    <GroupTitle title="Astinet" />
+                    <NetInput label="Rx (Mbps)" name="ast_rx" onChange={setNetFormData} value={netFormData.ast_rx} />
+                    <NetInput label="Tx (Mbps)" name="ast_tx" onChange={setNetFormData} value={netFormData.ast_tx} />
+                    <GroupTitle title="Server Health" />
+                    <NetInput label="DHCP CPU %" name="dhcp_cpu" onChange={setNetFormData} value={netFormData.dhcp_cpu} />
+                    <NetInput label="DHCP MEM %" name="dhcp_mem" onChange={setNetFormData} value={netFormData.dhcp_mem} />
+                    <NetInput label="DHCP Disk %" name="dhcp_disk" onChange={setNetFormData} value={netFormData.dhcp_disk} />
+                    <NetInput label="SANGFOR CPU %" name="sang_cpu" onChange={setNetFormData} value={netFormData.sang_cpu} />
+                    <NetInput label="SANGFOR MEM %" name="sang_mem" onChange={setNetFormData} value={netFormData.sang_mem} />
+                    <NetInput label="SANGFOR Virt %" name="sang_virt" onChange={setNetFormData} value={netFormData.sang_virt} />
+                    <NetInput label="SANGFOR Disk %" name="sang_disk" onChange={setNetFormData} value={netFormData.sang_disk} />
+                  </div>
+                  <button type="submit" className="btn" style={{ background: 'var(--accent-emerald)', color: 'white', width: '100%', marginTop: '1.5rem', padding: '0.85rem', fontWeight: 700, borderRadius: '10px', border: 'none', cursor: 'pointer' }}
+                  >{netLoading ? <Loader2 size={16} className="animate-spin" /> : 'Simpan Update'}</button>
+                </form>
+              )}
+            </div>
           </div>
         </div>
       )}
