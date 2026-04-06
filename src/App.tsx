@@ -134,6 +134,7 @@ function App() {
               <Route path="/" element={<Dashboard isLoggedIn={isLoggedIn} userPicture={userPicture} />} />
               <Route path="/meeting" element={<MeetingDashboard />} />
               <Route path="/it" element={<ITPage />} />
+              <Route path="/it-net" element={<ProtectedRoute isLoggedIn={isLoggedIn}><ITPage /></ProtectedRoute>} />
               <Route path="/lab" element={<LabPage />} />
               <Route path="/sarpras" element={<SarprasPage />} />
 

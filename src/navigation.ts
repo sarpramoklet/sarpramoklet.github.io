@@ -1,9 +1,10 @@
-import { LayoutDashboard, Ticket, Server, Component, Building, Package, BookOpen, Presentation, Users, Briefcase, TrendingUp, Zap, Wallet, History as HistoryIcon, Coins, Wind, Target } from 'lucide-react';
+import { LayoutDashboard, Ticket, Server, Component, Building, Package, BookOpen, Presentation, Users, Briefcase, TrendingUp, Zap, Wallet, History as HistoryIcon, Coins, Wind, Target, Activity } from 'lucide-react';
 
 export const NAVIGATION = [
   { path: '/', name: 'Dashboard', icon: LayoutDashboard, authRequired: false },
   { path: '/meeting', name: 'Rapat Bulanan', icon: Presentation, authRequired: false },
   { path: '/it', name: 'IT Services', icon: Server, authRequired: false },
+  { path: '/it#net', name: 'Monitor Jaringan', icon: Activity, authRequired: true },
   { path: '/lab', name: 'Laboratorium', icon: Component, authRequired: false },
   { path: '/sarpras', name: 'Sarpras', icon: Building, authRequired: false },
   { path: '/performance', name: 'Kinerja Personel', icon: TrendingUp, authRequired: true },

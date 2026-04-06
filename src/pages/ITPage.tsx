@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Server, Wifi, Shield, Edit2, Trash2, Plus, X, Activity, Smartphone, Loader2, DatabaseBackup } from 'lucide-react';
+import { Server, Wifi, Shield, Edit2, Trash2, X, Activity, Smartphone, Loader2, DatabaseBackup } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
@@ -190,6 +190,14 @@ const ITPage = () => {
   useEffect(() => {
     fetchData();
     fetchNetData();
+  }, []);
+
+  useEffect(() => {
+    if (window.location.hash === '#net') {
+      setTimeout(() => {
+        document.getElementById('net')?.scrollIntoView({ behavior: 'smooth' });
+      }, 500);
+    }
   }, []);
 
   const handleSyncPreviewToDB = async () => {
@@ -442,7 +450,7 @@ const ITPage = () => {
       </div>
 
       {/* NETWORK SECTION */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '4rem', marginBottom: '1.5rem' }}>
+      <div id="net" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '4rem', marginBottom: '1.5rem' }}>
         <h2 style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <Activity color="var(--accent-emerald)" /> Monitoring Infrastruktur & Bandwidth
         </h2>

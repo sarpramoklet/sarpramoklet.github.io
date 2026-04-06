@@ -180,11 +180,11 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
                 return allowed.includes(item.name);
               }
               if (user.unit === 'IT') {
-                const allowed = [...alwaysVisible, 'IT Services', 'Permintaan Layanan', 'Monitor AC', 'Penugasan', 'Kinerja Personel'];
+                const allowed = [...alwaysVisible, 'IT Services', 'Monitor Jaringan', 'Permintaan Layanan', 'Monitor AC', 'Penugasan', 'Kinerja Personel'];
                 return allowed.includes(item.name);
               }
               if (user.unit === 'Sarpras') {
-                const allowed = [...alwaysVisible, 'Sarpras', 'Permintaan Layanan', 'Tagihan Utilitas', 'Aset & Inventaris', 'Monitor AC', 'Penugasan', 'Kinerja Personel'];
+                const allowed = [...alwaysVisible, 'Sarpras', 'Monitor Jaringan', 'Permintaan Layanan', 'Tagihan Utilitas', 'Aset & Inventaris', 'Monitor AC', 'Penugasan', 'Kinerja Personel'];
                 return allowed.includes(item.name);
               }
               if (user.unit === 'Tata Kelola') {
