@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Server, Activity, Database, Loader2, DatabaseBackup, X, Plus } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Server, Activity, Database, Loader2, DatabaseBackup, X, Plus, Camera } from 'lucide-react';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 
@@ -96,6 +96,9 @@ const NetMonitorPage = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // Lightbox foto
+  const [lightbox, setLightbox] = useState<{ src: string; tanggal: string } | null>(null);
+
   const [formData, setFormData] = useState({
     date: '',
     i1_rx: '', i1_tx: '',
@@ -108,6 +111,22 @@ const NetMonitorPage = () => {
     sang_cpu: '', sang_mem: '', sang_virt: '', sang_disk: ''
   });
 
+  // Kompres gambar via Canvas → JPEG 40% quality agar muat di GSheets cell
+  const compressImage = (dataUrl: string): Promise<string> =>
+    new Promise((resolve) => {
+      const img = document.createElement('img');
+      img.onload = () => {
+        const MAX = 800;
+        let w = img.width, h = img.height;
+        if (w > MAX) { h = Math.round((h * MAX) / w); w = MAX; }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.4));
+      };
+      img.src = dataUrl;
+    });
+
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -115,7 +134,7 @@ const NetMonitorPage = () => {
       const data = await resp.json();
       if (data && Array.isArray(data) && data.length > 0) {
         setNetData(data[data.length - 1]);
-        setHistoryData(data.reverse().slice(0, 7));
+        setHistoryData([...data].reverse().slice(0, 7));
       }
     } catch (e) {
       console.error('Fetch net error', e);
@@ -175,9 +194,33 @@ const NetMonitorPage = () => {
     finally { setSubmitting(false); }
   };
 
+  // Upload foto untuk record yang sudah ada
+  const handlePhotoUpload = async (row: any, file: File) => {
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      try {
+        const compressed = await compressImage(ev.target?.result as string);
+        await fetch(API_URL, {
+          method: 'POST', mode: 'no-cors',
+          body: JSON.stringify({
+            action: 'FINANCE_RECORD',
+            sheetName: 'Monitor_Net',
+            id: row.id,
+            tanggal: row.tanggal,
+            snapshot: compressed
+          })
+        });
+        // Optimistic update
+        setHistoryData(prev => prev.map(r =>
+          (r.id === row.id || r.tanggal === row.tanggal) ? { ...r, snapshot: compressed } : r
+        ));
+      } catch { alert('Gagal upload foto.'); }
+    };
+    reader.readAsDataURL(file);
+  };
+
   useEffect(() => { fetchData(); }, []);
 
-  // Sample/fallback values from image
   const d = netData;
   const v = (key: string, fallback: string) => d?.[key] || fallback;
 
@@ -225,7 +268,6 @@ const NetMonitorPage = () => {
         </h2>
 
         <div style={{ display: 'flex', justifyContent: 'space-around', flexWrap: 'wrap', gap: '2rem', alignItems: 'flex-start' }}>
-          {/* Left group: Indibizz 4 & 5 */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem' }}>
             <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Gateway 2</span>
             <div style={{ display: 'flex', gap: '1.5rem' }}>
@@ -234,7 +276,6 @@ const NetMonitorPage = () => {
             </div>
           </div>
 
-          {/* Center group: Indibizz 1-3 */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem' }}>
             <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Gateway 1 (Main)</span>
             <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
@@ -244,7 +285,6 @@ const NetMonitorPage = () => {
             </div>
           </div>
 
-          {/* Right: Astinet */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem' }}>
             <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Backup ISP</span>
             <ISPNode name="Astinet" rx={v('ast_rx', '28.9')} tx={v('ast_tx', '1.21')} type="astinet" />
@@ -278,15 +318,18 @@ const NetMonitorPage = () => {
       {/* History Table */}
       {historyData.length > 0 && (
         <div className="glass-panel" style={{ overflow: 'hidden', marginBottom: '1.5rem' }}>
-          <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border-subtle)' }}>
+          <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Riwayat Update (7 Terakhir)</h3>
+            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+              📸 Klik <Camera size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> untuk lihat / upload foto kondisi jaringan
+            </span>
           </div>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
               <thead>
                 <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid var(--border-subtle)' }}>
-                  {['Tanggal', 'I1 Rx', 'I1 Tx', 'I2 Rx', 'I3 Rx', 'I4 Rx', 'I5 Rx', 'Astinet', 'DHCP CPU', 'SANG CPU'].map(h => (
-                    <th key={h} style={{ padding: '0.75rem 1rem', color: 'var(--text-secondary)', fontWeight: 500, whiteSpace: 'nowrap', textAlign: 'left' }}>{h}</th>
+                  {['Tanggal', 'I1 Rx', 'I1 Tx', 'I2 Rx', 'I3 Rx', 'I4 Rx', 'I5 Rx', 'Astinet', 'DHCP CPU', 'SANG CPU', 'Foto'].map(h => (
+                    <th key={h} style={{ padding: '0.75rem 1rem', color: 'var(--text-secondary)', fontWeight: 500, whiteSpace: 'nowrap', textAlign: h === 'Foto' ? 'center' : 'left' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -303,11 +346,71 @@ const NetMonitorPage = () => {
                     <td style={{ padding: '0.75rem 1rem' }}>{row.ast_rx || '-'}</td>
                     <td style={{ padding: '0.75rem 1rem', color: parseInt(row.dhcp_cpu) > 70 ? 'var(--accent-rose)' : 'inherit' }}>{row.dhcp_cpu ? `${row.dhcp_cpu}%` : '-'}</td>
                     <td style={{ padding: '0.75rem 1rem', color: parseInt(row.sang_cpu) > 70 ? 'var(--accent-rose)' : 'inherit' }}>{row.sang_cpu ? `${row.sang_cpu}%` : '-'}</td>
+
+                    {/* Kolom Foto */}
+                    <td style={{ padding: '0.5rem 1rem', textAlign: 'center' }}>
+                      {row.snapshot ? (
+                        <button
+                          onClick={() => setLightbox({ src: row.snapshot, tanggal: row.tanggal || '-' })}
+                          title="Lihat foto kondisi jaringan"
+                          style={{
+                            background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.3)',
+                            borderRadius: '8px', cursor: 'pointer', padding: '4px 10px',
+                            display: 'inline-flex', alignItems: 'center', gap: '5px', color: 'var(--accent-blue)'
+                          }}
+                        >
+                          <Camera size={13} />
+                          <span style={{ fontSize: '0.65rem', fontWeight: 600 }}>Lihat</span>
+                        </button>
+                      ) : (
+                        <label title="Upload foto kondisi jaringan" style={{ cursor: 'pointer', display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '2px', color: 'var(--text-muted)', opacity: 0.55 }}>
+                          <input
+                            type="file" accept="image/*"
+                            style={{ display: 'none' }}
+                            onChange={e => {
+                              const file = e.target.files?.[0];
+                              if (file) handlePhotoUpload(row, file);
+                            }}
+                          />
+                          <Camera size={14} />
+                          <span style={{ fontSize: '0.6rem' }}>Upload</span>
+                        </label>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* ── Lightbox Foto Jaringan ── */}
+      {lightbox && (
+        <div
+          onClick={() => setLightbox(null)}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', zIndex: 2000,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            padding: '1.5rem', cursor: 'zoom-out'
+          }}
+        >
+          <div style={{ position: 'absolute', top: '1rem', right: '1rem' }}>
+            <button onClick={() => setLightbox(null)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', color: 'white', cursor: 'pointer', padding: '8px', display: 'flex' }}>
+              <X size={20} />
+            </button>
+          </div>
+          <div style={{ marginBottom: '0.75rem', fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Camera size={14} />
+            <span>Kondisi Jaringan — {lightbox.tanggal}</span>
+          </div>
+          <img
+            src={lightbox.src}
+            alt={`Kondisi Jaringan ${lightbox.tanggal}`}
+            onClick={e => e.stopPropagation()}
+            style={{ maxWidth: '100%', maxHeight: '80vh', borderRadius: '12px', boxShadow: '0 25px 60px rgba(0,0,0,0.5)', objectFit: 'contain', cursor: 'default' }}
+          />
+          <p style={{ marginTop: '0.75rem', fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>Klik di luar gambar untuk menutup</p>
         </div>
       )}
 
