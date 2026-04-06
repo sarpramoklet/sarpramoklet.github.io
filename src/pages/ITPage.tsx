@@ -159,14 +159,19 @@ const ITPage = () => {
         });
         
         mapped.sort((a, b) => {
-          const parseDate = (s: string) => {
-            const p = s.split(' ');
-            const d = parseInt(p[0]) || 1;
-            const m = monthMap[p[1]] || 0;
-            const y = p[2] ? (p[2].length === 2 ? 2000 + parseInt(p[2]) : parseInt(p[2])) : 2026;
-            return new Date(y, m, d).getTime();
+          // Parse dd-mm-yy format
+          const parseDDMMYY = (s: string) => {
+            const p = s.split('-');
+            if (p.length === 3) {
+              const dd = parseInt(p[0]) || 1;
+              const mm = (parseInt(p[1]) || 1) - 1;
+              const yy = parseInt(p[2]) || 0;
+              const year = yy < 100 ? 2000 + yy : yy;
+              return new Date(year, mm, dd).getTime();
+            }
+            return 0;
           };
-          return parseDate(a.date) - parseDate(b.date);
+          return parseDDMMYY(a.date) - parseDDMMYY(b.date);
         });
 
         setDeviceData(mapped);
@@ -343,9 +348,15 @@ const ITPage = () => {
     e.preventDefault();
     if (!formData.date || !formData.count) return;
     const newId = (isEditing && currentId !== null) ? currentId : `WIFI-${Date.now()}`;
+    // format date dari yyyy-mm-dd (input type=date) ke dd-mm-yy
+    const formattedDate = formatDate(formData.date);
+    const sortFn = (a: any, b: any) => {
+      const p = (s: string) => { const x = s.split('-'); return x.length===3 ? new Date(2000+(parseInt(x[2])||0), (parseInt(x[1])||1)-1, parseInt(x[0])||1).getTime() : 0; };
+      return p(a.date) - p(b.date);
+    };
     const newItem = {
       id: newId,
-      date: formData.date,
+      date: formattedDate,
       count: parseInt(formData.count),
       overloads: parseInt(formData.overloads) || 0,
       note: formData.note,
@@ -353,9 +364,9 @@ const ITPage = () => {
     };
 
     if (isEditing) {
-      setDeviceData(prev => prev.map(d => d.id === newId ? newItem : d));
+      setDeviceData(prev => [...prev.map(d => d.id === newId ? newItem : d)].sort(sortFn));
     } else {
-      setDeviceData(prev => [...prev, newItem]);
+      setDeviceData(prev => [...prev, newItem].sort(sortFn));
     }
     resetForm();
 
@@ -367,7 +378,7 @@ const ITPage = () => {
           action: 'FINANCE_RECORD',
           sheetName: 'Monitor_Wifi',
           id: newId,
-          tanggal: formData.date,
+          tanggal: formattedDate,
           count: formData.count,
           overloads: formData.overloads,
           note: formData.note
@@ -380,12 +391,11 @@ const ITPage = () => {
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
-      const cleanLabel = label.replace(/\s+2026|\s+26/g, '');
       return (
         <div className="glass-panel" style={{ padding: '10px 15px', border: '1px solid var(--accent-blue)', borderRadius: '8px' }}>
-          <p style={{ margin: '0 0 5px 0', fontWeight: 'bold' }}>{cleanLabel}</p>
+          <p style={{ margin: '0 0 5px 0', fontWeight: 'bold', fontSize: '0.85rem' }}>{label}</p>
           <p style={{ margin: 0, color: 'var(--accent-blue)', fontSize: '1.2rem', fontWeight: 600 }}>
-            {payload[0].value} <span style={{ fontSize: '0.8rem' }}>Perangkat</span>
+            {payload[0].value?.toLocaleString()} <span style={{ fontSize: '0.8rem' }}>Perangkat</span>
           </p>
         </div>
       );
@@ -461,15 +471,41 @@ const ITPage = () => {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         <div className="glass-panel" style={{ padding: '1.5rem', height: '350px' }}>
            <ResponsiveContainer width="100%" height="100%">
-             <BarChart data={deviceData} margin={{ top: 20, right: 10, left: 0, bottom: 5 }} barCategoryGap="30%">
-               <XAxis dataKey="date" tick={{ fontSize: '0.72rem' }} />
-               <YAxis domain={['dataMin - 100', 'dataMax + 100']} tick={{ fontSize: '0.7rem' }} />
-               <Tooltip content={<CustomTooltip />} />
-               <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={60}>
-                 <LabelList dataKey="count" position="top" style={{ fontSize: '0.7rem', fill: 'var(--text-secondary)', fontWeight: 600 }} />
-                 {deviceData.map((_: any, i: number) => (
-                   <Cell key={i} fill={i === deviceData.length - 1 ? 'var(--accent-emerald)' : 'var(--accent-blue)'} fillOpacity={0.85} />
-                 ))}
+             <BarChart data={deviceData} margin={{ top: 24, right: 16, left: 0, bottom: 5 }} barCategoryGap="28%">
+               <XAxis
+                 dataKey="date"
+                 tick={{ fontSize: '0.72rem', fill: 'var(--text-secondary)' }}
+                 axisLine={{ stroke: 'var(--border-subtle)' }}
+                 tickLine={false}
+               />
+               <YAxis
+                 domain={[(dataMin: number) => Math.max(0, dataMin - 80), (dataMax: number) => dataMax + 80]}
+                 tick={{ fontSize: '0.7rem', fill: 'var(--text-secondary)' }}
+                 axisLine={false}
+                 tickLine={false}
+                 width={55}
+               />
+               <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+               <Bar dataKey="count" radius={[8, 8, 0, 0]} maxBarSize={72}>
+                 <LabelList
+                   dataKey="count"
+                   position="top"
+                   style={{ fontSize: '0.72rem', fontWeight: 700, fill: 'var(--text-secondary)' }}
+                 />
+                 {(() => {
+                   if (deviceData.length === 0) return null;
+                   const counts = deviceData.map((d: any) => d.count);
+                   const minVal = Math.min(...counts);
+                   const maxVal = Math.max(...counts);
+                   return deviceData.map((d: any, i: number) => {
+                     let color = '#3b82f6'; // biru default
+                     if (d.count === minVal) color = '#10b981'; // terendah = hijau (bagus!)
+                     else if (d.count === maxVal) color = '#f43f5e'; // tertinggi = merah
+                     else if (i > 0 && d.count < deviceData[i-1].count) color = '#34d399'; // turun = hijau muda
+                     else if (i > 0 && d.count > deviceData[i-1].count) color = '#fb7185'; // naik = merah muda
+                     return <Cell key={i} fill={color} fillOpacity={0.9} />;
+                   });
+                 })()}
                </Bar>
              </BarChart>
            </ResponsiveContainer>
@@ -477,41 +513,84 @@ const ITPage = () => {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '1.5rem' }} className="grid-responsive">
           <div className="glass-panel" style={{ overflow: 'auto' }}>
-            <table style={{ width: '100%', textAlign: 'left' }}>
+            <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
                <thead>
-                 <tr>
-                    <th style={{ padding: '1rem' }}>Tanggal</th>
-                    <th style={{ padding: '1rem' }}>Client</th>
-                    <th style={{ padding: '1rem' }}>Overload</th>
-                    <th style={{ padding: '1rem' }}>Catatan</th>
-                    <th style={{ padding: '1rem' }}>Aksi</th>
+                 <tr style={{ borderBottom: '2px solid var(--border-subtle)', background: 'rgba(0,0,0,0.15)' }}>
+                    <th style={{ padding: '0.85rem 1rem', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tanggal</th>
+                    <th style={{ padding: '0.85rem 1rem', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Client</th>
+                    <th style={{ padding: '0.85rem 1rem', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Overload</th>
+                    <th style={{ padding: '0.85rem 1rem', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Catatan</th>
+                    <th style={{ padding: '0.85rem 1rem', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Aksi</th>
                  </tr>
                </thead>
                <tbody>
-                  {deviceData.map((item) => (
-                    <tr key={item.id} style={{ borderTop: '1px solid var(--border-subtle)' }}>
-                      <td style={{ padding: '1rem' }}>{item.date} {item.isPreview && <small style={{ color: 'var(--accent-amber)' }}>(PREVIEW)</small>}</td>
-                      <td style={{ padding: '1rem' }}>{item.count}</td>
-                      <td style={{ padding: '1rem' }}>{item.overloads}</td>
-                      <td style={{ padding: '1rem', fontSize: '0.8rem' }}>{item.note}</td>
-                      <td style={{ padding: '1rem' }}>
-                        <button onClick={() => handleEdit(item)}><Edit2 size={14} /></button>
-                        <button onClick={() => handleDelete(item.id)}><Trash2 size={14} /></button>
+                  {[...deviceData].reverse().map((item) => {
+                    const counts = deviceData.map((d:any) => d.count);
+                    const minVal = Math.min(...counts);
+                    const maxVal = Math.max(...counts);
+                    const isLowest = item.count === minVal;
+                    const isHighest = item.count === maxVal;
+                    return (
+                    <tr key={item.id} style={{ borderTop: '1px solid var(--border-subtle)', transition: 'background 0.2s' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      <td style={{ padding: '0.85rem 1rem', fontWeight: 600 }}>{item.date} {item.isPreview && <small style={{ color: 'var(--accent-amber)' }}>(PREVIEW)</small>}</td>
+                      <td style={{ padding: '0.85rem 1rem' }}>
+                        <span style={{
+                          fontWeight: 700,
+                          color: isLowest ? '#10b981' : isHighest ? '#f43f5e' : 'inherit',
+                          fontSize: '1rem'
+                        }}>{item.count.toLocaleString()}</span>
+                      </td>
+                      <td style={{ padding: '0.85rem 1rem' }}>
+                        <span style={{
+                          padding: '2px 8px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 600,
+                          background: item.overloads === 0 ? 'rgba(16,185,129,0.15)' : item.overloads > 8 ? 'rgba(244,63,94,0.15)' : 'rgba(251,191,36,0.15)',
+                          color: item.overloads === 0 ? '#10b981' : item.overloads > 8 ? '#f43f5e' : '#fbbf24'
+                        }}>{item.overloads} ruang</span>
+                      </td>
+                      <td style={{ padding: '0.85rem 1rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{item.note}</td>
+                      <td style={{ padding: '0.85rem 1rem', display: 'flex', gap: '0.5rem' }}>
+                        <button onClick={() => handleEdit(item)} style={{ background: 'rgba(59,130,246,0.15)', border: 'none', borderRadius: '6px', padding: '4px 8px', cursor: 'pointer', color: 'var(--accent-blue)' }}><Edit2 size={13} /></button>
+                        <button onClick={() => handleDelete(item.id)} style={{ background: 'rgba(244,63,94,0.15)', border: 'none', borderRadius: '6px', padding: '4px 8px', cursor: 'pointer', color: '#f43f5e' }}><Trash2 size={13} /></button>
                       </td>
                     </tr>
-                  ))}
+                  )})}
                </tbody>
             </table>
           </div>
 
           <div id="crud-form" className="glass-panel" style={{ padding: '1.5rem' }}>
-             <h3 style={{ marginBottom: '1rem' }}>{isEditing ? 'Edit Data' : 'Tambah Data'}</h3>
-             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <input className="input-field" name="date" value={formData.date} onChange={handleInputChange} placeholder="Tanggal" required />
-                <input className="input-field" name="count" value={formData.count} onChange={handleInputChange} placeholder="Total Client" type="number" required />
-                <input className="input-field" name="overloads" value={formData.overloads} onChange={handleInputChange} placeholder="Overload" type="number" />
-                <input className="input-field" name="note" value={formData.note} onChange={handleInputChange} placeholder="Catatan" />
-                <button type="submit" className="btn" style={{ background: 'var(--accent-blue)', color: 'white' }}>Simpan</button>
+             <h3 style={{ marginBottom: '1rem', fontSize: '1rem' }}>{isEditing ? '✏️ Edit Data' : '➕ Tambah Data'}</h3>
+             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.7rem', display: 'block', marginBottom: '0.3rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tanggal</label>
+                  <input className="input-field" type="date" name="date"
+                    value={formData.date}
+                    onChange={e => {
+                      // simpan raw yyyy-mm-dd dari input date, format saat display
+                      setFormData({ ...formData, date: e.target.value });
+                    }}
+                    required
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.7rem', display: 'block', marginBottom: '0.3rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Client</label>
+                  <input className="input-field" name="count" value={formData.count} onChange={handleInputChange} placeholder="Contoh: 1359" type="number" required />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.7rem', display: 'block', marginBottom: '0.3rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ruang Overload</label>
+                  <input className="input-field" name="overloads" value={formData.overloads} onChange={handleInputChange} placeholder="Contoh: 4" type="number" />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.7rem', display: 'block', marginBottom: '0.3rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Catatan</label>
+                  <input className="input-field" name="note" value={formData.note} onChange={handleInputChange} placeholder="Keterangan singkat..." />
+                </div>
+                <button type="submit" className="btn" style={{ background: 'var(--accent-blue)', color: 'white', marginTop: '0.5rem' }}>Simpan</button>
+                {isEditing && (
+                  <button type="button" onClick={resetForm} className="btn" style={{ background: 'transparent', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}>Batal</button>
+                )}
              </form>
           </div>
         </div>
