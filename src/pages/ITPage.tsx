@@ -43,7 +43,8 @@ const ITPage = () => {
             date: dateStr,
             count: parseInt(item.count || item.Count || 0),
             overloads: parseInt(item.overloads || item.Overloads || 0),
-            note: item.note || item.Note || ""
+            note: item.note || item.Note || "",
+            isPreview: false
           };
         });
         
@@ -61,12 +62,12 @@ const ITPage = () => {
 
         setDeviceData(mapped);
       } else {
-        setDeviceData([]); // Wait for seed
+        // Tampilkan Initial Data sebagai PREVIEW jika DB Kosong
+        setDeviceData(initialDeviceData.map(d => ({ ...d, isPreview: true })));
       }
     } catch (e) {
       console.log('Error fetching wifi monitor', e);
-      // Fallback
-      setDeviceData(initialDeviceData);
+      setDeviceData(initialDeviceData.map(d => ({ ...d, isPreview: true })));
     } finally {
       setLoading(false);
     }
@@ -76,11 +77,13 @@ const ITPage = () => {
     fetchData();
   }, []);
 
-  const handleSeedToDB = async () => {
-    if (!window.confirm("Kirim data statis sementara ini ke Spreadsheet? (Hanya klik sekali agar tidak ganda)")) return;
+  const handleSyncPreviewToDB = async () => {
+    if (!window.confirm("Kirim data PREVIEW ini ke Cloud Spreadsheet sekarang?")) return;
     setLoading(true);
     try {
-      for (const item of initialDeviceData) {
+      // Loop hanya data yang isPreview: true
+      const previews = deviceData.filter(d => d.isPreview);
+      for (const item of previews) {
         await fetch(API_URL, {
           method: "POST",
           mode: "no-cors",
@@ -102,10 +105,10 @@ const ITPage = () => {
           })
         });
       }
-      alert('Berhasil Seed! Mereload dari Cloud...');
-      setTimeout(fetchData, 2000);
+      alert('Sinkronisasi Berhasil! Data preview telah dimasukkan ke DB.');
+      setTimeout(fetchData, 1000);
     } catch (e) {
-      alert('Error seeding');
+      alert('Gagal sinkronisasi');
       setLoading(false);
     }
   };
@@ -275,10 +278,10 @@ const ITPage = () => {
         <h2 style={{ fontSize: '1.2rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <Smartphone color="var(--accent-blue)" /> Pemantauan Trend Perangkat (WiFi Client)
         </h2>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          {deviceData.length === 0 && !loading && (
-            <button onClick={handleSeedToDB} className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem' }}>
-              <DatabaseBackup size={14} /> Seed Sample Data ke DB
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          {deviceData.some(d => d.isPreview) && !loading && (
+            <button onClick={handleSyncPreviewToDB} className="btn" style={{ background: 'var(--accent-emerald)', color: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem' }}>
+              <DatabaseBackup size={14} /> Sinkronkan Preview ke DB
             </button>
           )}
           {loading && <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}><Loader2 size={16} className="animate-spin" /> Sinkronisasi DB...</span>}
@@ -342,8 +345,11 @@ const ITPage = () => {
                 </thead>
                 <tbody>
                   {deviceData.map((item) => (
-                    <tr key={item.id} style={{ borderBottom: '1px solid var(--border-subtle)', transition: 'background 0.2s ease', background: currentId === item.id ? 'var(--accent-blue-ghost)' : 'transparent' }}>
-                      <td style={{ padding: '1rem 1.5rem', fontWeight: 500 }}>{item.date}</td>
+                    <tr key={item.id} style={{ borderBottom: '1px solid var(--border-subtle)', transition: 'background 0.2s ease', background: item.isPreview ? 'rgba(245, 158, 11, 0.05)' : (currentId === item.id ? 'var(--accent-blue-ghost)' : 'transparent') }}>
+                      <td style={{ padding: '1rem 1.5rem', fontWeight: 500 }}>
+                        {item.date} 
+                        {item.isPreview && <span style={{ marginLeft: '8px', fontSize: '10px', color: 'var(--accent-amber)', fontWeight: 700 }}> (PREVIEW)</span>}
+                      </td>
                       <td style={{ padding: '1rem 1.5rem', color: 'var(--accent-blue)', fontWeight: 600 }}>{item.count}</td>
                       <td style={{ padding: '1rem 1.5rem' }}>
                         <span className={`badge ${item.overloads > 10 ? 'badge-danger' : item.overloads > 5 ? 'badge-warning' : 'badge-success'}`}>
