@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Server, Wifi, Shield, Edit2, Trash2, X, Activity, Smartphone, Loader2, DatabaseBackup } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { Server, Wifi, Shield, Edit2, Trash2, X, Activity, Smartphone, Loader2, DatabaseBackup, TrendingUp } from 'lucide-react';
+import { AreaChart, Area, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 
@@ -100,13 +100,24 @@ const NetInput = ({ label, name, onChange }: any) => (
   </div>
 );
 
+const ONT_LIST = [
+  { key: 'i1', label: 'Indibizz 1', color: '#3b82f6' },
+  { key: 'i2', label: 'Indibizz 2', color: '#8b5cf6' },
+  { key: 'i3', label: 'Indibizz 3', color: '#f59e0b' },
+  { key: 'i4', label: 'Indibizz 4', color: '#10b981' },
+  { key: 'i5', label: 'Indibizz 5', color: '#ec4899' },
+  { key: 'ast', label: 'Astinet',    color: '#f97316' },
+];
+
 const ITPage = () => {
   const [deviceData, setDeviceData] = useState<any[]>([]);
   const [netData, setNetData] = useState<any>(null);
+  const [netHistory, setNetHistory] = useState<any[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [currentId, setCurrentId] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [netLoading, setNetLoading] = useState(false);
+  const [trafficView, setTrafficView] = useState<'rx'|'tx'>('rx');
   
   const [isNetFormOpen, setIsNetFormOpen] = useState(false);
   
@@ -175,13 +186,40 @@ const ITPage = () => {
       const resp = await fetch(`${API_URL}?sheetName=Monitor_Net`);
       const data = await resp.json();
       if (data && Array.isArray(data) && data.length > 0) {
-        setNetData(data[data.length - 1]);
+        // Ambil semua record untuk histori
+        const mapped = data
+          .filter((d: any) => d.id || d.ID)
+          .map((d: any) => ({
+            id: d.id || d.ID,
+            tanggal: formatDate(String(d.tanggal || d.Tanggal || '')),
+            i1_rx: parseFloat(d.i1_rx || 0), i1_tx: parseFloat(d.i1_tx || 0),
+            i2_rx: parseFloat(d.i2_rx || 0), i2_tx: parseFloat(d.i2_tx || 0),
+            i3_rx: parseFloat(d.i3_rx || 0), i3_tx: parseFloat(d.i3_tx || 0),
+            i4_rx: parseFloat(d.i4_rx || 0), i4_tx: parseFloat(d.i4_tx || 0),
+            i5_rx: parseFloat(d.i5_rx || 0), i5_tx: parseFloat(d.i5_tx || 0),
+            ast_rx: parseFloat(d.ast_rx || 0), ast_tx: parseFloat(d.ast_tx || 0),
+            dhcp_cpu: d.dhcp_cpu, dhcp_mem: d.dhcp_mem, dhcp_disk: d.dhcp_disk,
+            sang_cpu: d.sang_cpu, sang_mem: d.sang_mem, sang_virt: d.sang_virt, sang_disk: d.sang_disk,
+          }));
+        setNetHistory(mapped);
+        setNetData(mapped[mapped.length - 1]);
       }
     } catch (e) {
       console.log('Error fetching net monitor', e);
     } finally {
       setNetLoading(false);
     }
+  };
+
+  const handleDeleteTraffic = async (id: any) => {
+    if (!window.confirm('Hapus record traffic ini?')) return;
+    setNetHistory(prev => prev.filter(d => d.id !== id));
+    try {
+      await fetch(API_URL, {
+        method: 'POST', mode: 'no-cors',
+        body: JSON.stringify({ action: 'DELETE_RECORD', sheetName: 'Monitor_Net', id })
+      });
+    } catch (e) { fetchNetData(); }
   };
 
   const handleSeedNetToDB = async () => {
@@ -518,6 +556,105 @@ const ITPage = () => {
             <ISPNode name="Astinet" rx={netData?.ast_rx || "28.9"} tx={netData?.ast_tx || "1.21"} type="astinet" />
          </div>
       </div>
+
+      {/* ===== TRAFFIC PER ONT HISTORY ===== */}
+      <div style={{ marginTop: '3rem', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+        <h2 style={{ fontSize: '1.2rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <TrendingUp color="var(--accent-amber)" /> Histori Traffic per ONT
+        </h2>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button
+            onClick={() => setTrafficView('rx')}
+            className="btn"
+            style={{ fontSize: '0.75rem', background: trafficView === 'rx' ? 'var(--accent-blue)' : 'transparent', color: trafficView === 'rx' ? 'white' : 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}
+          >↓ Rx (Download)</button>
+          <button
+            onClick={() => setTrafficView('tx')}
+            className="btn"
+            style={{ fontSize: '0.75rem', background: trafficView === 'tx' ? 'var(--accent-rose)' : 'transparent', color: trafficView === 'tx' ? 'white' : 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}
+          >↑ Tx (Upload)</button>
+          {netLoading && <Loader2 size={16} className="animate-spin" />}
+        </div>
+      </div>
+
+      {/* Chart Tren */}
+      {netHistory.length > 0 ? (
+        <div className="glass-panel" style={{ padding: '1.5rem', height: '320px', marginBottom: '1.5rem' }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={netHistory} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+              <XAxis dataKey="tanggal" tick={{ fontSize: '0.65rem' }} />
+              <YAxis unit=" Mbps" tick={{ fontSize: '0.7rem' }} />
+              <Tooltip
+                contentStyle={{ background: 'rgba(15,20,40,0.95)', border: '1px solid var(--border-subtle)', borderRadius: '8px', fontSize: '0.75rem' }}
+                formatter={(val: any, name: any) => [`${val} Mbps`, String(name).replace('_rx','').replace('_tx','').replace(/^i(\d)/,'Indibizz $1').replace(/^ast$/,'Astinet')]}
+              />
+              <Legend wrapperStyle={{ fontSize: '0.7rem' }} formatter={(v) => v.replace('_rx',' Rx').replace('_tx',' Tx').replace(/^i(\d)/,'Indibizz $1').replace('ast','Astinet')} />
+              {ONT_LIST.map(ont => (
+                <Line
+                  key={ont.key}
+                  type="monotone"
+                  dataKey={`${ont.key}_${trafficView}`}
+                  name={`${ont.key}_${trafficView}`}
+                  stroke={ont.color}
+                  strokeWidth={2}
+                  dot={{ r: 3 }}
+                  activeDot={{ r: 5 }}
+                />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      ) : (
+        <div className="glass-panel" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+          <TrendingUp size={40} style={{ opacity: 0.3, marginBottom: '1rem' }} />
+          <p style={{ margin: 0 }}>Belum ada data histori. Klik <b>Update Status Harian</b> untuk mulai merekam.</p>
+        </div>
+      )}
+
+      {/* Tabel Histori */}
+      {netHistory.length > 0 && (
+        <div className="glass-panel" style={{ overflow: 'auto', marginBottom: '2rem' }}>
+          <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse', fontSize: '0.78rem', minWidth: '900px' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                <th style={{ padding: '0.75rem 1rem', color: 'var(--text-secondary)', fontWeight: 600 }}>TANGGAL</th>
+                {ONT_LIST.map(ont => (
+                  <th key={ont.key} style={{ padding: '0.75rem 0.5rem', color: ont.color, fontWeight: 600, textAlign: 'center' }}>{ont.label}</th>
+                ))}
+                <th style={{ padding: '0.75rem 1rem' }}></th>
+              </tr>
+              <tr style={{ borderBottom: '2px solid var(--border-subtle)', background: 'rgba(0,0,0,0.2)' }}>
+                <td style={{ padding: '0.4rem 1rem', fontSize: '0.65rem', color: 'var(--text-secondary)' }}></td>
+                {ONT_LIST.map(ont => (
+                  <td key={ont.key} style={{ padding: '0.4rem 0.5rem', textAlign: 'center', fontSize: '0.65rem', color: 'var(--text-secondary)' }}>
+                    <span style={{ color: '#60a5fa' }}>↓Rx</span> / <span style={{ color: '#f87171' }}>↑Tx</span> (Mbps)
+                  </td>
+                ))}
+                <td></td>
+              </tr>
+            </thead>
+            <tbody>
+              {[...netHistory].reverse().map((row) => (
+                <tr key={row.id} style={{ borderTop: '1px solid var(--border-subtle)' }}>
+                  <td style={{ padding: '0.75rem 1rem', fontWeight: 600, whiteSpace: 'nowrap' }}>{row.tanggal}</td>
+                  {ONT_LIST.map(ont => (
+                    <td key={ont.key} style={{ padding: '0.75rem 0.5rem', textAlign: 'center' }}>
+                      <span style={{ color: '#60a5fa', fontWeight: 600 }}>{row[`${ont.key}_rx`]}</span>
+                      <span style={{ color: 'var(--text-secondary)', margin: '0 3px' }}>/</span>
+                      <span style={{ color: '#f87171' }}>{row[`${ont.key}_tx`]}</span>
+                    </td>
+                  ))}
+                  <td style={{ padding: '0.75rem 1rem' }}>
+                    <button onClick={() => handleDeleteTraffic(row.id)} title="Hapus" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent-rose)', opacity: 0.6 }}>
+                      <Trash2 size={14} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {isNetFormOpen && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
