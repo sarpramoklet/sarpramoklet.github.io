@@ -24,6 +24,7 @@ const monthMap: any = {
   'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'Mei': 4, 'Jun': 5, 
   'Jul': 6, 'Agt': 7, 'Sep': 8, 'Okt': 9, 'Nov': 10, 'Des': 11 
 };
+const monthList = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
 
 const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => {
   const currentUser = getCurrentUser();
@@ -90,6 +91,52 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   };
 
   const getSnapshotSource = (row: any) => row?.snapshot || row?.Snapshot || row?.snapshot_url || row?.Snapshot_URL || '';
+
+  const formatSnapshotDate = (raw: any): string => {
+    const s = String(raw || '').trim();
+    if (!s) return '-';
+
+    const fmt = (dd: number, mm: number, yy: number) => {
+      const d = String(dd).padStart(2, '0');
+      const m = monthList[Math.max(0, Math.min(11, mm - 1))] || 'Jan';
+      const y = String(yy).padStart(2, '0');
+      return `${d} ${m} ${y}`;
+    };
+
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+      const d = new Date(s);
+      if (!isNaN(d.getTime())) return fmt(d.getDate(), d.getMonth() + 1, d.getFullYear() % 100);
+    }
+
+    const tanggalMatch = s.match(/tanggal\s+(\d{1,2})[-/](\d{1,2})[-/](\d{2,4})/i);
+    if (tanggalMatch) {
+      const dd = parseInt(tanggalMatch[1], 10) || 1;
+      const mm = parseInt(tanggalMatch[2], 10) || 1;
+      const yyRaw = parseInt(tanggalMatch[3], 10) || 0;
+      const yy = yyRaw > 99 ? yyRaw % 100 : yyRaw;
+      return fmt(dd, mm, yy);
+    }
+
+    const dmyMatch = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{2,4})$/);
+    if (dmyMatch) {
+      const dd = parseInt(dmyMatch[1], 10) || 1;
+      const mm = parseInt(dmyMatch[2], 10) || 1;
+      const yyRaw = parseInt(dmyMatch[3], 10) || 0;
+      const yy = yyRaw > 99 ? yyRaw % 100 : yyRaw;
+      return fmt(dd, mm, yy);
+    }
+
+    const parts = s.split(' ');
+    if (parts.length >= 3 && monthMap[parts[1]] !== undefined) {
+      const dd = parseInt(parts[0], 10) || 1;
+      const mm = (monthMap[parts[1]] || 0) + 1;
+      const yyRaw = parseInt(parts[2], 10) || 0;
+      const yy = yyRaw > 99 ? yyRaw % 100 : yyRaw;
+      return fmt(dd, mm, yy);
+    }
+
+    return s;
+  };
 
   useEffect(() => {
     const fetchFinanceData = async () => {
@@ -974,7 +1021,9 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
             <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Activity size={18} color="var(--accent-emerald)" /> Infrastructure Health Snapshot
             </h3>
-            <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{netSnapshot?.tanggal || 'Last update: Senin, 06 Apr 2026'}</span>
+            <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+              Last update: {formatSnapshotDate(netSnapshot?.tanggal || netSnapshot?.Tanggal || '')}
+            </span>
           </div>
           
           <div className="dashboard-grid">
@@ -995,7 +1044,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                   <button
                     onClick={() => setNetSnapshotLightbox({
                       src: getSnapshotSource(netSnapshotThumb),
-                      tanggal: String(netSnapshotThumb?.tanggal || netSnapshotThumb?.Tanggal || '-')
+                      tanggal: formatSnapshotDate(netSnapshotThumb?.tanggal || netSnapshotThumb?.Tanggal || '')
                     })}
                     title="Klik untuk zoom snapshot jaringan"
                     style={{ border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '0.25rem', background: 'rgba(0,0,0,0.2)', cursor: 'zoom-in', width: '130px', display: 'block' }}
@@ -1036,7 +1085,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       {netSnapshotLightbox && (
         <div
           onClick={() => setNetSnapshotLightbox(null)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 2100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem', cursor: 'zoom-out' }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 2100, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', flexDirection: 'column', padding: '1rem 1.25rem 1.25rem', cursor: 'zoom-out', overflowY: 'auto' }}
         >
           <button
             onClick={() => setNetSnapshotLightbox(null)}
@@ -1045,14 +1094,14 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           >
             <X size={18} />
           </button>
-          <div style={{ width: '100%', maxWidth: '960px', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+          <div style={{ width: '100%', maxWidth: '960px', textAlign: 'center', marginTop: '0.25rem' }} onClick={(e) => e.stopPropagation()}>
             <div style={{ marginBottom: '0.65rem', fontSize: '0.78rem', color: 'rgba(255,255,255,0.7)' }}>
               Snapshot Jaringan — {netSnapshotLightbox.tanggal}
             </div>
             <img
               src={netSnapshotLightbox.src}
               alt={`Snapshot Jaringan ${netSnapshotLightbox.tanggal}`}
-              style={{ maxWidth: '100%', maxHeight: '82vh', objectFit: 'contain', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.15)', boxShadow: '0 24px 60px rgba(0,0,0,0.5)' }}
+              style={{ maxWidth: '100%', maxHeight: 'calc(100vh - 120px)', objectFit: 'contain', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.15)', boxShadow: '0 24px 60px rgba(0,0,0,0.5)' }}
             />
           </div>
         </div>
