@@ -1,6 +1,8 @@
 import { USERS, getCurrentUser, ROLES } from '../data/organization';
 import { Search, ShieldCheck, Edit3, Calendar, Plus, X, Save } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+
+const FINANCE_API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 
 const Personnel = () => {
   const currentUser = getCurrentUser();
@@ -11,6 +13,38 @@ const Personnel = () => {
   // State for editing
   const [tempJobdesk, setTempJobdesk] = useState<string[]>([]);
   const [newJob, setNewJob] = useState('');
+  const [profileThumbByEmail, setProfileThumbByEmail] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const fetchProfileThumbs = async () => {
+      try {
+        const resp = await fetch(`${FINANCE_API_URL}?sheetName=Log_Akses`);
+        const data = await resp.json();
+        if (!data || !Array.isArray(data)) return;
+
+        const map: Record<string, string> = {};
+        data.forEach((row: any) => {
+          const email = String(row.Email || row.email || '').trim().toLowerCase();
+          if (!email) return;
+          const picture = String(
+            row.ProfilePicture ||
+            row.profilePicture ||
+            row.Picture ||
+            row.picture ||
+            row.UserPicture ||
+            row.userPicture ||
+            ''
+          ).trim();
+          if (picture) map[email] = picture;
+        });
+        setProfileThumbByEmail(map);
+      } catch (e) {
+        console.error("Profile thumbs fetch error:", e);
+      }
+    };
+
+    fetchProfileThumbs();
+  }, []);
 
   const isKaur = currentUser.roleAplikasi.includes('Koordinator');
   const isPimpinan = currentUser.roleAplikasi === ROLES.PIMPINAN;
@@ -91,15 +125,20 @@ const Personnel = () => {
                 <td>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <div className="mobile-hide" style={{ width: '40px', height: '40px', borderRadius: '50%', overflow: 'hidden', border: '1px solid var(--border-subtle)', background: 'var(--bg-primary)' }}>
-                      <img 
-                        src={user.fotoProfil || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.nama)}&background=random&color=fff`} 
-                        alt={user.nama}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.nama)}&background=random&color=fff`;
-                        }}
-                      />
+                      {(() => {
+                        const thumb = (user.email ? profileThumbByEmail[user.email.toLowerCase()] : '') || user.fotoProfil;
+                        return (
+                          <img 
+                            src={thumb || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.nama)}&background=random&color=fff`} 
+                            alt={user.nama}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.nama)}&background=random&color=fff`;
+                            }}
+                          />
+                        );
+                      })()}
                     </div>
                     <div>
                       <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{user.nama}</div>
@@ -149,11 +188,16 @@ const Personnel = () => {
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '1rem' }}>
               <div style={{ width: '64px', height: '64px', background: 'var(--accent-blue-ghost)', borderRadius: '50%', color: 'var(--accent-blue)', overflow: 'hidden', border: '2px solid var(--accent-blue)' }}>
-                <img 
-                  src={selectedUser.fotoProfil || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedUser.nama)}&background=random&color=fff`} 
-                  alt={selectedUser.nama}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
+                {(() => {
+                  const thumb = (selectedUser.email ? profileThumbByEmail[selectedUser.email.toLowerCase()] : '') || selectedUser.fotoProfil;
+                  return (
+                    <img 
+                      src={thumb || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedUser.nama)}&background=random&color=fff`} 
+                      alt={selectedUser.nama}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  );
+                })()}
               </div>
               <div>
                 <h2 style={{ fontSize: '1.25rem', margin: 0 }}>Kelola Personel: {selectedUser.nama}</h2>

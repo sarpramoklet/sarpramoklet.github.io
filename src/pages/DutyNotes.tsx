@@ -13,8 +13,41 @@ const DutyNotes = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingNote, setEditingNote] = useState<any>(null);
+  const [profileThumbByEmail, setProfileThumbByEmail] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const fetchProfileThumbs = async () => {
+      try {
+        const resp = await fetch(`${API_URL}?sheetName=Log_Akses`);
+        const data = await resp.json();
+        if (!data || !Array.isArray(data)) return;
+
+        const map: Record<string, string> = {};
+        data.forEach((row: any) => {
+          const email = String(row.Email || row.email || '').trim().toLowerCase();
+          if (!email) return;
+          const picture = String(
+            row.ProfilePicture ||
+            row.profilePicture ||
+            row.Picture ||
+            row.picture ||
+            row.UserPicture ||
+            row.userPicture ||
+            ''
+          ).trim();
+          if (picture) map[email] = picture;
+        });
+        setProfileThumbByEmail(map);
+      } catch (e) {
+        console.error("Profile thumbs fetch error:", e);
+      }
+    };
+
+    fetchProfileThumbs();
+  }, []);
 
   const currentUser = getCurrentUser();
+
   const isAuthorizedToManage = (noteSender: string) => {
     if (!currentUser) return false;
     
@@ -277,9 +310,10 @@ const DutyNotes = () => {
                 <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--accent-blue-ghost)', color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '1px solid var(--border-subtle)' }}>
                   {(() => {
                     const sender = USERS.find(u => u.nama === note.keterangan);
+                    const thumb = (sender?.email ? profileThumbByEmail[sender.email.toLowerCase()] : '') || sender?.fotoProfil;
                     return (
                       <img 
-                        src={sender?.fotoProfil || `https://ui-avatars.com/api/?name=${encodeURIComponent(note.keterangan)}&background=random&color=fff`} 
+                        src={thumb || `https://ui-avatars.com/api/?name=${encodeURIComponent(note.keterangan)}&background=random&color=fff`} 
                         alt={note.keterangan}
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                       />

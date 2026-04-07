@@ -142,21 +142,6 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   const sortedCapexProjects = capexProjects.slice().sort((a, b) => b.progress - a.progress);
   const [profileThumbByEmail, setProfileThumbByEmail] = useState<Record<string, string>>({});
 
-  const userIdToEmail: Record<string, string> = {
-    U001: 'hadi@smktelkom-mlg.sch.id',
-    U002: 'whyna@smktelkom-mlg.sch.id',
-    U003: 'chusni@smktelkom-mlg.sch.id',
-    U004: 'ekon.a.poernomo@smktelkom-mlg.sch.id',
-    U005: 'amalia@smktelkom-mlg.sch.id',
-    U006: 'zainul@smktelkom-mlg.sch.id',
-    U007: 'zakaria@smktelkom-mlg.sch.id',
-    U008: 'chandra@smktelkom-mlg.sch.id',
-    U009: 'bagus@smktelkom-mlg.sch.id',
-    U010: 'nico@smktelkom-mlg.sch.id',
-    U011: 'ayat@smktelkom-mlg.sch.id',
-    U012: 'rudimistriono@smktelkom-mlg.sch.id',
-    U013: 'yoko@smktelkom-mlg.sch.id',
-  };
 
   const personnelForDashboard = USERS;
 
@@ -1483,8 +1468,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         </div>
         <div style={{ padding: '1rem 1.25rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '0.8rem' }}>
           {personnelForDashboard.map((person) => {
-            const email = userIdToEmail[person.id] || '';
-            const thumb = email ? profileThumbByEmail[email.toLowerCase()] : '';
+            const thumb = (person.email ? profileThumbByEmail[person.email.toLowerCase()] : '') || person.fotoProfil;
             return (
               <div key={person.id} className="glass-panel" style={{ padding: '0.85rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-subtle)' }}>
                 <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'flex-start' }}>
