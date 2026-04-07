@@ -293,7 +293,7 @@ const ITPage = () => {
 
   
   const [formData, setFormData] = useState({
-    date: '',
+    date: getSystemDateInput(),
     count: '',
     overloads: '',
     note: ''
@@ -564,7 +564,7 @@ const ITPage = () => {
     setIsEditing(true);
     setCurrentId(item.id);
     setFormData({
-      date: item.date,
+      date: toInputDate(item.date),
       count: item.count.toString(),
       overloads: item.overloads.toString(),
       note: item.note
@@ -593,7 +593,7 @@ const ITPage = () => {
   const resetForm = () => {
     setIsEditing(false);
     setCurrentId(null);
-    setFormData({ date: '', count: '', overloads: '', note: '' });
+    setFormData({ date: getSystemDateInput(), count: '', overloads: '', note: '' });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -629,13 +629,20 @@ const ITPage = () => {
         body: JSON.stringify({
           action: 'FINANCE_RECORD',
           sheetName: 'Monitor_Wifi',
+          sheet: 'Monitor_Wifi',
           id: newId,
+          ID: newId,
           tanggal: formattedDate,
+          Tanggal: formattedDate,
           count: formData.count,
+          Count: formData.count,
           overloads: formData.overloads,
-          note: formData.note
+          Overloads: formData.overloads,
+          note: formData.note,
+          Note: formData.note
         })
       });
+      setTimeout(fetchData, 900);
     } catch(e) {
       fetchData();
     }
@@ -684,7 +691,7 @@ const ITPage = () => {
         <div className="it-hero-side">
           <div className="it-hero-meta-card">
             <span className="it-hero-meta-label">Update WiFi Terakhir</span>
-            <b className="it-hero-meta-value">{latestWifi?.date || '-'}</b>
+            <b className="it-hero-meta-value">{latestWifi?.date ? toDisplayDate(latestWifi.date) : '-'}</b>
           </div>
           <div className="it-hero-meta-card">
             <span className="it-hero-meta-label">Update Network Terakhir</span>
@@ -815,7 +822,7 @@ const ITPage = () => {
                       onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     >
-                      <td style={{ padding: '0.85rem 1rem', fontWeight: 600 }}>{item.date} {item.isPreview && <small style={{ color: 'var(--accent-amber)' }}>(PREVIEW)</small>}</td>
+                      <td style={{ padding: '0.85rem 1rem', fontWeight: 600 }}>{toDisplayDate(item.date)} {item.isPreview && <small style={{ color: 'var(--accent-amber)' }}>(PREVIEW)</small>}</td>
                       <td style={{ padding: '0.85rem 1rem' }}>
                         <span style={{
                           fontWeight: 700,
@@ -845,7 +852,7 @@ const ITPage = () => {
              <h3 style={{ marginBottom: '1rem', fontSize: '1rem' }}>{isEditing ? '✏️ Edit Data' : '➕ Tambah Data'}</h3>
              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
                 <div>
-                  <label style={{ fontSize: '0.7rem', display: 'block', marginBottom: '0.3rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tanggal</label>
+                  <label style={{ fontSize: '0.7rem', display: 'block', marginBottom: '0.3rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tanggal (default: sistem)</label>
                   <input className="input-field" type="date" name="date"
                     value={formData.date}
                     onChange={e => {
