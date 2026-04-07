@@ -20,7 +20,8 @@ const buildLogPayload = (
   unit: string,
   role: string,
   email: string,
-  page: string
+  page: string,
+  profilePicture: string = ''
 ) => {
   // Always unique per access event — ensures FINANCE_RECORD always INSERTs a new row
   const logId = `LOG-${Date.now()}-${Math.floor(Math.random() * 9999)}`;
@@ -43,6 +44,7 @@ const buildLogPayload = (
     Unit: unit,
     Role: role,
     Email: email,
+    ProfilePicture: profilePicture,
     Device: getDeviceInfo(),
     Page: page,
 
@@ -53,6 +55,7 @@ const buildLogPayload = (
     unit,
     roleAplikasi: role,
     email,
+    profilePicture,
     device: getDeviceInfo(),
   };
 };
@@ -66,7 +69,8 @@ export const logAccess = async (user: User, pageName: string = 'Dashboard') => {
     user.unit,
     user.roleAplikasi,
     localStorage.getItem('userEmail') || 'unknown',
-    pageName
+    pageName,
+    localStorage.getItem('userPicture') || ''
   );
 
   try {
@@ -90,9 +94,10 @@ export const logLoginEvent = async (
   jabatan: string = '-',
   unit: string = '-',
   role: string = '-',
-  userId: string = '-'
+  userId: string = '-',
+  profilePicture: string = ''
 ) => {
-  const logData = buildLogPayload(userId, nama, jabatan, unit, role, email, 'Login');
+  const logData = buildLogPayload(userId, nama, jabatan, unit, role, email, 'Login', profilePicture);
 
   try {
     await fetch(LOG_API_URL, {

@@ -63,7 +63,8 @@ const Login = ({ onLogin }: LoginProps) => {
             userProfile?.jabatan || '-',
             userProfile?.unit || '-',
             userProfile?.roleAplikasi || '-',
-            userId
+            userId,
+            decoded.picture || ''
           );
 
           onLogin(decoded.email, decoded.picture);
