@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, LabelList } from 'recharts';
+import { XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, LabelList, LineChart, Line, Legend } from 'recharts';
 import { UserCircle2, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, ShieldCheck, MessageSquare, AlertCircle, Edit3, Trash2, Wind, Briefcase, Smartphone, Activity, Coins, Camera, X } from 'lucide-react';
 import { getCurrentUser, ROLES, USERS } from '../data/organization';
 import { getUtilityChartData } from '../data/utilities';
@@ -25,6 +25,18 @@ const monthMap: any = {
   'Jul': 6, 'Agt': 7, 'Sep': 8, 'Okt': 9, 'Nov': 10, 'Des': 11 
 };
 const monthList = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
+const ONT_SERIES = [
+  { key: 'ast', label: 'Astinet', color: '#fb923c' },
+  { key: 'i1', label: 'Indibizz 1', color: '#60a5fa' },
+  { key: 'i2', label: 'Indibizz 2', color: '#a78bfa' },
+  { key: 'i3', label: 'Indibizz 3', color: '#fbbf24' },
+  { key: 'i4', label: 'Indibizz 4', color: '#34d399' },
+  { key: 'i5', label: 'Indibizz 5', color: '#f472b6' }
+];
+const toNum = (v: any): number => {
+  const n = parseFloat(String(v ?? '').replace(',', '.'));
+  return Number.isFinite(n) ? n : 0;
+};
 const parseWifiDateValue = (raw: any): Date | null => {
   const s = String(raw || '').trim();
   if (!s) return null;
@@ -88,6 +100,8 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
 
   const [wifiData, setWifiData] = useState<any[]>([]);
   const [wifiLoading, setWifiLoading] = useState(false);
+  const [netTrafficHistory, setNetTrafficHistory] = useState<any[]>([]);
+  const [trafficView, setTrafficView] = useState<'rx' | 'tx'>('rx');
   const [netSnapshot, setNetSnapshot] = useState<any>(null);
   const [netSnapshotThumb, setNetSnapshotThumb] = useState<any>(null);
   const [netSnapshotLightbox, setNetSnapshotLightbox] = useState<{ src: string; tanggal: string } | null>(null);
@@ -459,16 +473,49 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         const resp = await fetch(`${FINANCE_API_URL}?sheetName=Monitor_Net`);
         const data = await resp.json();
         if (data && Array.isArray(data) && data.length > 0) {
-          setNetSnapshot(data[data.length - 1]);
-          const latestWithSnapshot = [...data].reverse().find((row: any) => String(getSnapshotSource(row)).trim() !== '');
+          const normalized = data.map((row: any, idx: number) => {
+            const rawDate = pickDateField(row);
+            const ts = parseWifiDateValue(rawDate)?.getTime() ?? idx;
+            return {
+              ...row,
+              _ts: ts,
+              _dateDisplay: formatSnapshotDate(rawDate),
+              i1_rx: toNum(row.i1_rx), i1_tx: toNum(row.i1_tx),
+              i2_rx: toNum(row.i2_rx), i2_tx: toNum(row.i2_tx),
+              i3_rx: toNum(row.i3_rx), i3_tx: toNum(row.i3_tx),
+              i4_rx: toNum(row.i4_rx), i4_tx: toNum(row.i4_tx),
+              i5_rx: toNum(row.i5_rx), i5_tx: toNum(row.i5_tx),
+              ast_rx: toNum(row.ast_rx), ast_tx: toNum(row.ast_tx),
+            };
+          }).sort((a: any, b: any) => a._ts - b._ts);
+
+          const trafficHistory = normalized
+            .filter((r: any) => [r.ast_rx, r.ast_tx, r.i1_rx, r.i1_tx, r.i2_rx, r.i2_tx, r.i3_rx, r.i3_tx, r.i4_rx, r.i4_tx, r.i5_rx, r.i5_tx].some((v: number) => v > 0))
+            .map((r: any) => ({
+              tanggal: r._dateDisplay,
+              ast_rx: r.ast_rx, ast_tx: r.ast_tx,
+              i1_rx: r.i1_rx, i1_tx: r.i1_tx,
+              i2_rx: r.i2_rx, i2_tx: r.i2_tx,
+              i3_rx: r.i3_rx, i3_tx: r.i3_tx,
+              i4_rx: r.i4_rx, i4_tx: r.i4_tx,
+              i5_rx: r.i5_rx, i5_tx: r.i5_tx,
+            }));
+          setNetTrafficHistory(trafficHistory);
+
+          const latestRow = normalized[normalized.length - 1];
+          setNetSnapshot(latestRow || data[data.length - 1]);
+
+          const latestWithSnapshot = [...normalized].reverse().find((row: any) => String(getSnapshotSource(row)).trim() !== '');
           setNetSnapshotThumb(latestWithSnapshot || null);
         } else {
           setNetSnapshot(null);
           setNetSnapshotThumb(null);
+          setNetTrafficHistory([]);
         }
       } catch (e) {
         console.error("Net monitor fetch error:", e);
         setNetSnapshotThumb(null);
+        setNetTrafficHistory([]);
       }
     };
 
@@ -742,6 +789,88 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
             )}
 
           </div>
+      </div>
+
+      <div className="glass-panel delay-155" style={{ marginBottom: '2rem', background: 'linear-gradient(135deg, rgba(59,130,246,0.03), transparent)', borderLeft: '4px solid var(--accent-cyan)' }}>
+        <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+          <div>
+            <h3 style={{ fontSize: '1.02rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Activity size={18} color="var(--accent-cyan)" /> Histori Traffic per ONT
+            </h3>
+            <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+              Pantau tren bandwidth setiap link internet (download/upload).
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button
+              onClick={() => setTrafficView('rx')}
+              className="btn"
+              style={{
+                fontSize: '0.75rem',
+                border: '1px solid var(--border-subtle)',
+                background: trafficView === 'rx' ? 'var(--accent-blue)' : 'transparent',
+                color: trafficView === 'rx' ? 'white' : 'var(--text-secondary)'
+              }}
+            >
+              ↓ Rx (Download)
+            </button>
+            <button
+              onClick={() => setTrafficView('tx')}
+              className="btn"
+              style={{
+                fontSize: '0.75rem',
+                border: '1px solid var(--border-subtle)',
+                background: trafficView === 'tx' ? 'var(--accent-rose)' : 'transparent',
+                color: trafficView === 'tx' ? 'white' : 'var(--text-secondary)'
+              }}
+            >
+              ↑ Tx (Upload)
+            </button>
+          </div>
+        </div>
+        <div style={{ padding: '1.25rem' }}>
+          {netTrafficHistory.length > 0 ? (
+            <div style={{ width: '100%', height: '320px' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={netTrafficHistory} margin={{ top: 10, right: 10, left: 0, bottom: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                  <XAxis dataKey="tanggal" stroke="var(--text-muted)" fontSize={11} />
+                  <YAxis stroke="var(--text-muted)" fontSize={11} unit=" Mbps" />
+                  <RechartsTooltip
+                    contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-focus)', borderRadius: '10px' }}
+                    formatter={(val: any, name: any) => {
+                      const n = String(name);
+                      const base = ONT_SERIES.find(s => n.startsWith(s.key));
+                      const suffix = n.endsWith('_rx') ? 'Rx' : 'Tx';
+                      return [`${val} Mbps`, `${base?.label || n} ${suffix}`];
+                    }}
+                  />
+                  <Legend
+                    wrapperStyle={{ fontSize: '0.72rem' }}
+                    formatter={(value: any) => {
+                      const n = String(value);
+                      const base = ONT_SERIES.find(s => n.startsWith(s.key));
+                      return `${base?.label || n} ${n.endsWith('_rx') ? 'Rx' : 'Tx'}`;
+                    }}
+                  />
+                  {ONT_SERIES.map((series) => (
+                    <Line
+                      key={`${series.key}_${trafficView}`}
+                      type="monotone"
+                      dataKey={`${series.key}_${trafficView}`}
+                      stroke={series.color}
+                      strokeWidth={2}
+                      dot={{ r: 3 }}
+                      activeDot={{ r: 5 }}
+                    />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div style={{ padding: '1rem', color: 'var(--text-secondary)' }}>Belum ada histori traffic jaringan.</div>
+          )}
+        </div>
       </div>
 
       {/* DASHBOARD AC MONITORING SECTION */}
