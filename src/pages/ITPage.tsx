@@ -261,6 +261,7 @@ const ITPage = () => {
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [snapshotLightbox, setSnapshotLightbox] = useState<{ src: string; tanggal: string } | null>(null);
+  const [manualSnapshotImage, setManualSnapshotImage] = useState<string | null>(null);
 
   
   const [formData, setFormData] = useState({
@@ -281,6 +282,32 @@ const ITPage = () => {
     dhcp_cpu: '', dhcp_mem: '', dhcp_disk: '',
     sang_cpu: '', sang_mem: '', sang_virt: '', sang_disk: ''
   });
+
+  const resetNetFormState = () => {
+    setNetFormTab('upload');
+    setUploadImage(null);
+    setAiResult(null);
+    setAiError('');
+    setDragOver(false);
+    setAiLoading(false);
+    setManualSnapshotImage(null);
+    setNetFormData({
+      date: '',
+      i1_rx: '', i1_tx: '',
+      i2_rx: '', i2_tx: '',
+      i3_rx: '', i3_tx: '',
+      i4_rx: '', i4_tx: '',
+      i5_rx: '', i5_tx: '',
+      ast_rx: '', ast_tx: '',
+      dhcp_cpu: '', dhcp_mem: '', dhcp_disk: '',
+      sang_cpu: '', sang_mem: '', sang_virt: '', sang_disk: ''
+    });
+  };
+
+  const closeNetModal = () => {
+    setIsNetFormOpen(false);
+    resetNetFormState();
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -364,6 +391,7 @@ const ITPage = () => {
             dhcp_cpu: d.dhcp_cpu, dhcp_mem: d.dhcp_mem, dhcp_disk: d.dhcp_disk,
             sang_cpu: d.sang_cpu, sang_mem: d.sang_mem, sang_virt: d.sang_virt, sang_disk: d.sang_disk,
             snapshot: d.snapshot || d.Snapshot || '',
+            snapshot_url: d.snapshot_url || d.Snapshot_URL || '',
           }));
         setNetHistory(mapped);
         setNetData(mapped[mapped.length - 1]);
@@ -573,6 +601,7 @@ const ITPage = () => {
   const dhcpCpu = parseFloat(netData?.dhcp_cpu || 0);
   const overloadRooms = latestWifi?.overloads || 0;
   const needsAttentionCount = [sangCpu > 75, dhcpCpu > 75, overloadRooms > 8].filter(Boolean).length;
+  const latestSnapshotRecord = [...netHistory].reverse().find((row: any) => row.snapshot);
 
   return (
     <div className="animate-fade-in it-dashboard-page">
@@ -830,6 +859,40 @@ const ITPage = () => {
          </div>
       </div>
 
+      <div className="glass-panel" style={{ padding: '1rem', marginBottom: '0.5rem', border: '1px solid rgba(59,130,246,0.3)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <Camera size={16} color="var(--accent-blue)" /> Kondisi Gambar Jaringan Terkini
+            </h3>
+            <p style={{ margin: '0.25rem 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+              Snapshot terakhir: {latestSnapshotRecord?.tanggal || '-'}
+            </p>
+          </div>
+          <button onClick={() => setIsNetFormOpen(true)} className="btn btn-outline" style={{ fontSize: '0.75rem' }}>
+            Update + Simpan Gambar
+          </button>
+        </div>
+
+        {latestSnapshotRecord?.snapshot ? (
+          <button
+            onClick={() => setSnapshotLightbox({ src: latestSnapshotRecord.snapshot, tanggal: latestSnapshotRecord.tanggal || '-' })}
+            style={{ width: '100%', border: 'none', padding: 0, background: 'transparent', cursor: 'zoom-in' }}
+            title="Klik untuk lihat gambar ukuran penuh"
+          >
+            <img
+              src={latestSnapshotRecord.snapshot}
+              alt={`Snapshot jaringan ${latestSnapshotRecord?.tanggal || ''}`}
+              style={{ width: '100%', maxHeight: '260px', objectFit: 'contain', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'rgba(0,0,0,0.2)' }}
+            />
+          </button>
+        ) : (
+          <div style={{ border: '1px dashed var(--border-subtle)', borderRadius: '10px', padding: '1rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+            Belum ada snapshot tersimpan. Klik <b>Update + Simpan Gambar</b> untuk upload screenshot kondisi jaringan.
+          </div>
+        )}
+      </div>
+
       {/* ===== TRAFFIC PER ONT HISTORY ===== */}
       <div className="it-section-header" style={{ marginTop: '2.5rem' }}>
         <div>
@@ -929,14 +992,26 @@ const ITPage = () => {
                   {/* Kolom Foto */}
                   <td style={{ padding: '0.5rem', textAlign: 'center' }}>
                     {row.snapshot ? (
-                      <button
-                        onClick={() => setSnapshotLightbox({ src: row.snapshot, tanggal: row.tanggal || '-' })}
-                        title="Lihat foto kondisi jaringan"
-                        style={{ background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: '8px', cursor: 'pointer', padding: '4px 8px', display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--accent-blue)' }}
-                      >
-                        <Camera size={14} />
-                        <span style={{ fontSize: '0.65rem', fontWeight: 600 }}>Lihat</span>
-                      </button>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                        <button
+                          onClick={() => setSnapshotLightbox({ src: row.snapshot, tanggal: row.tanggal || '-' })}
+                          title="Lihat foto kondisi jaringan"
+                          style={{ background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: '8px', cursor: 'pointer', padding: '4px 8px', display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--accent-blue)' }}
+                        >
+                          <Camera size={14} />
+                          <span style={{ fontSize: '0.65rem', fontWeight: 600 }}>Lihat</span>
+                        </button>
+                        {(row.snapshot_url || String(row.snapshot || '').startsWith('http')) && (
+                          <a
+                            href={row.snapshot_url || row.snapshot}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ fontSize: '0.62rem', color: 'var(--accent-emerald)', textDecoration: 'none' }}
+                          >
+                            Buka Link
+                          </a>
+                        )}
+                      </div>
                     ) : (
                       <label title="Upload foto kondisi jaringan untuk tanggal ini" style={{ cursor: 'pointer', display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '2px', color: 'var(--text-muted)', opacity: 0.5 }}>
                         <input type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
@@ -1008,7 +1083,7 @@ const ITPage = () => {
                 <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Update Status Network Harian</h3>
                 <p style={{ margin: '0.25rem 0 0', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Upload screenshot traffic atau input manual</p>
               </div>
-              <button onClick={() => { setIsNetFormOpen(false); setUploadImage(null); setAiResult(null); setAiError(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '4px' }}><X size={20} /></button>
+              <button onClick={closeNetModal} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '4px' }}><X size={20} /></button>
             </div>
 
             {/* Tabs */}
@@ -1212,9 +1287,7 @@ const ITPage = () => {
                             };
                             setNetHistory(prev => [...prev, newRecord]);
                             setNetData(newRecord);
-                            setIsNetFormOpen(false);
-                            setUploadImage(null);
-                            setAiResult(null);
+                            closeNetModal();
                             alert('✅ Data traffic berhasil disimpan!');
                           } catch (err: any) {
                             alert('Gagal menyimpan: ' + (err.message || ''));
@@ -1261,15 +1334,55 @@ const ITPage = () => {
                   setNetLoading(true);
                   try {
                     const tanggal = netFormData.date ? formatDate(netFormData.date) : formatDate(new Date().toISOString());
+                    const manualSnapshotData = manualSnapshotImage ? await compressImage(manualSnapshotImage) : '';
                     await fetch(API_URL, {
                       method: 'POST', mode: 'no-cors',
-                      body: JSON.stringify({ action: 'FINANCE_RECORD', sheetName: 'Monitor_Net', id: `NET-${Date.now()}`, tanggal, ...netFormData })
+                      body: JSON.stringify({ action: 'FINANCE_RECORD', sheetName: 'Monitor_Net', id: `NET-${Date.now()}`, tanggal, snapshot: manualSnapshotData, ...netFormData })
                     });
                     alert('Berhasil Update!');
-                    setIsNetFormOpen(false); fetchNetData();
+                    closeNetModal();
+                    fetchNetData();
                   } catch { alert('Gagal'); }
                   finally { setNetLoading(false); }
                 }}>
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label style={{ fontSize: '0.7rem', display: 'block', marginBottom: '0.3rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+                      Snapshot Kondisi Jaringan (Opsional)
+                    </label>
+                    <label style={{ border: '1px dashed var(--border-subtle)', borderRadius: '10px', padding: manualSnapshotImage ? '0.5rem' : '0.85rem', display: 'block', cursor: 'pointer', textAlign: 'center', background: manualSnapshotImage ? 'rgba(16,185,129,0.06)' : 'rgba(0,0,0,0.12)' }}>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={(ev) => {
+                          const file = ev.target.files?.[0];
+                          if (!file) return;
+                          const reader = new FileReader();
+                          reader.onload = (e2) => setManualSnapshotImage(e2.target?.result as string);
+                          reader.readAsDataURL(file);
+                        }}
+                      />
+                      {manualSnapshotImage ? (
+                        <div>
+                          <img src={manualSnapshotImage} alt="Preview snapshot manual" style={{ maxHeight: '200px', maxWidth: '100%', borderRadius: '8px', objectFit: 'contain' }} />
+                          <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: 'var(--accent-emerald)' }}>✓ Snapshot akan ikut disimpan</p>
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Klik untuk upload screenshot/foto kondisi jaringan</span>
+                      )}
+                    </label>
+                    {manualSnapshotImage && (
+                      <button
+                        type="button"
+                        className="btn btn-outline"
+                        onClick={() => setManualSnapshotImage(null)}
+                        style={{ marginTop: '0.5rem', fontSize: '0.75rem' }}
+                      >
+                        Hapus Snapshot
+                      </button>
+                    )}
+                  </div>
+
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.5rem', marginBottom: '1rem' }}>
                     <div>
                       <label style={{ fontSize: '0.7rem', display: 'block', marginBottom: '0.3rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Tanggal</label>
