@@ -562,62 +562,89 @@ const ITPage = () => {
     return null;
   };
 
+  const latestWifi = deviceData.length > 0 ? deviceData[deviceData.length - 1] : null;
+  const previousWifi = deviceData.length > 1 ? deviceData[deviceData.length - 2] : null;
+  const wifiDelta = latestWifi && previousWifi ? latestWifi.count - previousWifi.count : 0;
+  const wifiTrendLabel = latestWifi && previousWifi
+    ? (wifiDelta <= 0 ? `${Math.abs(wifiDelta)} klien turun` : `${wifiDelta} klien naik`)
+    : 'Belum ada pembanding';
+
+  const sangCpu = parseFloat(netData?.sang_cpu || 0);
+  const dhcpCpu = parseFloat(netData?.dhcp_cpu || 0);
+  const overloadRooms = latestWifi?.overloads || 0;
+  const needsAttentionCount = [sangCpu > 75, dhcpCpu > 75, overloadRooms > 8].filter(Boolean).length;
+
   return (
-    <div className="animate-fade-in">
-      <div className="flex-row-responsive" style={{ marginBottom: '2rem' }}>
-        <div>
-          <h1 className="page-title gradient-text">IT Services Dashboard</h1>
-          <p className="page-subtitle" style={{ margin: 0 }}>Pemantauan Infrastruktur, Jaringan, dan Keamanan / PDP</p>
+    <div className="animate-fade-in it-dashboard-page">
+      <div className="glass-panel it-hero-panel">
+        <div className="it-hero-main">
+          <span className="it-hero-kicker">IT OPERATIONS CENTER</span>
+          <h1 className="page-title gradient-text" style={{ marginBottom: '0.35rem' }}>IT Services Dashboard</h1>
+          <p className="it-hero-subtitle">Pemantauan Infrastruktur, Jaringan, dan Keamanan / PDP</p>
+          <div className="it-hero-badges">
+            <span className="badge badge-info">NOC Monitoring</span>
+            <span className="badge badge-success">WiFi & Backbone</span>
+            <span className="badge badge-warning">Server Health</span>
+          </div>
+        </div>
+        <div className="it-hero-side">
+          <div className="it-hero-meta-card">
+            <span className="it-hero-meta-label">Update WiFi Terakhir</span>
+            <b className="it-hero-meta-value">{latestWifi?.date || '-'}</b>
+          </div>
+          <div className="it-hero-meta-card">
+            <span className="it-hero-meta-label">Update Network Terakhir</span>
+            <b className="it-hero-meta-value">{netData?.tanggal || '-'}</b>
+          </div>
         </div>
       </div>
 
-      <div className="stats-grid">
-        <div className="glass-panel stat-card">
-          <div className="stat-header">
-            <span className="stat-title">Uptime Jaringan</span>
-            <div className="stat-icon-wrapper" style={{ background: 'var(--accent-emerald-ghost)', color: 'var(--accent-emerald)' }}>
+      <div className="it-kpi-grid">
+        <div className="glass-panel it-kpi-card">
+          <div className="it-kpi-head">
+            <span className="it-kpi-title">Uptime Jaringan</span>
+            <div className="stat-icon-wrapper" style={{ background: 'var(--accent-emerald-ghost)', color: 'var(--accent-emerald)', padding: '0.45rem' }}>
               <Wifi size={20} />
             </div>
           </div>
-          <div>
-            <div className="stat-value">99.8%</div>
-            <div className="stat-trend trend-up">Target: 99.5%</div>
-          </div>
+          <div className="it-kpi-value">99.8%</div>
+          <div className="stat-trend trend-up">Target SLA: 99.5%</div>
         </div>
 
-        <div className="glass-panel stat-card">
-          <div className="stat-header">
-            <span className="stat-title">Tiket Baru</span>
-            <div className="stat-icon-wrapper" style={{ background: 'var(--accent-blue-ghost)', color: 'var(--accent-blue)' }}>
-              <Server size={20} />
+        <div className="glass-panel it-kpi-card">
+          <div className="it-kpi-head">
+            <span className="it-kpi-title">Klien WiFi Aktif</span>
+            <div className="stat-icon-wrapper" style={{ background: 'var(--accent-blue-ghost)', color: 'var(--accent-blue)', padding: '0.45rem' }}>
+              <Smartphone size={20} />
             </div>
           </div>
-          <div>
-            <div className="stat-value">12</div>
-            <div className="stat-trend trend-down">3 Kritis</div>
-          </div>
+          <div className="it-kpi-value">{latestWifi?.count?.toLocaleString() || '-'}</div>
+          <div className={`stat-trend ${wifiDelta <= 0 ? 'trend-up' : 'trend-down'}`}>{wifiTrendLabel}</div>
         </div>
 
-        <div className="glass-panel stat-card">
-          <div className="stat-header">
-            <span className="stat-title">Insiden Keamanan</span>
-            <div className="stat-icon-wrapper" style={{ background: 'var(--accent-rose-ghost)', color: 'var(--accent-rose)' }}>
+        <div className="glass-panel it-kpi-card">
+          <div className="it-kpi-head">
+            <span className="it-kpi-title">PDP / Keamanan</span>
+            <div className="stat-icon-wrapper" style={{ background: 'var(--accent-rose-ghost)', color: 'var(--accent-rose)', padding: '0.45rem' }}>
               <Shield size={20} />
             </div>
           </div>
-          <div>
-            <div className="stat-value">0</div>
-            <div className="stat-trend trend-up">Clear (30 Hari)</div>
+          <div className="it-kpi-value">{needsAttentionCount === 0 ? 'Aman' : `${needsAttentionCount} Atensi`}</div>
+          <div className={`stat-trend ${needsAttentionCount === 0 ? 'trend-up' : 'trend-down'}`}>
+            {needsAttentionCount === 0 ? 'Tidak ada alert kritis' : 'Perlu tindak lanjut'}
           </div>
         </div>
       </div>
 
       {/* WIFI MONITOR SECTION */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '3rem', marginBottom: '1.5rem' }}>
-        <h2 style={{ fontSize: '1.2rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <Smartphone color="var(--accent-blue)" /> Pemantauan Trend Perangkat (WiFi Client)
-        </h2>
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+      <div className="it-section-header">
+        <div>
+          <h2 className="it-section-title">
+            <Smartphone color="var(--accent-blue)" size={20} /> Pemantauan Trend Perangkat (WiFi Client)
+          </h2>
+          <p className="it-section-subtitle">Monitoring jumlah klien harian, area overload, dan catatan stabilisasi per ruang.</p>
+        </div>
+        <div className="it-section-actions">
           {deviceData.some(d => d.isPreview) && !loading && (
             <button onClick={handleSyncPreviewToDB} className="btn" style={{ background: 'var(--accent-emerald)', color: 'white', fontSize: '0.75rem' }}>
               <DatabaseBackup size={14} /> Sinkronkan Preview ke DB
@@ -756,11 +783,14 @@ const ITPage = () => {
       </div>
 
       {/* NETWORK SECTION */}
-      <div id="net" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '4rem', marginBottom: '1.5rem' }}>
-        <h2 style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <Activity color="var(--accent-emerald)" /> Monitoring Infrastruktur & Bandwidth
-        </h2>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
+      <div id="net" className="it-section-header" style={{ marginTop: '2.5rem' }}>
+        <div>
+          <h2 className="it-section-title">
+            <Activity color="var(--accent-emerald)" size={20} /> Monitoring Infrastruktur & Bandwidth
+          </h2>
+          <p className="it-section-subtitle">Pantau utilisasi setiap link ISP, kondisi gateway, serta kesehatan layanan inti jaringan.</p>
+        </div>
+        <div className="it-section-actions">
           {!netData && !netLoading && (
             <button onClick={handleSeedNetToDB} className="btn" style={{ background: 'var(--accent-blue-ghost)', color: 'var(--accent-blue)', fontSize: '0.75rem' }}>
               <DatabaseBackup size={14} /> Seed Data Gambar
@@ -801,11 +831,14 @@ const ITPage = () => {
       </div>
 
       {/* ===== TRAFFIC PER ONT HISTORY ===== */}
-      <div style={{ marginTop: '3rem', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-        <h2 style={{ fontSize: '1.2rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <TrendingUp color="var(--accent-amber)" /> Histori Traffic per ONT
-        </h2>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
+      <div className="it-section-header" style={{ marginTop: '2.5rem' }}>
+        <div>
+          <h2 className="it-section-title">
+            <TrendingUp color="var(--accent-amber)" size={20} /> Histori Traffic per ONT
+          </h2>
+          <p className="it-section-subtitle">Analisis tren download/upload antar hari untuk deteksi anomali beban jaringan.</p>
+        </div>
+        <div className="it-section-actions">
           <button
             onClick={() => setTrafficView('rx')}
             className="btn"
