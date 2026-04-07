@@ -156,7 +156,7 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
                 if (excludedPublic.includes(item.name)) return false;
               }
 
-              // leaderOnly items: hanya Waka (Pimpinan) + 3 Kaur
+              // leaderOnly items: hanya Waka (Pimpinan) + 3 Kaur + Amalia (PIC Admin)
               if (item.leaderOnly) {
                 if (!isLoggedIn) return false;
                 const seniorRoles = [
@@ -164,6 +164,7 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
                   ROLES.KOORDINATOR_IT,
                   ROLES.KOORDINATOR_LAB,
                   ROLES.KOORDINATOR_SARPRAS,
+                  ROLES.PIC_ADMIN,
                 ];
                 return seniorRoles.includes(user.roleAplikasi as any);
               }
@@ -191,7 +192,16 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
                 return allowed.includes(item.name);
               }
               if (user.unit === 'Tata Kelola') {
-                const allowed = [...alwaysVisible, 'Personel', 'SOP & Dokumen'];
+                const allowed = [
+                  ...alwaysVisible, 
+                  'Personel', 
+                  'SOP & Dokumen', 
+                  'Kinerja Personel',
+                  'Tata Kelola Keuangan',
+                  'Kas Operasional TU',
+                  'Kas Perawatan AC',
+                  'Monitor CAPEX'
+                ];
                 return allowed.includes(item.name);
               }
               
