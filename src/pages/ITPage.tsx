@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Server, Wifi, Shield, Edit2, Trash2, X, Activity, Smartphone, Loader2, DatabaseBackup, TrendingUp, Upload, Sparkles, CheckCircle, AlertCircle, Image, Camera } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, LabelList } from 'recharts';
+import { getCurrentUser, ROLES } from '../data/organization';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 // Dapatkan API key gratis di https://aistudio.google.com/apikey
@@ -330,6 +331,31 @@ const ITPage = () => {
   const [snapshotLightbox, setSnapshotLightbox] = useState<{ src: string; tanggal: string } | null>(null);
   const [manualSnapshotImage, setManualSnapshotImage] = useState<string | null>(null);
 
+  const currentEmail = (localStorage.getItem('userEmail') || '').toLowerCase();
+  const isLoggedInUser = Boolean(currentEmail);
+  const currentUser = isLoggedInUser ? getCurrentUser() : null;
+  const canCrudITNetwork = (() => {
+    if (!isLoggedInUser) return false;
+    const nicoEmails = ['nico@smktelkom-mlg.sch.id'];
+    if (nicoEmails.includes(currentEmail)) return true;
+    const allowedRoles = [
+      ROLES.PIMPINAN,
+      ROLES.KOORDINATOR_IT,
+      ROLES.PIC_IT_NETWORK,
+      ROLES.PIC_IT_BACKEND,
+      ROLES.PIC_IT_MOBILE,
+      ROLES.PIC_IT_UIUX,
+      ROLES.PIC_IT_SUPPORT
+    ];
+    return allowedRoles.includes((currentUser?.roleAplikasi || '') as any);
+  })();
+
+  const ensureCrudAccess = () => {
+    if (canCrudITNetwork) return true;
+    alert('Akses CRUD menu IT & Jaringan hanya untuk user berwenang. Silakan login dengan akun Nico / tim IT.');
+    return false;
+  };
+
   
   const [formData, setFormData] = useState({
     date: getSystemDateInput(),
@@ -390,6 +416,7 @@ const ITPage = () => {
   };
 
   const openNetModal = () => {
+    if (!ensureCrudAccess()) return;
     resetNetFormState();
     setIsNetFormOpen(true);
   };
@@ -532,6 +559,7 @@ const ITPage = () => {
   };
 
   const handleDeleteTraffic = async (id: any) => {
+    if (!ensureCrudAccess()) return;
     if (!window.confirm('Hapus record traffic ini?')) return;
     setNetHistory(prev => prev.filter(d => d.id !== id));
     try {
@@ -543,6 +571,7 @@ const ITPage = () => {
   };
 
   const handleSeedNetToDB = async () => {
+    if (!ensureCrudAccess()) return;
     if (!window.confirm("Kirim 2 data awal jaringan (01-04-26 & 06-04-26) ke DB?")) return;
     setNetLoading(true);
     try {
@@ -615,6 +644,7 @@ const ITPage = () => {
   }, []);
 
   const handleSyncPreviewToDB = async () => {
+    if (!ensureCrudAccess()) return;
     if (!window.confirm("Kirim data PREVIEW ini ke Cloud Spreadsheet sekarang?")) return;
     setLoading(true);
     try {
@@ -655,6 +685,7 @@ const ITPage = () => {
   };
 
   const handleEdit = (item: any) => {
+    if (!ensureCrudAccess()) return;
     setIsEditing(true);
     setCurrentId(item.id);
     setFormData({
@@ -667,6 +698,7 @@ const ITPage = () => {
   };
 
   const handleDelete = async (id: any) => {
+    if (!ensureCrudAccess()) return;
     if (!window.confirm('Hapus data monitoring harian ini?')) return;
     setDeviceData(prev => prev.filter(d => d.id !== id));
     try {
@@ -692,6 +724,7 @@ const ITPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!ensureCrudAccess()) return;
     if (!formData.date || !formData.count) return;
     const newId = (isEditing && currentId !== null) ? currentId : `WIFI-${Date.now()}`;
     // format date dari yyyy-mm-dd (input type=date) ke dd-mm-yy
@@ -794,6 +827,12 @@ const ITPage = () => {
         </div>
       </div>
 
+      {!canCrudITNetwork && (
+        <div className="glass-panel" style={{ marginBottom: '1rem', padding: '0.7rem 1rem', border: '1px solid rgba(245,158,11,0.35)', color: 'var(--text-secondary)', fontSize: '0.78rem' }}>
+          Mode baca saja aktif. CRUD menu IT & Jaringan tersedia untuk akun Nico dan tim IT berwenang.
+        </div>
+      )}
+
       <div className="it-kpi-grid">
         <div className="glass-panel it-kpi-card">
           <div className="it-kpi-head">
@@ -840,7 +879,7 @@ const ITPage = () => {
           <p className="it-section-subtitle">Monitoring jumlah klien harian, area overload, dan catatan stabilisasi per ruang.</p>
         </div>
         <div className="it-section-actions">
-          {deviceData.some(d => d.isPreview) && !loading && (
+          {canCrudITNetwork && deviceData.some(d => d.isPreview) && !loading && (
             <button onClick={handleSyncPreviewToDB} className="btn" style={{ background: 'var(--accent-emerald)', color: 'white', fontSize: '0.75rem' }}>
               <DatabaseBackup size={14} /> Sinkronkan Preview ke DB
             </button>
@@ -933,8 +972,16 @@ const ITPage = () => {
                       </td>
                       <td style={{ padding: '0.85rem 1rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{item.note}</td>
                       <td style={{ padding: '0.85rem 1rem', display: 'flex', gap: '0.5rem' }}>
-                        <button onClick={() => handleEdit(item)} style={{ background: 'rgba(59,130,246,0.15)', border: 'none', borderRadius: '6px', padding: '4px 8px', cursor: 'pointer', color: 'var(--accent-blue)' }}><Edit2 size={13} /></button>
-                        <button onClick={() => handleDelete(item.id)} style={{ background: 'rgba(244,63,94,0.15)', border: 'none', borderRadius: '6px', padding: '4px 8px', cursor: 'pointer', color: '#f43f5e' }}><Trash2 size={13} /></button>
+                        <button
+                          onClick={() => handleEdit(item)}
+                          disabled={!canCrudITNetwork}
+                          style={{ background: 'rgba(59,130,246,0.15)', border: 'none', borderRadius: '6px', padding: '4px 8px', cursor: canCrudITNetwork ? 'pointer' : 'not-allowed', color: 'var(--accent-blue)', opacity: canCrudITNetwork ? 1 : 0.45 }}
+                        ><Edit2 size={13} /></button>
+                        <button
+                          onClick={() => handleDelete(item.id)}
+                          disabled={!canCrudITNetwork}
+                          style={{ background: 'rgba(244,63,94,0.15)', border: 'none', borderRadius: '6px', padding: '4px 8px', cursor: canCrudITNetwork ? 'pointer' : 'not-allowed', color: '#f43f5e', opacity: canCrudITNetwork ? 1 : 0.45 }}
+                        ><Trash2 size={13} /></button>
                       </td>
                     </tr>
                   )})}
@@ -968,7 +1015,12 @@ const ITPage = () => {
                   <label style={{ fontSize: '0.7rem', display: 'block', marginBottom: '0.3rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Catatan</label>
                   <input className="input-field" name="note" value={formData.note} onChange={handleInputChange} placeholder="Keterangan singkat..." />
                 </div>
-                <button type="submit" className="btn" style={{ background: 'var(--accent-blue)', color: 'white', marginTop: '0.5rem' }}>Simpan</button>
+                <button
+                  type="submit"
+                  disabled={!canCrudITNetwork}
+                  className="btn"
+                  style={{ background: canCrudITNetwork ? 'var(--accent-blue)' : '#64748b', color: 'white', marginTop: '0.5rem', cursor: canCrudITNetwork ? 'pointer' : 'not-allowed', opacity: canCrudITNetwork ? 1 : 0.7 }}
+                >Simpan</button>
                 {isEditing && (
                   <button type="button" onClick={resetForm} className="btn" style={{ background: 'transparent', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}>Batal</button>
                 )}
@@ -986,12 +1038,12 @@ const ITPage = () => {
           <p className="it-section-subtitle">Pantau utilisasi setiap link ISP, kondisi gateway, serta kesehatan layanan inti jaringan.</p>
         </div>
         <div className="it-section-actions">
-          {!netData && !netLoading && (
+          {canCrudITNetwork && !netData && !netLoading && (
             <button onClick={handleSeedNetToDB} className="btn" style={{ background: 'var(--accent-blue-ghost)', color: 'var(--accent-blue)', fontSize: '0.75rem' }}>
               <DatabaseBackup size={14} /> Seed Data Gambar
             </button>
           )}
-          <button onClick={openNetModal} className="btn btn-outline" style={{ fontSize: '0.75rem' }}>
+          <button onClick={openNetModal} disabled={!canCrudITNetwork} className="btn btn-outline" style={{ fontSize: '0.75rem', cursor: canCrudITNetwork ? 'pointer' : 'not-allowed', opacity: canCrudITNetwork ? 1 : 0.6 }}>
             Update Status Harian
           </button>
         </div>
@@ -1035,7 +1087,7 @@ const ITPage = () => {
               Snapshot terakhir: {latestSnapshotRecord?.tanggal ? toDisplayDate(latestSnapshotRecord.tanggal) : '-'}
             </p>
           </div>
-          <button onClick={openNetModal} className="btn btn-outline" style={{ fontSize: '0.75rem' }}>
+          <button onClick={openNetModal} disabled={!canCrudITNetwork} className="btn btn-outline" style={{ fontSize: '0.75rem', cursor: canCrudITNetwork ? 'pointer' : 'not-allowed', opacity: canCrudITNetwork ? 1 : 0.6 }}>
             Update + Simpan Gambar
           </button>
         </div>
@@ -1178,7 +1230,7 @@ const ITPage = () => {
                           </a>
                         )}
                       </div>
-                    ) : (
+                    ) : canCrudITNetwork ? (
                       <label title="Upload foto kondisi jaringan untuk tanggal ini" style={{ cursor: 'pointer', display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '2px', color: 'var(--text-muted)', opacity: 0.5 }}>
                         <input type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
                           const file = e.target.files?.[0];
@@ -1211,10 +1263,12 @@ const ITPage = () => {
                         <Camera size={14} />
                         <span style={{ fontSize: '0.6rem' }}>Upload</span>
                       </label>
+                    ) : (
+                      <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', opacity: 0.65 }}>Read only</span>
                     )}
                   </td>
                   <td style={{ padding: '0.75rem 1rem' }}>
-                    <button onClick={() => handleDeleteTraffic(row.id)} title="Hapus" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent-rose)', opacity: 0.6 }}>
+                    <button onClick={() => handleDeleteTraffic(row.id)} disabled={!canCrudITNetwork} title="Hapus" style={{ background: 'none', border: 'none', cursor: canCrudITNetwork ? 'pointer' : 'not-allowed', color: 'var(--accent-rose)', opacity: canCrudITNetwork ? 0.6 : 0.3 }}>
                       <Trash2 size={14} />
                     </button>
                   </td>
@@ -1429,8 +1483,9 @@ const ITPage = () => {
 
                       {/* Tombol Simpan */}
                       <button
-                        disabled={!aiResult.tanggal || netLoading}
+                        disabled={!canCrudITNetwork || !aiResult.tanggal || netLoading}
                         onClick={async () => {
+                          if (!ensureCrudAccess()) return;
                           if (!aiResult.tanggal) {
                             alert('Pilih tanggal terlebih dahulu.');
                             return;
@@ -1477,12 +1532,12 @@ const ITPage = () => {
                         className="btn"
                         style={{
                           width: '100%', marginTop: '0.5rem',
-                          background: aiResult.tanggal ? '#10b981' : '#6b7280',
+                          background: canCrudITNetwork && aiResult.tanggal ? '#10b981' : '#6b7280',
                           color: 'white', fontWeight: 700, padding: '0.85rem',
                           borderRadius: '8px', border: 'none',
-                          cursor: aiResult.tanggal ? 'pointer' : 'not-allowed',
+                          cursor: canCrudITNetwork && aiResult.tanggal ? 'pointer' : 'not-allowed',
                           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-                          opacity: aiResult.tanggal ? 1 : 0.6
+                          opacity: canCrudITNetwork && aiResult.tanggal ? 1 : 0.6
                         }}
                       >
                         {netLoading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
@@ -1512,6 +1567,7 @@ const ITPage = () => {
               {netFormTab === 'manual' && (
                 <form onSubmit={async (e) => {
                   e.preventDefault();
+                  if (!ensureCrudAccess()) return;
                   setNetLoading(true);
                   try {
                     const tanggal = normalizeDateForSave(netFormData.date || getSystemDateInput());
@@ -1541,10 +1597,11 @@ const ITPage = () => {
                     <label style={{ fontSize: '0.7rem', display: 'block', marginBottom: '0.3rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
                       Snapshot Kondisi Jaringan (Opsional)
                     </label>
-                    <label style={{ border: '1px dashed var(--border-subtle)', borderRadius: '10px', padding: manualSnapshotImage ? '0.5rem' : '0.85rem', display: 'block', cursor: 'pointer', textAlign: 'center', background: manualSnapshotImage ? 'rgba(16,185,129,0.06)' : 'rgba(0,0,0,0.12)' }}>
+                    <label style={{ border: '1px dashed var(--border-subtle)', borderRadius: '10px', padding: manualSnapshotImage ? '0.5rem' : '0.85rem', display: 'block', cursor: canCrudITNetwork ? 'pointer' : 'not-allowed', textAlign: 'center', background: manualSnapshotImage ? 'rgba(16,185,129,0.06)' : 'rgba(0,0,0,0.12)', opacity: canCrudITNetwork ? 1 : 0.7 }}>
                       <input
                         type="file"
                         accept="image/*"
+                        disabled={!canCrudITNetwork}
                         style={{ display: 'none' }}
                         onChange={(ev) => {
                           const file = ev.target.files?.[0];
@@ -1563,7 +1620,7 @@ const ITPage = () => {
                         <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Klik untuk upload screenshot/foto kondisi jaringan</span>
                       )}
                     </label>
-                    {manualSnapshotImage && (
+                    {manualSnapshotImage && canCrudITNetwork && (
                       <button
                         type="button"
                         className="btn btn-outline"
@@ -1578,7 +1635,7 @@ const ITPage = () => {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.5rem', marginBottom: '1rem' }}>
                     <div>
                       <label style={{ fontSize: '0.7rem', display: 'block', marginBottom: '0.3rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Tanggal (otomatis dari sistem)</label>
-                      <input type="date" className="input-field" style={{ width: '100%' }} value={netFormData.date || ''} onChange={e => setNetFormData({...netFormData, date: e.target.value})} />
+                      <input type="date" className="input-field" style={{ width: '100%' }} value={netFormData.date || ''} onChange={e => setNetFormData({...netFormData, date: e.target.value})} disabled={!canCrudITNetwork} />
                     </div>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.85rem' }}>
@@ -1609,7 +1666,7 @@ const ITPage = () => {
                     <NetInput label="SANGFOR Virt %" name="sang_virt" onChange={setNetFormData} value={netFormData.sang_virt} />
                     <NetInput label="SANGFOR Disk %" name="sang_disk" onChange={setNetFormData} value={netFormData.sang_disk} />
                   </div>
-                  <button type="submit" className="btn" style={{ background: 'var(--accent-emerald)', color: 'white', width: '100%', marginTop: '1.5rem', padding: '0.85rem', fontWeight: 700, borderRadius: '10px', border: 'none', cursor: 'pointer' }}
+                  <button type="submit" disabled={!canCrudITNetwork} className="btn" style={{ background: canCrudITNetwork ? 'var(--accent-emerald)' : '#64748b', color: 'white', width: '100%', marginTop: '1.5rem', padding: '0.85rem', fontWeight: 700, borderRadius: '10px', border: 'none', cursor: canCrudITNetwork ? 'pointer' : 'not-allowed', opacity: canCrudITNetwork ? 1 : 0.75 }}
                   >{netLoading ? <Loader2 size={16} className="animate-spin" /> : 'Simpan Update'}</button>
                 </form>
               )}

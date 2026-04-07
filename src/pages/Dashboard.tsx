@@ -34,6 +34,9 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   const [internalFinance, setInternalFinance] = useState({ balance: 0, expense: 0, categories: [] as any[] });
   const [tuFinance, setTuFinance] = useState<{ balance: number; expense: number }>({ balance: 0, expense: 0 });
   const [acFinance, setAcFinance] = useState<{ balance: number; expense: number }>({ balance: 0, expense: 0 });
+  const [internalLastTx, setInternalLastTx] = useState<any>(null);
+  const [tuLastTx, setTuLastTx] = useState<any>(null);
+  const [acLastTx, setAcLastTx] = useState<any>(null);
   const [piketNotes, setPiketNotes] = useState<any[]>([]);
   const [piketLoading, setPiketLoading] = useState(false);
   
@@ -47,6 +50,42 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   const [wifiLoading, setWifiLoading] = useState(false);
   const [netSnapshot, setNetSnapshot] = useState<any>(null);
   const sortedCapexProjects = capexProjects.slice().sort((a, b) => b.progress - a.progress);
+
+  const pickDateField = (row: any) => String(
+    row?.tanggal || row?.Tanggal || row?.date || row?.Date || row?.waktu || row?.Waktu || ''
+  ).trim();
+
+  const formatTxDate = (raw: any) => {
+    const s = String(raw || '').trim();
+    if (!s) return '-';
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) {
+      return new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: '2-digit' }).format(d);
+    }
+    return s;
+  };
+
+  const pickLatestRow = (rows: any[], isValid: (row: any) => boolean) => {
+    const valid = rows.filter(isValid);
+    if (valid.length === 0) return null;
+    const dated = valid.map((row, idx) => {
+      const ts = new Date(pickDateField(row)).getTime();
+      return { row, idx, ts };
+    });
+    const parseable = dated.filter((d) => !isNaN(d.ts));
+    if (parseable.length > 0) {
+      parseable.sort((a, b) => a.ts - b.ts);
+      return parseable[parseable.length - 1].row;
+    }
+    return valid[valid.length - 1];
+  };
+
+  const txAmountText = (amount: number, type: 'in' | 'out' | 'unknown') => {
+    const nominal = formatIDR(Math.abs(Number(amount || 0)));
+    if (type === 'in') return `+ ${nominal}`;
+    if (type === 'out') return `- ${nominal}`;
+    return nominal;
+  };
 
   useEffect(() => {
     const fetchFinanceData = async () => {
@@ -72,6 +111,22 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           const categoryList = Object.keys(cats).map(k => ({ name: k, value: cats[k] })).sort((a, b) => b.value - a.value);
 
           setInternalFinance({ balance: income - expense, expense, categories: categoryList });
+
+          const latestInternal = pickLatestRow(dataInternal, (item: any) =>
+            Number(item.amount || item.Amount || 0) > 0 ||
+            String(item.title || item.Keterangan || '').trim() !== ''
+          );
+          if (latestInternal) {
+            const txType = String(latestInternal.type || latestInternal.Tipe || '').toLowerCase();
+            setInternalLastTx({
+              date: formatTxDate(pickDateField(latestInternal)),
+              note: String(latestInternal.title || latestInternal.Keterangan || latestInternal.category || latestInternal.Kategori || 'Transaksi').trim(),
+              amount: Number(latestInternal.amount || latestInternal.Amount || 0),
+              type: txType === 'income' ? 'in' : (txType === 'expense' ? 'out' : 'unknown')
+            });
+          } else {
+            setInternalLastTx(null);
+          }
         }
 
         // Fetch Kas TU
@@ -96,6 +151,22 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           balance = totalDebit - totalKredit;
           
           setTuFinance({ balance, expense: totalKredit });
+
+          const latestTU = pickLatestRow(dataTU, (item: any) =>
+            Number(item.debit || item.Debit || 0) > 0 || Number(item.kredit || item.Kredit || 0) > 0
+          );
+          if (latestTU) {
+            const debit = Number(latestTU.debit || latestTU.Debit || 0);
+            const kredit = Number(latestTU.kredit || latestTU.Kredit || 0);
+            setTuLastTx({
+              date: formatTxDate(pickDateField(latestTU)),
+              note: String(latestTU.keterangan || latestTU.Keterangan || 'Tanpa keterangan').trim(),
+              amount: debit > 0 ? debit : kredit,
+              type: debit > 0 ? 'in' : 'out'
+            });
+          } else {
+            setTuLastTx(null);
+          }
         }
 
         // Fetch Kas AC
@@ -119,6 +190,22 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           balance = totalDebit - totalKredit;
           
           setAcFinance({ balance, expense: totalKredit });
+
+          const latestAC = pickLatestRow(dataAC, (item: any) =>
+            Number(item.debit || item.Debit || 0) > 0 || Number(item.kredit || item.Kredit || 0) > 0
+          );
+          if (latestAC) {
+            const debit = Number(latestAC.debit || latestAC.Debit || 0);
+            const kredit = Number(latestAC.kredit || latestAC.Kredit || 0);
+            setAcLastTx({
+              date: formatTxDate(pickDateField(latestAC)),
+              note: String(latestAC.keterangan || latestAC.Keterangan || 'Tanpa keterangan').trim(),
+              amount: debit > 0 ? debit : kredit,
+              type: debit > 0 ? 'in' : 'out'
+            });
+          } else {
+            setAcLastTx(null);
+          }
         }
       } catch (error) {
         console.error("Dashboard monitor fetch error:", error);
@@ -780,6 +867,19 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                  </div>
                </div>
              )}
+             <div style={{ marginTop: '0.85rem', paddingTop: '0.65rem', borderTop: '1px dashed var(--border-subtle)' }}>
+               <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Transaksi terakhir</div>
+               {internalLastTx ? (
+                 <div style={{ marginTop: '0.2rem', fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: '1.45' }}>
+                   <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{internalLastTx.date}</span> · {internalLastTx.note}
+                   <span style={{ marginLeft: '0.45rem', fontWeight: 700, color: internalLastTx.type === 'in' ? 'var(--accent-emerald)' : internalLastTx.type === 'out' ? 'var(--accent-rose)' : 'var(--text-primary)' }}>
+                     {txAmountText(internalLastTx.amount, internalLastTx.type)}
+                   </span>
+                 </div>
+               ) : (
+                 <div style={{ marginTop: '0.2rem', fontSize: '0.72rem', color: 'var(--text-muted)' }}>Belum ada transaksi.</div>
+               )}
+             </div>
           </div>
 
           {/* TU Cash Monitor */}
@@ -805,6 +905,17 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                </div>
                <a href="#/operational-cash" style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--accent-rose)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.3rem 0.6rem', background: 'rgba(244,63,94,0.1)', borderRadius: '8px', border: '1px solid rgba(244,63,94,0.2)' }}>Lihat Detail →</a>
              </div>
+             <div style={{ marginTop: '0.7rem', fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: '1.45' }}>
+               <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.15rem' }}>Transaksi terakhir</div>
+               {tuLastTx ? (
+                 <span>
+                   <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{tuLastTx.date}</span> · {tuLastTx.note}
+                   <span style={{ marginLeft: '0.45rem', fontWeight: 700, color: tuLastTx.type === 'in' ? 'var(--accent-emerald)' : 'var(--accent-rose)' }}>
+                     {txAmountText(tuLastTx.amount, tuLastTx.type)}
+                   </span>
+                 </span>
+               ) : 'Belum ada transaksi.'}
+             </div>
           </div>
 
           {/* AC Cash Monitor */}
@@ -829,6 +940,17 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                   <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--accent-emerald)' }}>{financeLoading ? '---' : formatIDR(acFinance.expense)}</div>
                </div>
                <a href="#/ac-cash" style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--accent-emerald)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.3rem 0.6rem', background: 'rgba(16,185,129,0.1)', borderRadius: '8px', border: '1px solid rgba(16,185,129,0.2)' }}>Lihat Detail →</a>
+             </div>
+             <div style={{ marginTop: '0.7rem', fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: '1.45' }}>
+               <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.15rem' }}>Transaksi terakhir</div>
+               {acLastTx ? (
+                 <span>
+                   <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{acLastTx.date}</span> · {acLastTx.note}
+                   <span style={{ marginLeft: '0.45rem', fontWeight: 700, color: acLastTx.type === 'in' ? 'var(--accent-emerald)' : 'var(--accent-rose)' }}>
+                     {txAmountText(acLastTx.amount, acLastTx.type)}
+                   </span>
+                 </span>
+               ) : 'Belum ada transaksi.'}
              </div>
           </div>
         </div>
