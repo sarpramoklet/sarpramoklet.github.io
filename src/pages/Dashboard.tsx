@@ -25,6 +25,45 @@ const monthMap: any = {
   'Jul': 6, 'Agt': 7, 'Sep': 8, 'Okt': 9, 'Nov': 10, 'Des': 11 
 };
 const monthList = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
+const parseWifiDateValue = (raw: any): Date | null => {
+  const s = String(raw || '').trim();
+  if (!s) return null;
+
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  const dmy = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{2}|\d{4})$/);
+  if (dmy) {
+    const dd = parseInt(dmy[1], 10) || 1;
+    const mm = (parseInt(dmy[2], 10) || 1) - 1;
+    const yyRaw = parseInt(dmy[3], 10) || 0;
+    const yyyy = yyRaw < 100 ? 2000 + yyRaw : yyRaw;
+    return new Date(yyyy, mm, dd);
+  }
+
+  const parts = s.split(' ');
+  if (parts.length >= 3 && monthMap[parts[1]] !== undefined) {
+    const dd = parseInt(parts[0], 10) || 1;
+    const mm = monthMap[parts[1]];
+    const yyRaw = parseInt(parts[2], 10) || 0;
+    const yyyy = yyRaw < 100 ? 2000 + yyRaw : yyRaw;
+    return new Date(yyyy, mm, dd);
+  }
+
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+};
+
+const formatWifiDateDisplay = (raw: any): string => {
+  const d = parseWifiDateValue(raw);
+  if (!d) return String(raw || '-');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = monthList[d.getMonth()] || 'Jan';
+  const yy = String(d.getFullYear()).slice(-2);
+  return `${dd} ${mm} ${yy}`;
+};
 
 const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => {
   const currentUser = getCurrentUser();
@@ -388,33 +427,28 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         const data = await resp.json();
         if (data && Array.isArray(data) && data.length > 0) {
           const mapped = data.filter((d:any) => (d.id || d.ID) && (d.tanggal || d.Tanggal)).map((item:any) => {
-            let dateStr = String(item.tanggal || item.Tanggal || '').trim();
+            const dateStr = String(item.tanggal || item.Tanggal || '').trim();
+            const parsed = parseWifiDateValue(dateStr);
 
             return {
               id: item.id || item.ID,
-              date: dateStr,
-              count: parseInt(item.count || item.Count || 0)
+              date: formatWifiDateDisplay(dateStr),
+              count: parseInt(item.count || item.Count || 0),
+              _sortTs: parsed ? parsed.getTime() : 0
             };
           });
 
           // Sorting Berdasarkan Tanggal
           mapped.sort((a, b) => {
-            const parseDate = (s: string) => {
-              const p = s.split(' ');
-              const d = parseInt(p[0]) || 1;
-              const m = monthMap[p[1]] || 0;
-              const y = p[2] ? (p[2].length === 2 ? 2000 + parseInt(p[2]) : parseInt(p[2])) : 2026;
-              return new Date(y, m, d).getTime();
-            };
-            return parseDate(a.date) - parseDate(b.date);
+            return a._sortTs - b._sortTs;
           });
 
-          setWifiData(mapped);
+          setWifiData(mapped.map(({ _sortTs, ...rest }) => rest));
         } else {
-           setWifiData(initialDeviceData); // Fallback to demo layout logic
+           setWifiData(initialDeviceData.map((d) => ({ ...d, date: formatWifiDateDisplay(d.date) }))); // Fallback to demo layout logic
         }
       } catch (e) {
-        setWifiData(initialDeviceData);
+        setWifiData(initialDeviceData.map((d) => ({ ...d, date: formatWifiDateDisplay(d.date) })));
       } finally {
         setWifiLoading(false);
       }
@@ -678,10 +712,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                       fontSize={11}
                       tickLine={false}
                       axisLine={false}
-                      tickFormatter={(val) => {
-                        const parts = String(val).split('-');
-                        return parts.length === 3 ? `${parts[0]}/${parts[1]}` : String(val).replace(/\s+2026|\s+26/g, '');
-                      }}
+                      tickFormatter={(val) => formatWifiDateDisplay(val)}
                     />
                     <YAxis
                       domain={['dataMin - 50', 'dataMax + 50']}
@@ -694,10 +725,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                     <RechartsTooltip
                       contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-focus)', borderRadius: '8px', fontSize: '11px' }}
                       formatter={(value: any) => [`${Number(value).toLocaleString()} Perangkat`, 'Total Client']}
-                      labelFormatter={(label) => {
-                        const parts = String(label).split('-');
-                        return parts.length === 3 ? `${parts[0]}-${parts[1]}-${parts[2]}` : String(label).replace(/\s+2026|\s+26/g, '');
-                      }}
+                      labelFormatter={(label) => formatWifiDateDisplay(label)}
                     />
                     <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={60}>
                       {wifiData.map((entry: any, index: number) => {
