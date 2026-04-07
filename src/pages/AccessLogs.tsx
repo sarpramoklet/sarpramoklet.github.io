@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { History, Search, RefreshCw, User, ShieldCheck, Clock, Shield } from 'lucide-react';
+import { History, Search, RefreshCw, ShieldCheck, Clock, Shield } from 'lucide-react';
 import { getCurrentUser, ROLES } from '../data/organization';
 
 const LOG_API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
@@ -195,8 +195,16 @@ const AccessLogs = () => {
               >
                 <td style={{ padding: '1.25rem 1.5rem', verticalAlign: 'middle' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-blue-ghost), transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border-subtle)', flexShrink: 0 }}>
-                      <User size={18} color="var(--accent-blue)" />
+                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', overflow: 'hidden', border: '1px solid var(--border-subtle)', background: 'var(--bg-card)', flexShrink: 0 }}>
+                      <img 
+                        src={log.ProfilePicture || log.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(log.nama || log.Nama || 'User')}&background=random&color=fff`} 
+                        alt={log.nama || log.Nama}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(log.nama || log.Nama || 'User')}&background=random&color=fff`;
+                        }}
+                      />
                     </div>
                     <div>
                       <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.95rem', marginBottom: '1px' }}>{log.nama || log.Nama}</div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, User, Loader2, X, RefreshCw, Edit3, Trash2 } from 'lucide-react';
+import { Plus, Search, Loader2, X, RefreshCw, Edit3, Trash2 } from 'lucide-react';
 import { USERS, getCurrentUser } from '../data/organization';
 import { logAccess } from '../utils/logger';
 
@@ -274,8 +274,17 @@ const DutyNotes = () => {
 
             <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'var(--accent-blue-ghost)', color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <User size={14} />
+                <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--accent-blue-ghost)', color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '1px solid var(--border-subtle)' }}>
+                  {(() => {
+                    const sender = USERS.find(u => u.nama === note.keterangan);
+                    return (
+                      <img 
+                        src={sender?.fotoProfil || `https://ui-avatars.com/api/?name=${encodeURIComponent(note.keterangan)}&background=random&color=fff`} 
+                        alt={note.keterangan}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    );
+                  })()}
                 </div>
                 <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{note.keterangan}</span>
               </div>

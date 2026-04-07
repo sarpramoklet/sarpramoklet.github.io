@@ -53,6 +53,8 @@ export interface User {
   id: string;
   nama: string;
   nip: string;
+  email: string;
+  fotoProfil?: string;
   jabatan: string;
   roleAplikasi: string;
   unit: string;
@@ -67,6 +69,8 @@ export const USERS: User[] = [
     id: 'U001',
     nama: 'Mokhamad Hadi Wijaya, M.T.',
     nip: '07860075',
+    email: 'hadi@smktelkom-mlg.sch.id',
+    fotoProfil: 'https://lh3.googleusercontent.com/a-/ALV-EMh-M9g9-9g9-9g9-9g9-9g9-9g9-9g9-9g9-9g9-9g9', // Placeholder, user will sync
     jabatan: 'Waka. Bidang IT, Lab., dan Sarpra',
     roleAplikasi: ROLES.PIMPINAN,
     unit: 'Semua Unit',
@@ -79,6 +83,7 @@ export const USERS: User[] = [
     id: 'U002',
     nama: 'Whyna Agustin, S.Pd.',
     nip: '25950025',
+    email: 'whyna@smktelkom-mlg.sch.id',
     jabatan: 'Kaur IT (Information of Technology)',
     roleAplikasi: ROLES.KOORDINATOR_IT,
     unit: 'IT',
@@ -91,6 +96,7 @@ export const USERS: User[] = [
     id: 'U003',
     nama: 'Muhammad Chusni Agus, M.Pd.',
     nip: '22880006',
+    email: 'chusni@smktelkom-mlg.sch.id',
     jabatan: 'Kaur. Laboratorium',
     roleAplikasi: ROLES.KOORDINATOR_LAB,
     unit: 'Laboratorium',
@@ -103,6 +109,7 @@ export const USERS: User[] = [
     id: 'U004',
     nama: 'Ekon Anjar Poernomo, S.Kom.',
     nip: '11820014',
+    email: 'ekon.a.poernomo@smktelkom-mlg.sch.id',
     jabatan: 'Kaur Sarana dan Prasarana',
     roleAplikasi: ROLES.KOORDINATOR_SARPRAS,
     unit: 'Sarpras',
@@ -115,6 +122,7 @@ export const USERS: User[] = [
     id: 'U005',
     nama: 'Amalia Ramadhanty, S.Kom.',
     nip: '25940004',
+    email: 'amalia@smktelkom-mlg.sch.id',
     jabatan: 'PIC. Administrasi, Tata Kelola, dan Keuangan',
     roleAplikasi: ROLES.PIC_ADMIN,
     unit: 'Tata Kelola',
@@ -127,6 +135,7 @@ export const USERS: User[] = [
     id: 'U006',
     nama: 'Zainul Abidin, S.Kom.',
     nip: '20820006',
+    email: 'zainul@smktelkom-mlg.sch.id',
     jabatan: 'PIC. IT. Mobile Developer & Technical Support',
     roleAplikasi: ROLES.PIC_IT_MOBILE,
     unit: 'IT',
@@ -139,6 +148,7 @@ export const USERS: User[] = [
     id: 'U007',
     nama: 'Zakaria, S.Pd.',
     nip: '25960026',
+    email: 'zakaria@smktelkom-mlg.sch.id',
     jabatan: 'PIC. IT. Backend & DevOps',
     roleAplikasi: ROLES.PIC_IT_BACKEND,
     unit: 'IT',
@@ -151,6 +161,7 @@ export const USERS: User[] = [
     id: 'U008',
     nama: 'Chandra Wijaya Kristanto, S.Pd.',
     nip: '25980017',
+    email: 'chandra@smktelkom-mlg.sch.id',
     jabatan: 'PIC. IT. UI/UX & Frontend Developer',
     roleAplikasi: ROLES.PIC_IT_UIUX,
     unit: 'IT',
@@ -163,6 +174,7 @@ export const USERS: User[] = [
     id: 'U009',
     nama: 'Muhammad Bagus Arifin, S.Pd.',
     nip: '26960021',
+    email: 'bagus@smktelkom-mlg.sch.id',
     jabatan: 'PIC. IT. Technical Support',
     roleAplikasi: ROLES.PIC_IT_SUPPORT,
     unit: 'IT',
@@ -175,6 +187,7 @@ export const USERS: User[] = [
     id: 'U010',
     nama: 'Nico Rachmacandrana, S.ST.',
     nip: '26910009',
+    email: 'nico@smktelkom-mlg.sch.id',
     jabatan: 'PIC. IT. Infrastructure & Network',
     roleAplikasi: ROLES.PIC_IT_NETWORK,
     unit: 'IT',
@@ -187,6 +200,7 @@ export const USERS: User[] = [
     id: 'U011',
     nama: 'Firmansyah Ayatullah, S.Kom.',
     nip: '25890012',
+    email: 'ayat@smktelkom-mlg.sch.id',
     jabatan: 'PIC. Laboratorium Riset',
     roleAplikasi: ROLES.PIC_LAB_RISET,
     unit: 'Laboratorium',
@@ -199,6 +213,7 @@ export const USERS: User[] = [
     id: 'U012',
     nama: 'Rudi Mistriono, S.Kom.',
     nip: '25900022',
+    email: 'rudimistriono@smktelkom-mlg.sch.id',
     jabatan: 'PIC. Pengelola Dapodik & Inventaris Aset Sekolah',
     roleAplikasi: ROLES.PIC_DAPODIK,
     unit: 'Sarpras',
@@ -211,6 +226,7 @@ export const USERS: User[] = [
     id: 'U013',
     nama: 'Setdiyoko, S.E.',
     nip: '95710035',
+    email: 'yoko@smktelkom-mlg.sch.id',
     jabatan: 'PIC. Sapra, Kebersihan, Keamanan dan Perlengkapan',
     roleAplikasi: ROLES.PIC_SARPRAS_UMUM,
     unit: 'Sarpras',

@@ -1,5 +1,5 @@
 import { USERS, getCurrentUser, ROLES } from '../data/organization';
-import { Search, ShieldCheck, UserCircle2, Edit3, Calendar, Plus, X, Save } from 'lucide-react';
+import { Search, ShieldCheck, Edit3, Calendar, Plus, X, Save } from 'lucide-react';
 import { useState } from 'react';
 
 const Personnel = () => {
@@ -90,8 +90,16 @@ const Personnel = () => {
               <tr className="ticket-row" key={user.id}>
                 <td>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <div className="mobile-hide" style={{ padding: '8px', background: 'var(--bg-primary)', borderRadius: '50%', border: '1px solid var(--border-subtle)' }}>
-                      <UserCircle2 size={20} color="var(--accent-blue)" />
+                    <div className="mobile-hide" style={{ width: '40px', height: '40px', borderRadius: '50%', overflow: 'hidden', border: '1px solid var(--border-subtle)', background: 'var(--bg-primary)' }}>
+                      <img 
+                        src={user.fotoProfil || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.nama)}&background=random&color=fff`} 
+                        alt={user.nama}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.nama)}&background=random&color=fff`;
+                        }}
+                      />
                     </div>
                     <div>
                       <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{user.nama}</div>
@@ -140,8 +148,12 @@ const Personnel = () => {
             </button>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '1rem' }}>
-              <div style={{ padding: '12px', background: 'var(--accent-blue-ghost)', borderRadius: '50%', color: 'var(--accent-blue)' }}>
-                <UserCircle2 size={32} />
+              <div style={{ width: '64px', height: '64px', background: 'var(--accent-blue-ghost)', borderRadius: '50%', color: 'var(--accent-blue)', overflow: 'hidden', border: '2px solid var(--accent-blue)' }}>
+                <img 
+                  src={selectedUser.fotoProfil || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedUser.nama)}&background=random&color=fff`} 
+                  alt={selectedUser.nama}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
               </div>
               <div>
                 <h2 style={{ fontSize: '1.25rem', margin: 0 }}>Kelola Personel: {selectedUser.nama}</h2>

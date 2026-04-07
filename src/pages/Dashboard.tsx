@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, LabelList, LineChart, Line, Legend } from 'recharts';
-import { UserCircle2, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, ShieldCheck, MessageSquare, AlertCircle, Edit3, Trash2, Wind, Briefcase, Smartphone, Activity, Coins, Camera, X } from 'lucide-react';
+import { UserCircle2, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, MessageSquare, AlertCircle, Edit3, Trash2, Wind, Briefcase, Smartphone, Activity, Coins, Camera, X } from 'lucide-react';
 import { getCurrentUser, ROLES, USERS } from '../data/organization';
 import { getUtilityChartData } from '../data/utilities';
 
@@ -1128,12 +1128,21 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                     {item.day}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {item.personnel.map((p, pIdx) => (
-                      <div key={pIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: p === 'Rudi' ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
-                        {p === 'Rudi' ? <ShieldCheck size={14} color="var(--accent-blue)" /> : <UserCheck size={14} />}
-                        <span style={{ fontWeight: p === 'Rudi' ? 600 : 400 }}>{p}</span>
-                      </div>
-                    ))}
+                    {item.personnel.map((p, pIdx) => {
+                      const user = USERS.find(u => u.nama.includes(p));
+                      return (
+                        <div key={pIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.8rem', color: p === 'Rudi' ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
+                          <div style={{ width: '22px', height: '22px', borderRadius: '50%', overflow: 'hidden', border: '1px solid var(--border-subtle)', background: 'var(--bg-primary)', flexShrink: 0 }}>
+                            <img 
+                              src={user?.fotoProfil || `https://ui-avatars.com/api/?name=${encodeURIComponent(p)}&background=random&color=fff`} 
+                              alt={p}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                          </div>
+                          <span style={{ fontWeight: p === 'Rudi' ? 600 : 400 }}>{p}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               );
