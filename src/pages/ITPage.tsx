@@ -83,6 +83,42 @@ const toDisplayDate = (dateStr: string): string => {
   return norm || '-';
 };
 
+const normalizeWifiDateFromDb = (raw: any): string => {
+  const s = String(raw || '').trim();
+  if (!s) return '';
+
+  // Kasus dari Sheet sering jadi ISO dan bisa kebalik month/day untuk input dd-mm.
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) {
+      let dd = d.getDate();
+      let mm = d.getMonth() + 1;
+      const yy = d.getFullYear() % 100;
+      // Jika ambigu (dua-duanya <=12), asumsikan tersimpan terbalik dan tukar.
+      if (dd <= 12 && mm <= 12) {
+        const tmp = dd;
+        dd = mm;
+        mm = tmp;
+      }
+      return `${String(dd).padStart(2, '0')}-${String(mm).padStart(2, '0')}-${String(yy).padStart(2, '0')}`;
+    }
+  }
+
+  return formatDate(s);
+};
+
+const toSheetWifiDate = (value: string): string => {
+  const norm = formatDate(value || '');
+  const p = norm.split('-');
+  if (p.length === 3) {
+    const dd = String(parseInt(p[0], 10) || 0).padStart(2, '0');
+    const mIdx = (parseInt(p[1], 10) || 1) - 1;
+    const yy = String(parseInt(p[2], 10) || 0).padStart(2, '0');
+    return `${dd} ${monthList[mIdx] || 'Jan'} ${yy}`;
+  }
+  return value;
+};
+
 const isShortDate = (dateStr: string): boolean => /^\d{2}-\d{2}-\d{2}$/.test(dateStr);
 
 const inferDateFromNetId = (id: any): string => {
@@ -436,7 +472,7 @@ const ITPage = () => {
           let dateStr = String(item.tanggal || item.Tanggal || '').trim();
           return {
             id: item.id || item.ID,
-            date: formatDate(dateStr),
+            date: normalizeWifiDateFromDb(dateStr),
             count: parseInt(item.count || item.Count || 0),
             overloads: parseInt(item.overloads || item.Overloads || 0),
             note: item.note || item.Note || "",
@@ -650,6 +686,7 @@ const ITPage = () => {
     try {
       const previews = deviceData.filter(d => d.isPreview);
       for (const item of previews) {
+        const sheetDate = toSheetWifiDate(item.date);
         await fetch(API_URL, {
           method: "POST",
           mode: "no-cors",
@@ -660,8 +697,8 @@ const ITPage = () => {
             sheet: 'Monitor_Wifi',
             id: `WIFI-${item.id}`,
             ID: `WIFI-${item.id}`,
-            tanggal: item.date,
-            Tanggal: item.date,
+            tanggal: sheetDate,
+            Tanggal: sheetDate,
             count: item.count.toString(),
             Count: item.count.toString(),
             overloads: item.overloads.toString(),
@@ -729,6 +766,7 @@ const ITPage = () => {
     const newId = (isEditing && currentId !== null) ? currentId : `WIFI-${Date.now()}`;
     // format date dari yyyy-mm-dd (input type=date) ke dd-mm-yy
     const formattedDate = formatDate(formData.date);
+    const sheetDate = toSheetWifiDate(formattedDate);
     const sortFn = (a: any, b: any) => {
       const p = (s: string) => { const x = s.split('-'); return x.length===3 ? new Date(2000+(parseInt(x[2])||0), (parseInt(x[1])||1)-1, parseInt(x[0])||1).getTime() : 0; };
       return p(a.date) - p(b.date);
@@ -759,8 +797,8 @@ const ITPage = () => {
           sheet: 'Monitor_Wifi',
           id: newId,
           ID: newId,
-          tanggal: formattedDate,
-          Tanggal: formattedDate,
+          tanggal: sheetDate,
+          Tanggal: sheetDate,
           count: formData.count,
           Count: formData.count,
           overloads: formData.overloads,
