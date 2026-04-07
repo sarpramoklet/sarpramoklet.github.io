@@ -1,10 +1,13 @@
 import { USERS, getCurrentUser, ROLES } from '../data/organization';
-import { Briefcase, Search, AlertTriangle, CheckSquare, UserCheck2, Plus } from 'lucide-react';
+import { Briefcase, Search, AlertTriangle, CheckSquare, Plus } from 'lucide-react';
 import { useState } from 'react';
+import { useProfileThumbByEmail } from '../hooks/useProfileThumbByEmail';
+import UserAvatar from '../components/UserAvatar';
 
 const Assignment = () => {
   const currentUser = getCurrentUser();
   const [searchTerm, setSearchTerm] = useState('');
+  const profileThumbByEmail = useProfileThumbByEmail();
 
   const isKaur = currentUser.roleAplikasi.includes('Koordinator');
   const isPimpinan = currentUser.roleAplikasi === ROLES.PIMPINAN;
@@ -72,9 +75,14 @@ const Assignment = () => {
             
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <div style={{ padding: '8px', background: 'var(--bg-primary)', borderRadius: '50%', border: '1px solid var(--border-subtle)' }}>
-                  <UserCheck2 size={24} color={assignment.loadKerja > 85 ? 'var(--accent-rose)' : 'var(--accent-blue)'} />
-                </div>
+                <UserAvatar
+                  name={assignment.nama}
+                  email={assignment.email}
+                  photoUrl={assignment.fotoProfil}
+                  profileThumbByEmail={profileThumbByEmail}
+                  size={40}
+                  border={`1px solid ${assignment.loadKerja > 85 ? 'var(--accent-rose)' : 'var(--accent-blue)'}`}
+                />
                 <div>
                   <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{assignment.nama}</div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{assignment.jabatan}</div>

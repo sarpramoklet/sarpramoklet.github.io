@@ -1,5 +1,7 @@
 import { USERS } from '../data/organization';
-import { Search, Filter, TrendingUp, Award, Clock10, ShieldCheck } from 'lucide-react';
+import { Search, Filter, TrendingUp, Clock10, ShieldCheck } from 'lucide-react';
+import { useProfileThumbByEmail } from '../hooks/useProfileThumbByEmail';
+import UserAvatar from '../components/UserAvatar';
 
 const mockPerformance = USERS.filter(u => u.atasanLangsung !== null).map((user) => {
   return {
@@ -12,6 +14,8 @@ const mockPerformance = USERS.filter(u => u.atasanLangsung !== null).map((user) 
 });
 
 const Performance = () => {
+  const profileThumbByEmail = useProfileThumbByEmail();
+
   return (
     <div className="animate-fade-in" style={{ paddingBottom: '3rem' }}>
       <div className="flex-row-responsive" style={{ marginBottom: '2rem' }}>
@@ -54,8 +58,15 @@ const Performance = () => {
               <tr className="ticket-row" key={perf.id}>
                 <td>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <div className="mobile-hide" style={{ padding: '8px', background: 'var(--bg-primary)', borderRadius: '50%', border: '1px solid var(--border-subtle)' }}>
-                      <Award size={20} color={perf.sla >= 95 ? 'var(--accent-emerald)' : 'var(--text-secondary)'} />
+                    <div className="mobile-hide">
+                      <UserAvatar
+                        name={perf.nama}
+                        email={perf.email}
+                        photoUrl={perf.fotoProfil}
+                        profileThumbByEmail={profileThumbByEmail}
+                        size={36}
+                        border={`1px solid ${perf.sla >= 95 ? 'var(--accent-emerald)' : 'var(--border-subtle)'}`}
+                      />
                     </div>
                     <div>
                       <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{perf.nama}</div>

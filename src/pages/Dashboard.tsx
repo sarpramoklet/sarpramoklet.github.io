@@ -3,6 +3,9 @@ import { XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveCont
 import { UserCircle2, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, MessageSquare, AlertCircle, Edit3, Trash2, Wind, Briefcase, Smartphone, Activity, Coins, Camera, X } from 'lucide-react';
 import { getCurrentUser, ROLES, USERS } from '../data/organization';
 import { getUtilityChartData } from '../data/utilities';
+import { useProfileThumbByEmail } from '../hooks/useProfileThumbByEmail';
+import UserAvatar from '../components/UserAvatar';
+import { getMotivationForLogin } from '../utils/motivation';
 
 const FINANCE_API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 
@@ -187,7 +190,9 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   const [netSnapshotThumb, setNetSnapshotThumb] = useState<any>(null);
   const [netSnapshotLightbox, setNetSnapshotLightbox] = useState<{ src: string; tanggal: string } | null>(null);
   const sortedCapexProjects = capexProjects.slice().sort((a, b) => b.progress - a.progress);
-  const [profileThumbByEmail, setProfileThumbByEmail] = useState<Record<string, string>>({});
+  const profileThumbByEmail = useProfileThumbByEmail();
+  const loginSessionSeed = localStorage.getItem('loginSessionSeed') || '';
+  const motivationText = getMotivationForLogin(currentUser, loginSessionSeed);
 
 
   const personnelForDashboard = USERS;
@@ -618,38 +623,10 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       }
     };
 
-    const fetchProfileThumbs = async () => {
-      try {
-        const resp = await fetch(`${FINANCE_API_URL}?sheetName=Log_Akses`);
-        const data = await resp.json();
-        if (!data || !Array.isArray(data)) return;
-
-        const map: Record<string, string> = {};
-        data.forEach((row: any) => {
-          const email = String(row.Email || row.email || '').trim().toLowerCase();
-          if (!email) return;
-          const picture = String(
-            row.ProfilePicture ||
-            row.profilePicture ||
-            row.Picture ||
-            row.picture ||
-            row.UserPicture ||
-            row.userPicture ||
-            ''
-          ).trim();
-          if (picture) map[email] = picture;
-        });
-        setProfileThumbByEmail(map);
-      } catch (e) {
-        console.error("Profile thumbs fetch error:", e);
-      }
-    };
-
     fetchACMonitor();
     fetchCapexProjects();
     fetchWifiMonitor();
     fetchNetSnapshot();
-    fetchProfileThumbs();
 
   }, [isAuthorizedFinance, isLoggedIn]);
 
@@ -707,13 +684,13 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       const d = new Date(dateValue);
       if (isNaN(d.getTime())) return dateValue;
       
-      const mm = String(d.getMonth() + 1).padStart(2, '0');
       const dd = String(d.getDate()).padStart(2, '0');
-      const yyyy = d.getFullYear();
-      const h = d.getHours();
-      const m = String(d.getMinutes()).padStart(2, '0');
+      const mmm = monthList[d.getMonth()] || 'Jan';
+      const yy = String(d.getFullYear()).slice(-2);
+      const hh = String(d.getHours()).padStart(2, '0');
+      const mm = String(d.getMinutes()).padStart(2, '0');
       
-      return `${mm}-${dd}-${yyyy} ${h}:${m}`;
+      return `${dd} ${mmm} ${yy} ${hh}:${mm}`;
     } catch (e) {
       return dateValue;
     }
@@ -879,8 +856,8 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
             )}
           </div>
           <div>
-            <h2 style={{ fontSize: '1rem', margin: 0, fontWeight: 700 }}>Hai, {getCurrentUser().nama.split(' ')[0]}!</h2>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0 0', fontStyle: 'italic', opacity: 0.9 }}>"Melayani dengan hati, memberikan yang terbaik untuk setiap solusi."</p>
+            <h2 style={{ fontSize: '1rem', margin: 0, fontWeight: 700 }}>Hai, {currentUser.nama.split(' ')[0]}!</h2>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0 0', fontStyle: 'italic', opacity: 0.9 }}>"{motivationText}"</p>
           </div>
         </div>
       )}
@@ -1146,13 +1123,13 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                       const user = USERS.find(u => u.nama.includes(p));
                       return (
                         <div key={pIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.8rem', color: p === 'Rudi' ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
-                          <div style={{ width: '22px', height: '22px', borderRadius: '50%', overflow: 'hidden', border: '1px solid var(--border-subtle)', background: 'var(--bg-primary)', flexShrink: 0 }}>
-                            <img 
-                              src={user?.fotoProfil || `https://ui-avatars.com/api/?name=${encodeURIComponent(p)}&background=random&color=fff`} 
-                              alt={p}
-                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            />
-                          </div>
+                          <UserAvatar
+                            name={user?.nama || p}
+                            email={user?.email}
+                            photoUrl={user?.fotoProfil}
+                            profileThumbByEmail={profileThumbByEmail}
+                            size={22}
+                          />
                           <span style={{ fontWeight: p === 'Rudi' ? 600 : 400 }}>{p}</span>
                         </div>
                       );
@@ -1231,7 +1208,19 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                   </p>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: 'var(--accent-blue)', fontWeight: 600 }}>
-                      <UserCircle2 size={14} /> {note.keterangan.split(' ')[0]}
+                      {(() => {
+                        const sender = USERS.find((u) => u.nama === note.keterangan);
+                        return (
+                          <UserAvatar
+                            name={note.keterangan}
+                            email={sender?.email}
+                            photoUrl={sender?.fotoProfil}
+                            profileThumbByEmail={profileThumbByEmail}
+                            size={18}
+                          />
+                        );
+                      })()}
+                      {note.keterangan.split(' ')[0]}
                     </div>
                     
                     <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
@@ -1497,17 +1486,17 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         </div>
         <div style={{ padding: '1rem 1.25rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '0.8rem' }}>
           {personnelForDashboard.map((person) => {
-            const thumb = (person.email ? profileThumbByEmail[person.email.toLowerCase()] : '') || person.fotoProfil;
             return (
               <div key={person.id} className="glass-panel" style={{ padding: '0.85rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-subtle)' }}>
                 <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'flex-start' }}>
-                  <div style={{ width: '38px', height: '38px', borderRadius: '50%', overflow: 'hidden', flexShrink: 0, border: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {thumb ? (
-                      <img src={thumb} alt={person.nama} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      <UserCircle2 size={20} color="var(--text-muted)" />
-                    )}
-                  </div>
+                  <UserAvatar
+                    name={person.nama}
+                    email={person.email}
+                    photoUrl={person.fotoProfil}
+                    profileThumbByEmail={profileThumbByEmail}
+                    size={38}
+                    background="rgba(255,255,255,0.03)"
+                  />
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
                       <div style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.35 }}>

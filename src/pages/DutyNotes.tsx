@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Search, Loader2, X, RefreshCw, Edit3, Trash2 } from 'lucide-react';
 import { USERS, getCurrentUser } from '../data/organization';
 import { logAccess } from '../utils/logger';
+import { useProfileThumbByEmail } from '../hooks/useProfileThumbByEmail';
+import UserAvatar from '../components/UserAvatar';
 
 // URL Apps Script DB_Sarpramoklet (URL Terbaru)
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
@@ -13,38 +15,7 @@ const DutyNotes = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingNote, setEditingNote] = useState<any>(null);
-  const [profileThumbByEmail, setProfileThumbByEmail] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    const fetchProfileThumbs = async () => {
-      try {
-        const resp = await fetch(`${API_URL}?sheetName=Log_Akses`);
-        const data = await resp.json();
-        if (!data || !Array.isArray(data)) return;
-
-        const map: Record<string, string> = {};
-        data.forEach((row: any) => {
-          const email = String(row.Email || row.email || '').trim().toLowerCase();
-          if (!email) return;
-          const picture = String(
-            row.ProfilePicture ||
-            row.profilePicture ||
-            row.Picture ||
-            row.picture ||
-            row.UserPicture ||
-            row.userPicture ||
-            ''
-          ).trim();
-          if (picture) map[email] = picture;
-        });
-        setProfileThumbByEmail(map);
-      } catch (e) {
-        console.error("Profile thumbs fetch error:", e);
-      }
-    };
-
-    fetchProfileThumbs();
-  }, []);
+  const profileThumbByEmail = useProfileThumbByEmail();
 
   const currentUser = getCurrentUser();
 
@@ -307,19 +278,19 @@ const DutyNotes = () => {
 
             <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--accent-blue-ghost)', color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '1px solid var(--border-subtle)' }}>
-                  {(() => {
-                    const sender = USERS.find(u => u.nama === note.keterangan);
-                    const thumb = (sender?.email ? profileThumbByEmail[sender.email.toLowerCase()] : '') || sender?.fotoProfil;
-                    return (
-                      <img 
-                        src={thumb || `https://ui-avatars.com/api/?name=${encodeURIComponent(note.keterangan)}&background=random&color=fff`} 
-                        alt={note.keterangan}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      />
-                    );
-                  })()}
-                </div>
+                {(() => {
+                  const sender = USERS.find(u => u.nama === note.keterangan);
+                  return (
+                    <UserAvatar
+                      name={note.keterangan}
+                      email={sender?.email}
+                      photoUrl={sender?.fotoProfil}
+                      profileThumbByEmail={profileThumbByEmail}
+                      size={28}
+                      background="var(--accent-blue-ghost)"
+                    />
+                  );
+                })()}
                 <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{note.keterangan}</span>
               </div>
               

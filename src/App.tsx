@@ -77,6 +77,9 @@ function App() {
 
   useEffect(() => {
     if (isLoggedIn) {
+      if (!localStorage.getItem('loginSessionSeed')) {
+        localStorage.setItem('loginSessionSeed', `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`);
+      }
       const user = getCurrentUser();
       logAccess(user);
     }
@@ -127,6 +130,7 @@ function App() {
                 <Login onLogin={(email, picture) => { 
                   localStorage.setItem('userEmail', email); 
                   if (picture) localStorage.setItem('userPicture', picture);
+                  localStorage.setItem('loginSessionSeed', `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`);
                   setIsLoggedIn(true); 
                   if (picture) setUserPicture(picture);
                 }} />

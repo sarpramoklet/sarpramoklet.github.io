@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Filter, Search, Plus, Loader2, X } from 'lucide-react';
-import { ORGANIZATION_UNITS } from '../data/organization';
+import { ORGANIZATION_UNITS, USERS } from '../data/organization';
+import { useProfileThumbByEmail } from '../hooks/useProfileThumbByEmail';
+import UserAvatar from '../components/UserAvatar';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbyyXOLhUEs7IaRtlAgq-S6On6KuUuaAGSkw-sG6IPLmFH1-YHPRT2ZvsNRcRbcUypHljg/exec";
 
@@ -24,6 +26,7 @@ const Tickets = () => {
     description: '',
     pic: ''
   });
+  const profileThumbByEmail = useProfileThumbByEmail();
 
   useEffect(() => {
     fetchTickets();
@@ -179,7 +182,24 @@ const Tickets = () => {
                     </div>
                   </div>
                 </td>
-                <td>{ticket.pic}</td>
+                <td>
+                  {(() => {
+                    const picName = String(ticket.pic || 'Belum Ada');
+                    const matchedUser = USERS.find((u) => u.nama.toLowerCase().includes(picName.toLowerCase()));
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                        <UserAvatar
+                          name={matchedUser?.nama || picName}
+                          email={matchedUser?.email}
+                          photoUrl={matchedUser?.fotoProfil}
+                          profileThumbByEmail={profileThumbByEmail}
+                          size={22}
+                        />
+                        <span>{picName}</span>
+                      </div>
+                    );
+                  })()}
+                </td>
               </tr>
             ))}
           </tbody>

@@ -2,6 +2,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { NAVIGATION } from '../navigation';
 import { UserCircle2, X, Sun, Moon, LogOut, LogIn } from 'lucide-react';
 import { getCurrentUser, ROLES } from '../data/organization';
+import { useProfileThumbByEmail } from '../hooks/useProfileThumbByEmail';
+import UserAvatar from './UserAvatar';
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -17,6 +19,8 @@ interface SidebarProps {
 const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMode, isLoggedIn = false, setIsLoggedIn, userPicture = '', setUserPicture }: SidebarProps) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const profileThumbByEmail = useProfileThumbByEmail();
+  const currentUser = getCurrentUser();
 
   const handleClose = () => {
     if (setIsOpen) setIsOpen(false);
@@ -52,19 +56,27 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
           {/* User Profile Info */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem', background: 'rgba(255,255,255,0.03)', borderRadius: '16px', border: '1px solid var(--border-subtle)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', overflow: 'hidden' }}>
-              <div style={{ padding: isLoggedIn && userPicture ? '0' : '6px', background: 'var(--bg-card)', borderRadius: '50%', border: '1px solid var(--border-subtle)', flexShrink: 0, width: '36px', height: '36px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {isLoggedIn && userPicture ? (
-                  <img src={userPicture} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  <UserCircle2 size={20} color={isLoggedIn ? "var(--accent-blue)" : "var(--text-secondary)"} />
-                )}
-              </div>
+              {isLoggedIn ? (
+                <UserAvatar
+                  name={currentUser.nama}
+                  email={currentUser.email}
+                  photoUrl={userPicture || currentUser.fotoProfil}
+                  profileThumbByEmail={profileThumbByEmail}
+                  size={36}
+                  border="1px solid var(--border-subtle)"
+                  background="var(--bg-card)"
+                />
+              ) : (
+                <div style={{ padding: '6px', background: 'var(--bg-card)', borderRadius: '50%', border: '1px solid var(--border-subtle)', flexShrink: 0, width: '36px', height: '36px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <UserCircle2 size={20} color="var(--text-secondary)" />
+                </div>
+              )}
               <div style={{ overflow: 'hidden' }}>
                 <p style={{ margin: 0, fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {isLoggedIn ? getCurrentUser().nama.split(',')[0] : 'Akses Publik'}
+                  {isLoggedIn ? currentUser.nama.split(',')[0] : 'Akses Publik'}
                 </p>
                 <p style={{ margin: 0, fontSize: '0.65rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {isLoggedIn ? getCurrentUser().jabatan : 'Tamu'}
+                  {isLoggedIn ? currentUser.jabatan : 'Tamu'}
                 </p>
               </div>
             </div>
@@ -87,6 +99,7 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
               onClick={() => {
                 localStorage.removeItem('userEmail');
                 localStorage.removeItem('userPicture');
+                localStorage.removeItem('loginSessionSeed');
                 if (setIsLoggedIn) setIsLoggedIn(false);
                 if (setUserPicture) setUserPicture('');
                 navigate('/');
@@ -128,7 +141,7 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
           }}
         >
           {(() => {
-            const user = getCurrentUser();
+            const user = currentUser;
             const userEmail = localStorage.getItem('userEmail') || '';
             const piketEmails = [
               'rudimistriono@smktelkom-mlg.sch.id',
