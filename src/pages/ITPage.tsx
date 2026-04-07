@@ -480,25 +480,49 @@ const ITPage = () => {
   };
 
   const handleSeedNetToDB = async () => {
-    if (!window.confirm("Kirim data contoh jaringan dari gambar ke DB? (Hanya klik sekali)")) return;
+    if (!window.confirm("Kirim 2 data awal jaringan (01-04-26 & 06-04-26) ke DB?")) return;
     setNetLoading(true);
     try {
-      const sampleItem = {
-        action: 'FINANCE_RECORD',
-        sheetName: 'Monitor_Net',
-        id: `NET-SAMPLE`,
-        tanggal: 'Senin, 06 Apr 2026',
-        i1_rx: '366', i1_tx: '21.8',
-        i2_rx: '253', i2_tx: '15.4',
-        i3_rx: '270', i3_tx: '18.7',
-        i4_rx: '101', i4_tx: '14.3',
-        i5_rx: '130', i5_tx: '5.44',
-        ast_rx: '28.9', ast_tx: '1.21',
-        dhcp_cpu: '12', dhcp_mem: '2', dhcp_disk: '18',
-        sang_cpu: '80', sang_mem: '48', sang_virt: '48', sang_disk: '45'
-      };
-      await fetch(API_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(sampleItem) });
-      alert('Berhasil seed data contoh jaringan!');
+      const seedRecords = [
+        {
+          id: 'NET-010426',
+          tanggal: '01-04-26',
+          i1_rx: '278', i1_tx: '30.9',
+          i2_rx: '277', i2_tx: '22.5',
+          i3_rx: '280', i3_tx: '58.6',
+          i4_rx: '162', i4_tx: '8.26',
+          i5_rx: '118', i5_tx: '8.75',
+          ast_rx: '5.97', ast_tx: '2.22',
+          dhcp_cpu: '13', dhcp_mem: '2', dhcp_disk: '18',
+          sang_cpu: '85', sang_mem: '48', sang_virt: '48', sang_disk: '45'
+        },
+        {
+          id: 'NET-060426',
+          tanggal: '06-04-26',
+          i1_rx: '366', i1_tx: '21.8',
+          i2_rx: '253', i2_tx: '15.4',
+          i3_rx: '270', i3_tx: '18.7',
+          i4_rx: '101', i4_tx: '14.3',
+          i5_rx: '130', i5_tx: '5.44',
+          ast_rx: '28.9', ast_tx: '1.21',
+          dhcp_cpu: '12', dhcp_mem: '2', dhcp_disk: '18',
+          sang_cpu: '80', sang_mem: '48', sang_virt: '48', sang_disk: '45'
+        }
+      ];
+
+      for (const record of seedRecords) {
+        await fetch(API_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          body: JSON.stringify({
+            action: 'FINANCE_RECORD',
+            sheetName: 'Monitor_Net',
+            ...record
+          })
+        });
+      }
+
+      alert('Berhasil seed 2 data awal jaringan!');
       fetchNetData();
     } catch (e) {
       alert('Gagal seed');
