@@ -82,6 +82,45 @@ const toDisplayDate = (dateStr: string): string => {
   return norm || '-';
 };
 
+const isShortDate = (dateStr: string): boolean => /^\d{2}-\d{2}-\d{2}$/.test(dateStr);
+
+const inferDateFromNetId = (id: any): string => {
+  const m = String(id || '').match(/NET-(\d{2})(\d{2})(\d{2})$/);
+  if (!m) return '';
+  return `${m[1]}-${m[2]}-${m[3]}`;
+};
+
+const netIdFromDate = (dateStr: string): string => {
+  const d = formatDate(dateStr);
+  const p = d.split('-');
+  if (p.length !== 3) return '';
+  return `NET-${p[0]}${p[1]}${p[2]}`;
+};
+
+const inferLegacySeedDate = (row: any): string => {
+  const n = (v: any) => {
+    const x = parseFloat(String(v ?? '').replace(',', '.'));
+    return Number.isFinite(x) ? x : 0;
+  };
+  const sig = [
+    n(row?.i1_rx), n(row?.i1_tx),
+    n(row?.i2_rx), n(row?.i2_tx),
+    n(row?.i3_rx), n(row?.i3_tx),
+    n(row?.i4_rx), n(row?.i4_tx),
+    n(row?.i5_rx), n(row?.i5_tx),
+    n(row?.ast_rx), n(row?.ast_tx)
+  ].join('|');
+  if (sig === '278|30.9|277|22.5|280|58.6|162|8.26|118|8.75|5.97|2.22') return '01-04-26';
+  if (sig === '366|21.8|253|15.4|270|18.7|101|14.3|130|5.44|28.9|1.21') return '06-04-26';
+  return '';
+};
+
+const normalizeDateForSave = (value: string): string => {
+  const formatted = formatDate(value || '');
+  if (isShortDate(formatted)) return formatted;
+  return formatDate(getSystemDateInput());
+};
+
 // Helper Components
 const ISPNode = ({ name, rx, tx, active, type }: any) => (
   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
@@ -427,14 +466,19 @@ const ITPage = () => {
       const resp = await fetch(`${API_URL}?sheetName=Monitor_Net`);
       const data = await resp.json();
       if (data && Array.isArray(data) && data.length > 0) {
-        const mapped = data
+        const mappedRaw = data
           .filter((d: any) => hasNetPayload(d))
           .map((d: any, idx: number) => {
+            const rawId = String(d.id || d.ID || '').trim();
             const parsedTanggal = formatDate(String(d.tanggal || d.Tanggal || ''));
+            const inferredFromId = inferDateFromNetId(rawId);
+            const inferredFromLegacy = inferLegacySeedDate(d);
+            const tanggal = inferredFromId || parsedTanggal || inferredFromLegacy || '';
+            const normalizedId = rawId || netIdFromDate(tanggal) || `ROW-${idx + 1}`;
             const sourceSnapshot = getSnapshotSource(d);
             return {
-              id: d.id || d.ID || `ROW-${idx + 1}`,
-              tanggal: parsedTanggal || formatDate(getSystemDateInput()),
+              id: normalizedId,
+              tanggal,
               i1_rx: toNum(d.i1_rx), i1_tx: toNum(d.i1_tx),
               i2_rx: toNum(d.i2_rx), i2_tx: toNum(d.i2_tx),
               i3_rx: toNum(d.i3_rx), i3_tx: toNum(d.i3_tx),
@@ -452,6 +496,25 @@ const ITPage = () => {
               snapshot_url: d.snapshot_url || d.Snapshot_URL || ''
             };
           });
+
+        // Dedup jika ada data ganda (mis. seed lama + seed perbaikan) berdasarkan ID atau tanggal.
+        const seen = new Set<string>();
+        const mapped = mappedRaw.filter((row: any) => {
+          const key = String(row.id || '').startsWith('NET-') ? String(row.id) : `DATE-${row.tanggal || ''}`;
+          if (!key || seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+
+        const parseNetDate = (s: string) => {
+          const p = String(s || '').split('-');
+          if (p.length !== 3) return 0;
+          const dd = parseInt(p[0], 10) || 1;
+          const mm = (parseInt(p[1], 10) || 1) - 1;
+          const yy = parseInt(p[2], 10) || 0;
+          return new Date(2000 + yy, mm, dd).getTime();
+        };
+        mapped.sort((a: any, b: any) => parseNetDate(a.tanggal) - parseNetDate(b.tanggal));
 
         if (mapped.length > 0) {
           setNetHistory(mapped);
@@ -511,13 +574,20 @@ const ITPage = () => {
       ];
 
       for (const record of seedRecords) {
+        const tanggal = normalizeDateForSave(record.tanggal);
+        const id = netIdFromDate(tanggal) || record.id;
         await fetch(API_URL, {
           method: 'POST',
           mode: 'no-cors',
           body: JSON.stringify({
             action: 'FINANCE_RECORD',
             sheetName: 'Monitor_Net',
-            ...record
+            sheet: 'Monitor_Net',
+            ...record,
+            id,
+            ID: id,
+            tanggal,
+            Tanggal: tanggal
           })
         });
       }
@@ -1118,10 +1188,20 @@ const ITPage = () => {
                             const compressed = await compressImage(ev.target?.result as string);
                             // Simpan ke DB
                             try {
-                              const recordId = String(row.id || '').startsWith('ROW-') ? `NET-${Date.now()}` : row.id;
+                              const tanggal = normalizeDateForSave(String(row.tanggal || getSystemDateInput()));
+                              const recordId = String(row.id || '').startsWith('ROW-') ? (netIdFromDate(tanggal) || `NET-${Date.now()}`) : String(row.id);
                               await fetch(API_URL, {
                                 method: 'POST', mode: 'no-cors',
-                                body: JSON.stringify({ action: 'FINANCE_RECORD', sheetName: 'Monitor_Net', id: recordId, tanggal: formatDate(String(row.tanggal || getSystemDateInput())), snapshot: compressed })
+                                body: JSON.stringify({
+                                  action: 'FINANCE_RECORD',
+                                  sheetName: 'Monitor_Net',
+                                  sheet: 'Monitor_Net',
+                                  id: recordId,
+                                  ID: recordId,
+                                  tanggal,
+                                  Tanggal: tanggal,
+                                  snapshot: compressed
+                                })
                               });
                               setNetHistory(prev => prev.map(r => r.id === row.id ? { ...r, id: recordId, snapshot: compressed } : r));
                             } catch { alert('Gagal upload foto.'); }
@@ -1357,15 +1437,19 @@ const ITPage = () => {
                           }
                           setNetLoading(true);
                           try {
-                            const newId = `NET-${Date.now()}`;
-                            const { tanggal, ...fields } = aiResult;
+                            const tanggal = normalizeDateForSave(aiResult.tanggal);
+                            const newId = netIdFromDate(tanggal) || `NET-${Date.now()}`;
+                            const { tanggal: _ignoredTanggal, ...fields } = aiResult;
                             // Kompres gambar upload (yang dipakai AI) jadi snapshot
                             const snapshotData = uploadImage ? await compressImage(uploadImage) : '';
                             const payload = {
                               action: 'FINANCE_RECORD',
                               sheetName: 'Monitor_Net',
+                              sheet: 'Monitor_Net',
                               id: newId,
+                              ID: newId,
                               tanggal,
+                              Tanggal: tanggal,
                               snapshot: snapshotData,
                               ...fields
                             };
@@ -1430,11 +1514,22 @@ const ITPage = () => {
                   e.preventDefault();
                   setNetLoading(true);
                   try {
-                    const tanggal = netFormData.date ? formatDate(netFormData.date) : formatDate(new Date().toISOString());
+                    const tanggal = normalizeDateForSave(netFormData.date || getSystemDateInput());
+                    const netId = netIdFromDate(tanggal) || `NET-${Date.now()}`;
                     const manualSnapshotData = manualSnapshotImage ? await compressImage(manualSnapshotImage) : '';
                     await fetch(API_URL, {
                       method: 'POST', mode: 'no-cors',
-                      body: JSON.stringify({ action: 'FINANCE_RECORD', sheetName: 'Monitor_Net', id: `NET-${Date.now()}`, tanggal, snapshot: manualSnapshotData, ...netFormData })
+                      body: JSON.stringify({
+                        action: 'FINANCE_RECORD',
+                        sheetName: 'Monitor_Net',
+                        sheet: 'Monitor_Net',
+                        id: netId,
+                        ID: netId,
+                        tanggal,
+                        Tanggal: tanggal,
+                        snapshot: manualSnapshotData,
+                        ...netFormData
+                      })
                     });
                     alert('Berhasil Update!');
                     closeNetModal();
