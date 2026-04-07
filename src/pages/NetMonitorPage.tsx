@@ -1,7 +1,132 @@
-import React, { useState, useEffect } from 'react';
-import { Server, Activity, Database, Loader2, DatabaseBackup, X, Plus, Camera } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Server, Activity, Database, Loader2, DatabaseBackup, X, Plus, Camera, Upload, Sparkles, CheckCircle, AlertCircle, Image as ImageIcon } from 'lucide-react';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
+const GEMINI_API_KEY = "AIzaSyD3XFX6ovEE0XhRvFg7nxxrC4Of9yEW6gE";
+
+const monthMap: any = {
+  Jan: 0, Feb: 1, Mar: 2, Apr: 3, Mei: 4, Jun: 5,
+  Jul: 6, Agt: 7, Sep: 8, Okt: 9, Nov: 10, Des: 11
+};
+
+const formatDate = (dateStr: string): string => {
+  if (!dateStr) return '';
+  const s = dateStr.trim();
+
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) {
+      const dd = String(d.getDate()).padStart(2, '0');
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const yy = String(d.getFullYear()).slice(-2);
+      return `${dd}-${mm}-${yy}`;
+    }
+  }
+
+  const tanggalMatch = s.match(/tanggal\s+(\d{1,2}[-/]\d{2}[-/]\d{4})/i);
+  if (tanggalMatch) return formatDate(tanggalMatch[1]);
+
+  const dmyMatch = s.match(/^(\d{1,2})[-/](\d{2})[-/](\d{4})$/);
+  if (dmyMatch) {
+    const dd = dmyMatch[1].padStart(2, '0');
+    const mm = dmyMatch[2];
+    const yy = dmyMatch[3].slice(-2);
+    return `${dd}-${mm}-${yy}`;
+  }
+
+  const parts = s.split(' ');
+  if (parts.length >= 3) {
+    const dd = String(parseInt(parts[0]) || 1).padStart(2, '0');
+    const mm = String((monthMap[parts[1]] ?? 0) + 1).padStart(2, '0');
+    const year = parts[2].length === 2 ? parts[2] : String(parseInt(parts[2]) || 0).slice(-2);
+    return `${dd}-${mm}-${year}`;
+  }
+
+  return s;
+};
+
+const cleanNum = (v: any): string => {
+  if (v === null || v === undefined || v === '') return '';
+  const s = String(v).replace(/[^0-9.]/g, '').trim();
+  return s || '';
+};
+
+const cleanAiResult = (raw: any): any => {
+  const numFields = [
+    'i1_rx', 'i1_tx', 'i2_rx', 'i2_tx', 'i3_rx', 'i3_tx',
+    'i4_rx', 'i4_tx', 'i5_rx', 'i5_tx', 'ast_rx', 'ast_tx',
+    'dhcp_cpu', 'dhcp_mem', 'dhcp_disk',
+    'sang_cpu', 'sang_mem', 'sang_virt', 'sang_disk'
+  ];
+  const cleaned: any = { ...raw };
+  numFields.forEach((f) => { cleaned[f] = cleanNum(raw[f]); });
+
+  if (raw.tanggal) {
+    cleaned.tanggal = formatDate(String(raw.tanggal));
+    if (!cleaned.tanggal || cleaned.tanggal === raw.tanggal) {
+      const d = new Date(raw.tanggal);
+      if (!isNaN(d.getTime())) {
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const yy = String(d.getFullYear()).slice(-2);
+        cleaned.tanggal = `${dd}-${mm}-${yy}`;
+      }
+    }
+  }
+  return cleaned;
+};
+
+const analyzeTrafficImage = async (base64: string, mimeType: string): Promise<any> => {
+  const prompt = `Extract network monitor values from this screenshot and return ONLY JSON.
+
+Expected keys:
+{
+  "tanggal": "dd-mm-yy",
+  "i1_rx": "", "i1_tx": "",
+  "i2_rx": "", "i2_tx": "",
+  "i3_rx": "", "i3_tx": "",
+  "i4_rx": "", "i4_tx": "",
+  "i5_rx": "", "i5_tx": "",
+  "ast_rx": "", "ast_tx": "",
+  "dhcp_cpu": "", "dhcp_mem": "", "dhcp_disk": "",
+  "sang_cpu": "", "sang_mem": "", "sang_virt": "", "sang_disk": ""
+}
+
+Rules:
+- title format usually "Hari ... Tanggal d-mm-yyyy": extract only date and output dd-mm-yy
+- Rx/Tx return number only (no Mbps)
+- cpu/mem/disk/virt return number only (no %)
+- if value is not visible use ""
+- return JSON only, no markdown/text`;
+
+  const resp = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{
+          parts: [
+            { text: prompt },
+            { inline_data: { mime_type: mimeType, data: base64 } }
+          ]
+        }],
+        generationConfig: { temperature: 0.1, topP: 0.8 }
+      })
+    }
+  );
+
+  if (!resp.ok) {
+    const err = await resp.json();
+    throw new Error(err.error?.message || `HTTP ${resp.status}`);
+  }
+
+  const result = await resp.json();
+  const text = result.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  const raw = JSON.parse(jsonMatch ? jsonMatch[0] : '{}');
+  return cleanAiResult(raw);
+};
 
 
 // ─── Helper Components ────────────────────────────────────────────────────────
@@ -99,6 +224,13 @@ const NetMonitorPage = () => {
 
   // Lightbox foto
   const [lightbox, setLightbox] = useState<{ src: string; tanggal: string } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadImage, setUploadImage] = useState<string | null>(null);
+  const [uploadMime, setUploadMime] = useState('image/png');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
+  const [aiResult, setAiResult] = useState<any>(null);
+  const [dragOver, setDragOver] = useState(false);
 
   const [formData, setFormData] = useState({
     date: '',
@@ -111,6 +243,25 @@ const NetMonitorPage = () => {
     dhcp_cpu: '', dhcp_mem: '', dhcp_disk: '',
     sang_cpu: '', sang_mem: '', sang_virt: '', sang_disk: ''
   });
+
+  const resetNetForm = () => {
+    setFormData({
+      date: '',
+      i1_rx: '', i1_tx: '',
+      i2_rx: '', i2_tx: '',
+      i3_rx: '', i3_tx: '',
+      i4_rx: '', i4_tx: '',
+      i5_rx: '', i5_tx: '',
+      ast_rx: '', ast_tx: '',
+      dhcp_cpu: '', dhcp_mem: '', dhcp_disk: '',
+      sang_cpu: '', sang_mem: '', sang_virt: '', sang_disk: ''
+    });
+    setUploadImage(null);
+    setAiResult(null);
+    setAiError('');
+    setAiLoading(false);
+    setDragOver(false);
+  };
 
   // Kompres gambar via Canvas → JPEG 40% quality agar muat di GSheets cell
   const compressImage = (dataUrl: string): Promise<string> =>
@@ -188,6 +339,8 @@ const NetMonitorPage = () => {
     e.preventDefault();
     setSubmitting(true);
     try {
+      const tanggal = formData.date ? formatDate(formData.date) : formatDate(new Date().toISOString());
+      const snapshotData = uploadImage ? await compressImage(uploadImage) : '';
       await fetch(API_URL, {
         method: 'POST',
         mode: 'no-cors',
@@ -195,13 +348,14 @@ const NetMonitorPage = () => {
           action: 'FINANCE_RECORD',
           sheetName: 'Monitor_Net',
           id: `NET-${Date.now()}`,
-          tanggal: formData.date || new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' }),
+          tanggal,
+          snapshot: snapshotData,
           ...formData
         })
       });
       alert('Update berhasil disimpan!');
       setIsFormOpen(false);
-      setFormData({ date: '', i1_rx: '', i1_tx: '', i2_rx: '', i2_tx: '', i3_rx: '', i3_tx: '', i4_rx: '', i4_tx: '', i5_rx: '', i5_tx: '', ast_rx: '', ast_tx: '', dhcp_cpu: '', dhcp_mem: '', dhcp_disk: '', sang_cpu: '', sang_mem: '', sang_virt: '', sang_disk: '' });
+      resetNetForm();
       setTimeout(fetchData, 1500);
     } catch { alert('Gagal menyimpan'); }
     finally { setSubmitting(false); }
@@ -490,10 +644,138 @@ const NetMonitorPage = () => {
           <div className="glass-panel" style={{ width: '100%', maxWidth: '780px', maxHeight: '90vh', overflow: 'auto', padding: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h3 style={{ margin: 0 }}>Update Status Jaringan Harian</h3>
-              <button onClick={() => setIsFormOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}><X size={20} /></button>
+              <button onClick={() => { setIsFormOpen(false); resetNetForm(); }} style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}><X size={20} /></button>
             </div>
 
             <form onSubmit={handleSubmit}>
+              <div style={{ marginBottom: '1.25rem' }}>
+                <div
+                  onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={e => {
+                    e.preventDefault();
+                    setDragOver(false);
+                    const file = e.dataTransfer.files[0];
+                    if (file && file.type.startsWith('image/')) {
+                      setUploadMime(file.type);
+                      const reader = new FileReader();
+                      reader.onload = ev => {
+                        setUploadImage(ev.target?.result as string);
+                        setAiResult(null);
+                        setAiError('');
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{
+                    border: `2px dashed ${dragOver ? 'var(--accent-blue)' : uploadImage ? 'var(--accent-emerald)' : 'var(--border-subtle)'}`,
+                    borderRadius: '12px',
+                    padding: uploadImage ? '1rem' : '1.5rem 1rem',
+                    cursor: 'pointer',
+                    textAlign: 'center',
+                    background: uploadImage ? 'rgba(16,185,129,0.06)' : 'rgba(0,0,0,0.1)',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setUploadMime(file.type);
+                      const reader = new FileReader();
+                      reader.onload = ev => {
+                        setUploadImage(ev.target?.result as string);
+                        setAiResult(null);
+                        setAiError('');
+                      };
+                      reader.readAsDataURL(file);
+                    }}
+                  />
+                  {uploadImage ? (
+                    <div>
+                      <img src={uploadImage} alt="Preview screenshot jaringan" style={{ maxHeight: '220px', maxWidth: '100%', borderRadius: '8px', objectFit: 'contain' }} />
+                      <p style={{ margin: '0.6rem 0 0', fontSize: '0.8rem', color: 'var(--accent-emerald)' }}>✓ Gambar lokal siap dianalisis (klik area untuk ganti file)</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <Upload size={28} style={{ margin: '0 auto 0.7rem', opacity: 0.5 }} />
+                      <p style={{ margin: 0, fontWeight: 600, fontSize: '0.9rem' }}>Upload gambar dari lokal</p>
+                      <p style={{ margin: '0.35rem 0 0', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Screenshot monitor jaringan akan dibaca jadi data Rx/Tx dan server health</p>
+                    </div>
+                  )}
+                </div>
+
+                {uploadImage && (
+                  <button
+                    type="button"
+                    disabled={aiLoading}
+                    onClick={async () => {
+                      setAiLoading(true);
+                      setAiError('');
+                      try {
+                        const base64 = uploadImage.split(',')[1];
+                        const extracted = await analyzeTrafficImage(base64, uploadMime);
+                        setAiResult(extracted);
+                        const { tanggal, ...fields } = extracted;
+                        setFormData(prev => ({
+                          ...prev,
+                          ...fields,
+                          date: tanggal || prev.date
+                        }));
+                      } catch (err: any) {
+                        setAiError('Gagal membaca gambar. Cek API key Gemini atau isi manual. ' + (err.message || ''));
+                      } finally {
+                        setAiLoading(false);
+                      }
+                    }}
+                    className="btn"
+                    style={{ marginTop: '0.75rem', width: '100%', background: 'linear-gradient(135deg, #6366f1, #3b82f6)', color: 'white', border: 'none' }}
+                  >
+                    {aiLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                    {aiLoading ? 'Menganalisis screenshot...' : 'Analisis Gambar Otomatis'}
+                  </button>
+                )}
+
+                {aiError && (
+                  <div style={{ marginTop: '0.75rem', padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(244,63,94,0.35)', background: 'rgba(244,63,94,0.1)', display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+                    <AlertCircle size={15} color="#f43f5e" />
+                    <span style={{ fontSize: '0.78rem', color: '#f43f5e' }}>{aiError}</span>
+                  </div>
+                )}
+
+                {aiResult && (
+                  <div style={{ marginTop: '0.75rem', padding: '0.85rem', borderRadius: '8px', border: '1px solid rgba(16,185,129,0.35)', background: 'rgba(16,185,129,0.1)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.45rem' }}>
+                      <CheckCircle size={15} color="#10b981" />
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#10b981' }}>Data monitor berhasil dibaca dari gambar</span>
+                    </div>
+                    <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                      <div>Tanggal: <b style={{ color: 'var(--text-primary)' }}>{aiResult.tanggal || '-'}</b></div>
+                      <div>Indibizz 1: ↓{aiResult.i1_rx || '-'} / ↑{aiResult.i1_tx || '-'} Mbps</div>
+                      <div>Indibizz 2: ↓{aiResult.i2_rx || '-'} / ↑{aiResult.i2_tx || '-'} Mbps</div>
+                      <div>Indibizz 3: ↓{aiResult.i3_rx || '-'} / ↑{aiResult.i3_tx || '-'} Mbps</div>
+                      <div>Indibizz 4: ↓{aiResult.i4_rx || '-'} / ↑{aiResult.i4_tx || '-'} Mbps</div>
+                      <div>Indibizz 5: ↓{aiResult.i5_rx || '-'} / ↑{aiResult.i5_tx || '-'} Mbps</div>
+                      <div>Astinet: ↓{aiResult.ast_rx || '-'} / ↑{aiResult.ast_tx || '-'} Mbps</div>
+                      <div>DHCP cpu/mem/disk: {aiResult.dhcp_cpu || '-'} / {aiResult.dhcp_mem || '-'} / {aiResult.dhcp_disk || '-'} %</div>
+                      <div>SANGFOR cpu/mem/virt/disk: {aiResult.sang_cpu || '-'} / {aiResult.sang_mem || '-'} / {aiResult.sang_virt || '-'} / {aiResult.sang_disk || '-'} %</div>
+                    </div>
+                  </div>
+                )}
+
+                {!uploadImage && (
+                  <div style={{ marginTop: '0.75rem', padding: '0.7rem 0.85rem', borderRadius: '8px', border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(99,102,241,0.08)', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                    <ImageIcon size={14} color="#6366f1" />
+                    <span style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>Upload screenshot lokal dulu, lalu klik Analisis agar field monitor terisi otomatis.</span>
+                  </div>
+                )}
+              </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
                 <div style={{ gridColumn: '1 / -1' }}>
                   <label style={{ fontSize: '0.8rem', display: 'block', marginBottom: '0.4rem', color: 'var(--text-secondary)' }}>Tanggal</label>
@@ -552,7 +834,7 @@ const NetMonitorPage = () => {
                 >
                   {submitting ? <Loader2 size={16} className="animate-spin" /> : '💾 Simpan ke DB'}
                 </button>
-                <button type="button" onClick={() => setIsFormOpen(false)} className="btn btn-outline">Batal</button>
+                <button type="button" onClick={() => { setIsFormOpen(false); resetNetForm(); }} className="btn btn-outline">Batal</button>
               </div>
             </form>
           </div>
