@@ -149,7 +149,7 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
               
               // For Amalia (Tata Kelola), exclude unit-specific public landing pages
               if (user.unit === 'Tata Kelola') {
-                const excludedPublic = ['IT Services', 'Laboratorium', 'Sarpras'];
+                const excludedPublic = ['IT Service & Monitor Jaringan', 'Laboratorium', 'Sarpras'];
                 if (excludedPublic.includes(item.name)) return false;
               }
 
@@ -172,7 +172,7 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
               if (user.unit === 'Semua Unit') return true;
               
               // Common menus for all authenticated staff
-              const alwaysVisible = ['Dashboard', 'Rapat Bulanan', 'Catatan Piket', 'Monitor Jaringan'];
+              const alwaysVisible = ['Dashboard', 'Rapat Bulanan', 'Catatan Piket'];
 
               // Unit based access
               if (user.unit === 'Laboratorium') {
@@ -180,11 +180,11 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
                 return allowed.includes(item.name);
               }
               if (user.unit === 'IT') {
-                const allowed = [...alwaysVisible, 'IT Services', 'Monitor Jaringan', 'Permintaan Layanan', 'Monitor AC', 'Penugasan', 'Kinerja Personel'];
+                const allowed = [...alwaysVisible, 'IT Service & Monitor Jaringan', 'Permintaan Layanan', 'Monitor AC', 'Penugasan', 'Kinerja Personel'];
                 return allowed.includes(item.name);
               }
               if (user.unit === 'Sarpras') {
-                const allowed = [...alwaysVisible, 'Sarpras', 'Monitor Jaringan', 'Permintaan Layanan', 'Tagihan Utilitas', 'Aset & Inventaris', 'Monitor AC', 'Penugasan', 'Kinerja Personel'];
+                const allowed = [...alwaysVisible, 'Sarpras', 'Permintaan Layanan', 'Tagihan Utilitas', 'Aset & Inventaris', 'Monitor AC', 'Penugasan', 'Kinerja Personel'];
                 return allowed.includes(item.name);
               }
               if (user.unit === 'Tata Kelola') {
