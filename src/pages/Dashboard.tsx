@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, LabelList } from 'recharts';
-import { UserCircle2, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, ShieldCheck, MessageSquare, AlertCircle, Edit3, Trash2, Wind, Briefcase, Smartphone, Activity, Coins } from 'lucide-react';
+import { UserCircle2, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, ShieldCheck, MessageSquare, AlertCircle, Edit3, Trash2, Wind, Briefcase, Smartphone, Activity, Coins, Camera, X } from 'lucide-react';
 import { getCurrentUser, ROLES } from '../data/organization';
 import { getUtilityChartData } from '../data/utilities';
 
@@ -49,6 +49,8 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   const [wifiData, setWifiData] = useState<any[]>([]);
   const [wifiLoading, setWifiLoading] = useState(false);
   const [netSnapshot, setNetSnapshot] = useState<any>(null);
+  const [netSnapshotThumb, setNetSnapshotThumb] = useState<any>(null);
+  const [netSnapshotLightbox, setNetSnapshotLightbox] = useState<{ src: string; tanggal: string } | null>(null);
   const sortedCapexProjects = capexProjects.slice().sort((a, b) => b.progress - a.progress);
 
   const pickDateField = (row: any) => String(
@@ -86,6 +88,8 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
     if (type === 'out') return `- ${nominal}`;
     return nominal;
   };
+
+  const getSnapshotSource = (row: any) => row?.snapshot || row?.Snapshot || row?.snapshot_url || row?.Snapshot_URL || '';
 
   useEffect(() => {
     const fetchFinanceData = async () => {
@@ -356,9 +360,15 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         const data = await resp.json();
         if (data && Array.isArray(data) && data.length > 0) {
           setNetSnapshot(data[data.length - 1]);
+          const latestWithSnapshot = [...data].reverse().find((row: any) => String(getSnapshotSource(row)).trim() !== '');
+          setNetSnapshotThumb(latestWithSnapshot || null);
+        } else {
+          setNetSnapshot(null);
+          setNetSnapshotThumb(null);
         }
       } catch (e) {
         console.error("Net monitor fetch error:", e);
+        setNetSnapshotThumb(null);
       }
     };
 
@@ -977,6 +987,31 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                 <span style={{ color: 'var(--text-secondary)' }}>Server Uptime</span>
                 <span style={{ color: 'var(--accent-emerald)', fontWeight: 600 }}>99.9%</span>
               </div>
+              <div style={{ marginTop: '0.35rem' }}>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <Camera size={12} /> Snapshot terbaru
+                </div>
+                {netSnapshotThumb && getSnapshotSource(netSnapshotThumb) ? (
+                  <button
+                    onClick={() => setNetSnapshotLightbox({
+                      src: getSnapshotSource(netSnapshotThumb),
+                      tanggal: String(netSnapshotThumb?.tanggal || netSnapshotThumb?.Tanggal || '-')
+                    })}
+                    title="Klik untuk zoom snapshot jaringan"
+                    style={{ border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '0.25rem', background: 'rgba(0,0,0,0.2)', cursor: 'zoom-in', width: '130px', display: 'block' }}
+                  >
+                    <img
+                      src={getSnapshotSource(netSnapshotThumb)}
+                      alt="Thumbnail snapshot jaringan terbaru"
+                      style={{ width: '100%', height: '72px', objectFit: 'cover', borderRadius: '7px', display: 'block' }}
+                    />
+                  </button>
+                ) : (
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', border: '1px dashed var(--border-subtle)', borderRadius: '8px', padding: '0.55rem 0.6rem', display: 'inline-block' }}>
+                    Belum ada snapshot
+                  </div>
+                )}
+              </div>
             </div>
             
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
@@ -994,6 +1029,31 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           </div>
           <div style={{ marginTop: '1rem', textAlign: 'right' }}>
             <a href="#/it" style={{ fontSize: '0.75rem', color: 'var(--accent-blue)', textDecoration: 'none' }}>View Network Topology Map &rarr;</a>
+          </div>
+        </div>
+      )}
+
+      {netSnapshotLightbox && (
+        <div
+          onClick={() => setNetSnapshotLightbox(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 2100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem', cursor: 'zoom-out' }}
+        >
+          <button
+            onClick={() => setNetSnapshotLightbox(null)}
+            style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'rgba(255,255,255,0.12)', border: 'none', borderRadius: '999px', width: '34px', height: '34px', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            aria-label="Tutup zoom snapshot"
+          >
+            <X size={18} />
+          </button>
+          <div style={{ width: '100%', maxWidth: '960px', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ marginBottom: '0.65rem', fontSize: '0.78rem', color: 'rgba(255,255,255,0.7)' }}>
+              Snapshot Jaringan — {netSnapshotLightbox.tanggal}
+            </div>
+            <img
+              src={netSnapshotLightbox.src}
+              alt={`Snapshot Jaringan ${netSnapshotLightbox.tanggal}`}
+              style={{ maxWidth: '100%', maxHeight: '82vh', objectFit: 'contain', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.15)', boxShadow: '0 24px 60px rgba(0,0,0,0.5)' }}
+            />
           </div>
         </div>
       )}
