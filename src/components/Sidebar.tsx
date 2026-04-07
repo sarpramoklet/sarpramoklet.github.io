@@ -144,8 +144,8 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
 
             // Filter logic
             const filteredItems = NAVIGATION.filter((item: any) => {
-              // Sembunyikan menu IT & Jaringan jika belum login
-              if (!isLoggedIn && item.path === '/it') return false;
+              // Mode publik: hanya tampilkan Dashboard
+              if (!isLoggedIn) return item.path === '/';
 
               // Hide Performance for Petugas Piket as requested
               if (isPetugasPiket && item.name === 'Kinerja Personel') return false;

@@ -289,7 +289,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       }
     };
 
-    if (isLoggedIn) fetchPiketNotes();
+    fetchPiketNotes();
 
     const fetchACMonitor = async () => {
       setAcLoading(true);
@@ -420,9 +420,9 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
     };
 
     if (isLoggedIn) fetchACMonitor();
-    if (isLoggedIn) fetchCapexProjects();
+    fetchCapexProjects();
     if (isLoggedIn) fetchWifiMonitor();
-    if (isLoggedIn) fetchNetSnapshot();
+    fetchNetSnapshot();
 
   }, [isAuthorizedFinance, isLoggedIn]);
 
@@ -458,7 +458,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   };
 
   const isAuthorizedToManagePiket = (noteSender: string) => {
-    if (!currentUser) return false;
+    if (!isLoggedIn || !currentUser) return false;
     
     const sender = (noteSender || '').trim().toLowerCase();
     const currentName = (currentUser.nama || '').trim().toLowerCase();
@@ -677,8 +677,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       )}
 
       {/* DASHBOARD CAPEX PROJECTS SECTION */}
-      {isLoggedIn && (
-        <div className="glass-panel delay-200" style={{ marginBottom: '2rem', background: 'linear-gradient(135deg, rgba(245,158,11,0.03), transparent)', borderLeft: '4px solid var(--accent-amber)' }}>
+      <div className="glass-panel delay-200" style={{ marginBottom: '2rem', background: 'linear-gradient(135deg, rgba(245,158,11,0.03), transparent)', borderLeft: '4px solid var(--accent-amber)' }}>
           <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <h3 style={{ fontSize: '1.05rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -713,8 +712,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
               <div style={{ padding: '1rem', color: 'var(--text-secondary)' }}>Data proyek belum tersedia.</div>
             )}
           </div>
-        </div>
-      )}
+      </div>
 
       {/* Jadwal Piket Sarpras Section - Moved to Top */}
       <div className="glass-panel delay-300" style={{ marginBottom: '2rem', overflow: 'hidden' }}>
@@ -1015,8 +1013,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
 
 
       {/* NETWORK INFRASTRUCTURE SUMMARY */}
-      {isLoggedIn && (
-        <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '1.5rem', background: 'linear-gradient(135deg, rgba(16,185,129,0.03), transparent)', borderLeft: '4px solid var(--accent-emerald)' }}>
+      <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '1.5rem', background: 'linear-gradient(135deg, rgba(16,185,129,0.03), transparent)', borderLeft: '4px solid var(--accent-emerald)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Activity size={18} color="var(--accent-emerald)" /> Infrastructure Health Snapshot
@@ -1079,8 +1076,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           <div style={{ marginTop: '1rem', textAlign: 'right' }}>
             <a href="#/it" style={{ fontSize: '0.75rem', color: 'var(--accent-blue)', textDecoration: 'none' }}>View Network Topology Map &rarr;</a>
           </div>
-        </div>
-      )}
+      </div>
 
       {netSnapshotLightbox && (
         <div
