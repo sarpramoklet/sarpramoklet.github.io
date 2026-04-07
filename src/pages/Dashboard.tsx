@@ -37,6 +37,40 @@ const toNum = (v: any): number => {
   const n = parseFloat(String(v ?? '').replace(',', '.'));
   return Number.isFinite(n) ? n : 0;
 };
+const inferDateFromNetId = (id: any): string => {
+  const m = String(id || '').match(/NET-(\d{2})(\d{2})(\d{2})$/);
+  if (!m) return '';
+  return `${m[1]}-${m[2]}-${m[3]}`;
+};
+const inferLegacySeedDate = (row: any): string => {
+  const sig = [
+    toNum(row?.i1_rx), toNum(row?.i1_tx),
+    toNum(row?.i2_rx), toNum(row?.i2_tx),
+    toNum(row?.i3_rx), toNum(row?.i3_tx),
+    toNum(row?.i4_rx), toNum(row?.i4_tx),
+    toNum(row?.i5_rx), toNum(row?.i5_tx),
+    toNum(row?.ast_rx), toNum(row?.ast_tx),
+  ].join('|');
+  if (sig === '278|30.9|277|22.5|280|58.6|162|8.26|118|8.75|5.97|2.22') return '01-04-26';
+  if (sig === '366|21.8|253|15.4|270|18.7|101|14.3|130|5.44|28.9|1.21') return '06-04-26';
+  return '';
+};
+const toShortDate = (raw: any): string => {
+  const d = parseWifiDateValue(raw);
+  if (!d) return '';
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yy = String(d.getFullYear()).slice(-2);
+  return `${dd}-${mm}-${yy}`;
+};
+const parseShortDateTs = (shortDate: string): number => {
+  const p = String(shortDate || '').split('-');
+  if (p.length !== 3) return 0;
+  const dd = parseInt(p[0], 10) || 1;
+  const mm = (parseInt(p[1], 10) || 1) - 1;
+  const yy = parseInt(p[2], 10) || 0;
+  return new Date(2000 + yy, mm, dd).getTime();
+};
 const parseWifiDateValue = (raw: any): Date | null => {
   const s = String(raw || '').trim();
   if (!s) return null;
@@ -474,25 +508,68 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         const data = await resp.json();
         if (data && Array.isArray(data) && data.length > 0) {
           const normalized = data.map((row: any, idx: number) => {
+            const rawId = String(row?.id || row?.ID || '').trim();
             const rawDate = pickDateField(row);
-            const ts = parseWifiDateValue(rawDate)?.getTime() ?? idx;
+            const inferredTanggal = inferDateFromNetId(rawId) || toShortDate(rawDate) || inferLegacySeedDate(row) || '';
+            const fallbackTs = parseWifiDateValue(rawDate)?.getTime() || 0;
+            const ts = parseShortDateTs(inferredTanggal) || fallbackTs || idx + 1;
+
+            const i1_rx = toNum(row.i1_rx);
+            const i1_tx = toNum(row.i1_tx);
+            const i2_rx = toNum(row.i2_rx);
+            const i2_tx = toNum(row.i2_tx);
+            const i3_rx = toNum(row.i3_rx);
+            const i3_tx = toNum(row.i3_tx);
+            const i4_rx = toNum(row.i4_rx);
+            const i4_tx = toNum(row.i4_tx);
+            const i5_rx = toNum(row.i5_rx);
+            const i5_tx = toNum(row.i5_tx);
+            const ast_rx = toNum(row.ast_rx);
+            const ast_tx = toNum(row.ast_tx);
+            const metrics = [ast_rx, ast_tx, i1_rx, i1_tx, i2_rx, i2_tx, i3_rx, i3_tx, i4_rx, i4_tx, i5_rx, i5_tx];
+            const nonZeroCount = metrics.filter((v) => v > 0).length;
+            const score = metrics.reduce((acc, v) => acc + Math.max(0, v), 0);
+
             return {
               ...row,
+              id: rawId || row?.id || row?.ID || '',
+              tanggal: inferredTanggal || row?.tanggal || row?.Tanggal || '',
               _ts: ts,
-              _dateDisplay: formatSnapshotDate(rawDate),
-              i1_rx: toNum(row.i1_rx), i1_tx: toNum(row.i1_tx),
-              i2_rx: toNum(row.i2_rx), i2_tx: toNum(row.i2_tx),
-              i3_rx: toNum(row.i3_rx), i3_tx: toNum(row.i3_tx),
-              i4_rx: toNum(row.i4_rx), i4_tx: toNum(row.i4_tx),
-              i5_rx: toNum(row.i5_rx), i5_tx: toNum(row.i5_tx),
-              ast_rx: toNum(row.ast_rx), ast_tx: toNum(row.ast_tx),
+              _snapshot: String(getSnapshotSource(row) || '').trim(),
+              _nonZeroCount: nonZeroCount,
+              _score: score,
+              i1_rx, i1_tx,
+              i2_rx, i2_tx,
+              i3_rx, i3_tx,
+              i4_rx, i4_tx,
+              i5_rx, i5_tx,
+              ast_rx, ast_tx,
             };
           }).sort((a: any, b: any) => a._ts - b._ts);
 
-          const trafficHistory = normalized
-            .filter((r: any) => [r.ast_rx, r.ast_tx, r.i1_rx, r.i1_tx, r.i2_rx, r.i2_tx, r.i3_rx, r.i3_tx, r.i4_rx, r.i4_tx, r.i5_rx, r.i5_tx].some((v: number) => v > 0))
+          const trafficRows = normalized.filter((r: any) => r._nonZeroCount > 0 && String(r.tanggal || '').trim() !== '');
+          const perDateBest = new Map<string, any>();
+          trafficRows.forEach((row: any) => {
+            const key = String(row.tanggal || '').trim();
+            if (!key) return;
+            const existing = perDateBest.get(key);
+            if (!existing) {
+              perDateBest.set(key, row);
+              return;
+            }
+            const existingValue = Number(existing._nonZeroCount || 0) * 100000 + Number(existing._score || 0);
+            const currentValue = Number(row._nonZeroCount || 0) * 100000 + Number(row._score || 0);
+            if (currentValue > existingValue || (currentValue === existingValue && Number(row._ts || 0) > Number(existing._ts || 0))) {
+              perDateBest.set(key, row);
+            }
+          });
+
+          const trafficBestRows = Array.from(perDateBest.values())
+            .sort((a: any, b: any) => parseShortDateTs(String(a.tanggal || '')) - parseShortDateTs(String(b.tanggal || '')));
+
+          const trafficHistory = trafficBestRows
             .map((r: any) => ({
-              tanggal: r._dateDisplay,
+              tanggal: String(r.tanggal || ''),
               ast_rx: r.ast_rx, ast_tx: r.ast_tx,
               i1_rx: r.i1_rx, i1_tx: r.i1_tx,
               i2_rx: r.i2_rx, i2_tx: r.i2_tx,
@@ -502,10 +579,18 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
             }));
           setNetTrafficHistory(trafficHistory);
 
-          const latestRow = normalized[normalized.length - 1];
-          setNetSnapshot(latestRow || data[data.length - 1]);
+          const latestMetricsRow = trafficBestRows[trafficBestRows.length - 1]
+            || [...normalized].reverse().find((r: any) => r._nonZeroCount > 0);
+          setNetSnapshot(latestMetricsRow || normalized[normalized.length - 1] || data[data.length - 1]);
 
-          const latestWithSnapshot = [...normalized].reverse().find((row: any) => String(getSnapshotSource(row)).trim() !== '');
+          const snapshotCandidates = normalized.filter((r: any) => r._snapshot);
+          const latestWithSnapshot = snapshotCandidates
+            .sort((a: any, b: any) => {
+              const ta = parseShortDateTs(String(a.tanggal || '')) || Number(a._ts || 0);
+              const tb = parseShortDateTs(String(b.tanggal || '')) || Number(b._ts || 0);
+              return ta - tb;
+            })
+            .pop();
           setNetSnapshotThumb(latestWithSnapshot || null);
         } else {
           setNetSnapshot(null);
