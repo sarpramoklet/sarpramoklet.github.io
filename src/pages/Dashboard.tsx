@@ -843,34 +843,35 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
             })}
           </div>
 
-          {/* Provisions & Rules */}
-          <div style={{ flex: 1, background: 'rgba(255,255,255,0.03)', borderRadius: '16px', padding: '1.25rem', border: '1px solid var(--border-subtle)' }}>
-            <h4 style={{ fontSize: '0.9rem', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-cyan)' }}>
-              <Info size={18} /> Ketentuan & Himbauan
-            </h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {[
-                "Piket berdasarkan jumlah jam kosong terbanyak.",
-                "Standby di Sarpras saat jam kosong untuk melayani.",
-                "Pak Rudi standby penuh setiap hari (Backup non-guru).",
-                "Layanan mencakup peminjaman barang harian.",
-                "Ruang, mobil & event tanggung jawab Pak Ekon (dibantu piket).",
-                "Wajib memastikan semua data terinput di aplikasi.",
-                "Pastikan pengembalian barang tepat waktu/konfirmasi.",
-                "Sampaikan informasi handover ke petugas piket berikutnya."
-              ].map((text, i) => (
-                <div key={i} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-                  <div style={{ minWidth: '18px', height: '18px', borderRadius: '50%', background: 'var(--accent-cyan-ghost)', color: 'var(--accent-cyan)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 700 }}>
-                    {i + 1}
+          {isLoggedIn && (
+            <div style={{ flex: 1, background: 'rgba(255,255,255,0.03)', borderRadius: '16px', padding: '1.25rem', border: '1px solid var(--border-subtle)' }}>
+              <h4 style={{ fontSize: '0.9rem', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-cyan)' }}>
+                <Info size={18} /> Ketentuan & Himbauan
+              </h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {[
+                  "Piket berdasarkan jumlah jam kosong terbanyak.",
+                  "Standby di Sarpras saat jam kosong untuk melayani.",
+                  "Pak Rudi standby penuh setiap hari (Backup non-guru).",
+                  "Layanan mencakup peminjaman barang harian.",
+                  "Ruang, mobil & event tanggung jawab Pak Ekon (dibantu piket).",
+                  "Wajib memastikan semua data terinput di aplikasi.",
+                  "Pastikan pengembalian barang tepat waktu/konfirmasi.",
+                  "Sampaikan informasi handover ke petugas piket berikutnya."
+                ].map((text, i) => (
+                  <div key={i} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                    <div style={{ minWidth: '18px', height: '18px', borderRadius: '50%', background: 'var(--accent-cyan-ghost)', color: 'var(--accent-cyan)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 700 }}>
+                      {i + 1}
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.75rem', lineHeight: '1.4', color: 'var(--text-secondary)' }}>{text}</p>
                   </div>
-                  <p style={{ margin: 0, fontSize: '0.75rem', lineHeight: '1.4', color: 'var(--text-secondary)' }}>{text}</p>
-                </div>
-              ))}
+                ))}
+              </div>
+              <div style={{ marginTop: '1.25rem', padding: '0.75rem', borderRadius: '8px', background: 'var(--accent-amber-ghost)', border: '1px solid rgba(245, 158, 11, 0.2)', fontSize: '0.7rem', color: 'var(--accent-amber)', fontStyle: 'italic' }}>
+                * mari bekerja sama untuk kelancaran layanan excelent dari sarana
+              </div>
             </div>
-            <div style={{ marginTop: '1.25rem', padding: '0.75rem', borderRadius: '8px', background: 'var(--accent-amber-ghost)', border: '1px solid rgba(245, 158, 11, 0.2)', fontSize: '0.7rem', color: 'var(--accent-amber)', fontStyle: 'italic' }}>
-              * mari bekerja sama untuk kelancaran layanan excelent dari sarana
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
