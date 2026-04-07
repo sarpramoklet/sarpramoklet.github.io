@@ -11,7 +11,7 @@ export const NAVIGATION = [
   { path: '/utilities', name: 'Tagihan Utilitas', icon: Zap, authRequired: true },
   { path: '/assets', name: 'Aset & Inventaris', icon: Package, authRequired: true },
   { path: '/personnel', name: 'Personel', icon: Users, authRequired: true },
-  { path: '/finance', name: 'Tata Kelola Keuangan', icon: Wallet, authRequired: true, leaderOnly: true },
+  { path: '/finance', name: 'KAS SARPRA', icon: Wallet, authRequired: true, leaderOnly: true },
   { path: '/operational-cash', name: 'Kas Operasional TU', icon: Coins, authRequired: true, leaderOnly: true },
   { path: '/ac-cash', name: 'Kas Perawatan AC', icon: Wind, authRequired: true, leaderOnly: true },
   { path: '/ac-monitor', name: 'Monitor AC', icon: Wind, authRequired: true },

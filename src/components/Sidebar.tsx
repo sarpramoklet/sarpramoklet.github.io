@@ -197,7 +197,7 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
                   'Personel', 
                   'SOP & Dokumen', 
                   'Kinerja Personel',
-                  'Tata Kelola Keuangan',
+                  'KAS SARPRA',
                   'Kas Operasional TU',
                   'Kas Perawatan AC',
                   'Monitor CAPEX'

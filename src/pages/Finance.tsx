@@ -215,7 +215,7 @@ const Finance = () => {
     <div className="animate-fade-in" style={{ paddingBottom: '3rem' }}>
       <div className="flex-row-responsive" style={{ marginBottom: '2rem' }}>
         <div>
-          <h1 className="page-title gradient-text">Tata Kelola Keuangan</h1>
+          <h1 className="page-title gradient-text">KAS SARPRA</h1>
           <p className="page-subtitle" style={{ margin: 0 }}>Portal pelaporan kas operasional terpusat bapak/ibu sarpra.</p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', width: '100%', maxWidth: '400px', justifyContent: 'flex-end' }}>
