@@ -71,21 +71,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
     U013: 'yoko@smktelkom-mlg.sch.id',
   };
 
-  const personnelForDashboard = [...USERS]
-    .sort((a, b) => {
-      const rank = (role: string, unit: string) => {
-        if (role === ROLES.PIMPINAN) return 0;
-        if (role.includes('Koordinator')) return 1;
-        if (role === ROLES.PIC_ADMIN) return 2;
-        if (unit === 'Sarpras') return 3;
-        if (unit === 'IT') return 4;
-        if (unit === 'Laboratorium') return 5;
-        return 6;
-      };
-      const diff = rank(a.roleAplikasi, a.unit) - rank(b.roleAplikasi, b.unit);
-      if (diff !== 0) return diff;
-      return a.nama.localeCompare(b.nama, 'id');
-    });
+  const personnelForDashboard = USERS;
 
   const pickDateField = (row: any) => String(
     row?.tanggal || row?.Tanggal || row?.date || row?.Date || row?.waktu || row?.Waktu || ''
@@ -579,68 +565,6 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           <p className="page-subtitle" style={{ margin: 0, maxWidth: '800px' }}>
             Monitor penugasan, progres rutin, dan proyek tim IT, Lab & Sarana Prasarana.
           </p>
-        </div>
-      </div>
-
-      <div className="glass-panel delay-050" style={{ marginBottom: '2rem', borderLeft: '4px solid var(--accent-violet)', background: 'linear-gradient(135deg, rgba(139,92,246,0.06), transparent)' }}>
-        <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.8rem' }}>
-          <div>
-            <h3 style={{ fontSize: '1.02rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <UserCheck size={18} color="var(--accent-violet)" /> Seluruh Personil Sarpramoklet
-            </h3>
-            <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-              Susunan personil mulai Pimpinan, Koordinator, hingga PIC lintas unit.
-            </p>
-          </div>
-          <span className="badge badge-info" style={{ borderColor: 'rgba(139,92,246,0.35)', color: 'var(--accent-violet)', background: 'rgba(139,92,246,0.12)' }}>
-            {personnelForDashboard.length} Personil
-          </span>
-        </div>
-        <div style={{ padding: '1rem 1.25rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '0.8rem' }}>
-          {personnelForDashboard.map((person) => {
-            const email = userIdToEmail[person.id] || '';
-            const thumb = email ? profileThumbByEmail[email.toLowerCase()] : '';
-            return (
-            <div key={person.id} className="glass-panel" style={{ padding: '0.85rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-subtle)' }}>
-              <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'flex-start' }}>
-                <div style={{ width: '38px', height: '38px', borderRadius: '50%', overflow: 'hidden', flexShrink: 0, border: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {thumb ? (
-                    <img src={thumb} alt={person.nama} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    <UserCircle2 size={20} color="var(--text-muted)" />
-                  )}
-                </div>
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
-                    <div style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.35 }}>
-                      {person.nama}
-                    </div>
-                    <span
-                      style={{
-                        fontSize: '0.62rem',
-                        fontWeight: 700,
-                        padding: '2px 8px',
-                        borderRadius: '999px',
-                        whiteSpace: 'nowrap',
-                        color: person.roleAplikasi === ROLES.PIMPINAN ? 'var(--accent-amber)' : person.roleAplikasi.includes('Koordinator') ? 'var(--accent-blue)' : 'var(--accent-emerald)',
-                        background: person.roleAplikasi === ROLES.PIMPINAN ? 'rgba(245,158,11,0.14)' : person.roleAplikasi.includes('Koordinator') ? 'rgba(59,130,246,0.14)' : 'rgba(16,185,129,0.14)',
-                        border: person.roleAplikasi === ROLES.PIMPINAN ? '1px solid rgba(245,158,11,0.3)' : person.roleAplikasi.includes('Koordinator') ? '1px solid rgba(59,130,246,0.3)' : '1px solid rgba(16,185,129,0.3)'
-                      }}
-                    >
-                      {person.roleAplikasi === ROLES.PIMPINAN ? 'Pimpinan' : person.roleAplikasi.includes('Koordinator') ? 'Koordinator' : 'PIC'}
-                    </span>
-                  </div>
-                  <div style={{ marginTop: '0.45rem', fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
-                    {person.jabatan}
-                  </div>
-                  <div style={{ marginTop: '0.45rem', fontSize: '0.68rem', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between', gap: '0.5rem' }}>
-                    <span>NIP: {person.nip}</span>
-                    <span>{person.unit}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )})}
         </div>
       </div>
 
@@ -1289,6 +1213,69 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
               </BarChart>
             </ResponsiveContainer>
           </div>
+        </div>
+      </div>
+
+      <div className="glass-panel delay-050" style={{ marginBottom: '2rem', borderLeft: '4px solid var(--accent-violet)', background: 'linear-gradient(135deg, rgba(139,92,246,0.06), transparent)' }}>
+        <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.8rem' }}>
+          <div>
+            <h3 style={{ fontSize: '1.02rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <UserCheck size={18} color="var(--accent-violet)" /> Seluruh Personil Sarpramoklet
+            </h3>
+            <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+              Data personil diambil dari halaman Personnel, thumbnail dari riwayat login Google.
+            </p>
+          </div>
+          <span className="badge badge-info" style={{ borderColor: 'rgba(139,92,246,0.35)', color: 'var(--accent-violet)', background: 'rgba(139,92,246,0.12)' }}>
+            {personnelForDashboard.length} Personil
+          </span>
+        </div>
+        <div style={{ padding: '1rem 1.25rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '0.8rem' }}>
+          {personnelForDashboard.map((person) => {
+            const email = userIdToEmail[person.id] || '';
+            const thumb = email ? profileThumbByEmail[email.toLowerCase()] : '';
+            return (
+              <div key={person.id} className="glass-panel" style={{ padding: '0.85rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-subtle)' }}>
+                <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'flex-start' }}>
+                  <div style={{ width: '38px', height: '38px', borderRadius: '50%', overflow: 'hidden', flexShrink: 0, border: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {thumb ? (
+                      <img src={thumb} alt={person.nama} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <UserCircle2 size={20} color="var(--text-muted)" />
+                    )}
+                  </div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
+                      <div style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.35 }}>
+                        {person.nama}
+                      </div>
+                      <span
+                        style={{
+                          fontSize: '0.62rem',
+                          fontWeight: 700,
+                          padding: '2px 8px',
+                          borderRadius: '999px',
+                          whiteSpace: 'nowrap',
+                          color: person.roleAplikasi === ROLES.PIMPINAN ? 'var(--accent-amber)' : person.roleAplikasi.includes('Koordinator') ? 'var(--accent-blue)' : 'var(--accent-emerald)',
+                          background: person.roleAplikasi === ROLES.PIMPINAN ? 'rgba(245,158,11,0.14)' : person.roleAplikasi.includes('Koordinator') ? 'rgba(59,130,246,0.14)' : 'rgba(16,185,129,0.14)',
+                          border: person.roleAplikasi === ROLES.PIMPINAN ? '1px solid rgba(245,158,11,0.3)' : person.roleAplikasi.includes('Koordinator') ? '1px solid rgba(59,130,246,0.3)' : '1px solid rgba(16,185,129,0.3)'
+                        }}
+                      >
+                        {person.roleAplikasi === ROLES.PIMPINAN ? 'Pimpinan' : person.roleAplikasi.includes('Koordinator') ? 'Koordinator' : 'PIC'}
+                      </span>
+                    </div>
+                    <div style={{ marginTop: '0.45rem', fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                      {person.jabatan}
+                    </div>
+                    <div style={{ marginTop: '0.45rem', fontSize: '0.68rem', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between', gap: '0.5rem' }}>
+                      <span>NIP: {person.nip}</span>
+                      <span>{person.unit}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
