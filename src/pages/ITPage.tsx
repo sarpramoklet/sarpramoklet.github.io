@@ -17,6 +17,7 @@ const monthMap: any = {
   'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'Mei': 4, 'Jun': 5, 
   'Jul': 6, 'Agt': 7, 'Sep': 8, 'Okt': 9, 'Nov': 10, 'Des': 11 
 };
+const monthList = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
 
 // Format tanggal ke dd-mm-yy (dari berbagai format: ISO, "31 Mar 2026", "6-04-2026", dsb.)
 const formatDate = (dateStr: string): string => {
@@ -52,6 +53,33 @@ const formatDate = (dateStr: string): string => {
     return `${dd}-${mm}-${year}`;
   }
   return s;
+};
+
+const getSystemDateInput = (): string => {
+  const now = new Date();
+  const yyyy = String(now.getFullYear());
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+};
+
+const toInputDate = (dateStr: string): string => {
+  const norm = formatDate(dateStr);
+  const p = norm.split('-');
+  if (p.length === 3) return `20${p[2]}-${p[1]}-${p[0]}`;
+  return getSystemDateInput();
+};
+
+const toDisplayDate = (dateStr: string): string => {
+  const norm = formatDate(dateStr);
+  const p = norm.split('-');
+  if (p.length === 3) {
+    const dd = String(parseInt(p[0], 10) || 0).padStart(2, '0');
+    const mIdx = (parseInt(p[1], 10) || 1) - 1;
+    const yy = String(parseInt(p[2], 10) || 0).padStart(2, '0');
+    return `${dd} ${monthList[mIdx] || 'Jan'} ${yy}`;
+  }
+  return norm || '-';
 };
 
 // Helper Components
@@ -272,7 +300,7 @@ const ITPage = () => {
   });
 
   const [netFormData, setNetFormData] = useState({
-    date: '',
+    date: getSystemDateInput(),
     i1_rx: '', i1_tx: '',
     i2_rx: '', i2_tx: '',
     i3_rx: '', i3_tx: '',
@@ -310,7 +338,7 @@ const ITPage = () => {
     setAiLoading(false);
     setManualSnapshotImage(null);
     setNetFormData({
-      date: '',
+      date: getSystemDateInput(),
       i1_rx: '', i1_tx: '',
       i2_rx: '', i2_tx: '',
       i3_rx: '', i3_tx: '',
@@ -320,6 +348,11 @@ const ITPage = () => {
       dhcp_cpu: '', dhcp_mem: '', dhcp_disk: '',
       sang_cpu: '', sang_mem: '', sang_virt: '', sang_disk: ''
     });
+  };
+
+  const openNetModal = () => {
+    resetNetFormState();
+    setIsNetFormOpen(true);
   };
 
   const closeNetModal = () => {
@@ -401,7 +434,7 @@ const ITPage = () => {
             const sourceSnapshot = getSnapshotSource(d);
             return {
               id: d.id || d.ID || `ROW-${idx + 1}`,
-              tanggal: parsedTanggal || 'Tanpa tanggal',
+              tanggal: parsedTanggal || formatDate(getSystemDateInput()),
               i1_rx: toNum(d.i1_rx), i1_tx: toNum(d.i1_tx),
               i2_rx: toNum(d.i2_rx), i2_tx: toNum(d.i2_tx),
               i3_rx: toNum(d.i3_rx), i3_tx: toNum(d.i3_tx),
@@ -857,7 +890,7 @@ const ITPage = () => {
               <DatabaseBackup size={14} /> Seed Data Gambar
             </button>
           )}
-          <button onClick={() => setIsNetFormOpen(true)} className="btn btn-outline" style={{ fontSize: '0.75rem' }}>
+          <button onClick={openNetModal} className="btn btn-outline" style={{ fontSize: '0.75rem' }}>
             Update Status Harian
           </button>
         </div>
@@ -898,10 +931,10 @@ const ITPage = () => {
               <Camera size={16} color="var(--accent-blue)" /> Kondisi Gambar Jaringan Terkini
             </h3>
             <p style={{ margin: '0.25rem 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-              Snapshot terakhir: {latestSnapshotRecord?.tanggal || '-'}
+              Snapshot terakhir: {latestSnapshotRecord?.tanggal ? toDisplayDate(latestSnapshotRecord.tanggal) : '-'}
             </p>
           </div>
-          <button onClick={() => setIsNetFormOpen(true)} className="btn btn-outline" style={{ fontSize: '0.75rem' }}>
+          <button onClick={openNetModal} className="btn btn-outline" style={{ fontSize: '0.75rem' }}>
             Update + Simpan Gambar
           </button>
         </div>
@@ -1013,7 +1046,7 @@ const ITPage = () => {
             <tbody>
               {[...netHistory].reverse().slice(0, 7).map((row) => (
                 <tr key={row.id} style={{ borderTop: '1px solid var(--border-subtle)' }}>
-                  <td style={{ padding: '0.75rem 1rem', fontWeight: 600, whiteSpace: 'nowrap' }}>{row.tanggal || '-'}</td>
+                  <td style={{ padding: '0.75rem 1rem', fontWeight: 600, whiteSpace: 'nowrap' }}>{toDisplayDate(String(row.tanggal || ''))}</td>
                   {ONT_LIST.map(ont => (
                     <td key={ont.key} style={{ padding: '0.75rem 0.5rem', textAlign: 'center' }}>
                       <span style={{ color: '#60a5fa', fontWeight: 600 }}>{row[`${ont.key}_rx`]}</span>
@@ -1057,7 +1090,7 @@ const ITPage = () => {
                               const recordId = String(row.id || '').startsWith('ROW-') ? `NET-${Date.now()}` : row.id;
                               await fetch(API_URL, {
                                 method: 'POST', mode: 'no-cors',
-                                body: JSON.stringify({ action: 'FINANCE_RECORD', sheetName: 'Monitor_Net', id: recordId, tanggal: row.tanggal === 'Tanpa tanggal' ? formatDate(new Date().toISOString()) : row.tanggal, snapshot: compressed })
+                                body: JSON.stringify({ action: 'FINANCE_RECORD', sheetName: 'Monitor_Net', id: recordId, tanggal: formatDate(String(row.tanggal || getSystemDateInput())), snapshot: compressed })
                               });
                               setNetHistory(prev => prev.map(r => r.id === row.id ? { ...r, id: recordId, snapshot: compressed } : r));
                             } catch { alert('Gagal upload foto.'); }
@@ -1204,7 +1237,7 @@ const ITPage = () => {
                           const extracted = await analyzeTrafficImage(base64, uploadMime);
                           setAiResult(extracted);
                           // Otomatis isi form manual juga
-                          setNetFormData(prev => ({ ...prev, ...extracted, date: extracted.tanggal || prev.date }));
+                          setNetFormData(prev => ({ ...prev, ...extracted, date: extracted.tanggal ? toInputDate(extracted.tanggal) : prev.date }));
                         } catch (err: any) {
                           setAiError('Gagal menganalisis gambar. Pastikan API key Gemini sudah diset. ' + (err.message || ''));
                         } finally { setAiLoading(false); }
@@ -1418,7 +1451,7 @@ const ITPage = () => {
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.5rem', marginBottom: '1rem' }}>
                     <div>
-                      <label style={{ fontSize: '0.7rem', display: 'block', marginBottom: '0.3rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Tanggal</label>
+                      <label style={{ fontSize: '0.7rem', display: 'block', marginBottom: '0.3rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Tanggal (otomatis dari sistem)</label>
                       <input type="date" className="input-field" style={{ width: '100%' }} value={netFormData.date || ''} onChange={e => setNetFormData({...netFormData, date: e.target.value})} />
                     </div>
                   </div>
