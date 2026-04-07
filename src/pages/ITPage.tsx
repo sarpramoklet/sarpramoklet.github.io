@@ -283,6 +283,24 @@ const ITPage = () => {
     sang_cpu: '', sang_mem: '', sang_virt: '', sang_disk: ''
   });
 
+  const toNum = (v: any) => {
+    const n = parseFloat(String(v ?? '').replace(',', '.'));
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  const hasNetPayload = (row: any) => {
+    const keys = [
+      'i1_rx', 'i1_tx', 'i2_rx', 'i2_tx', 'i3_rx', 'i3_tx',
+      'i4_rx', 'i4_tx', 'i5_rx', 'i5_tx', 'ast_rx', 'ast_tx',
+      'dhcp_cpu', 'dhcp_mem', 'dhcp_disk', 'sang_cpu', 'sang_mem', 'sang_virt', 'sang_disk',
+      'snapshot', 'Snapshot', 'snapshot_url', 'Snapshot_URL',
+      'tanggal', 'Tanggal'
+    ];
+    return keys.some((k) => String(row?.[k] ?? '').trim() !== '');
+  };
+
+  const getSnapshotSource = (row: any) => row?.snapshot || row?.Snapshot || row?.snapshot_url || row?.Snapshot_URL || '';
+
   const resetNetFormState = () => {
     setNetFormTab('upload');
     setUploadImage(null);
@@ -376,25 +394,39 @@ const ITPage = () => {
       const resp = await fetch(`${API_URL}?sheetName=Monitor_Net`);
       const data = await resp.json();
       if (data && Array.isArray(data) && data.length > 0) {
-        // Ambil semua record untuk histori
         const mapped = data
-          .filter((d: any) => d.id || d.ID)
-          .map((d: any) => ({
-            id: d.id || d.ID,
-            tanggal: formatDate(String(d.tanggal || d.Tanggal || '')),
-            i1_rx: parseFloat(d.i1_rx || 0), i1_tx: parseFloat(d.i1_tx || 0),
-            i2_rx: parseFloat(d.i2_rx || 0), i2_tx: parseFloat(d.i2_tx || 0),
-            i3_rx: parseFloat(d.i3_rx || 0), i3_tx: parseFloat(d.i3_tx || 0),
-            i4_rx: parseFloat(d.i4_rx || 0), i4_tx: parseFloat(d.i4_tx || 0),
-            i5_rx: parseFloat(d.i5_rx || 0), i5_tx: parseFloat(d.i5_tx || 0),
-            ast_rx: parseFloat(d.ast_rx || 0), ast_tx: parseFloat(d.ast_tx || 0),
-            dhcp_cpu: d.dhcp_cpu, dhcp_mem: d.dhcp_mem, dhcp_disk: d.dhcp_disk,
-            sang_cpu: d.sang_cpu, sang_mem: d.sang_mem, sang_virt: d.sang_virt, sang_disk: d.sang_disk,
-            snapshot: d.snapshot || d.Snapshot || '',
-            snapshot_url: d.snapshot_url || d.Snapshot_URL || '',
-          }));
-        setNetHistory(mapped);
-        setNetData(mapped[mapped.length - 1]);
+          .filter((d: any) => hasNetPayload(d))
+          .map((d: any, idx: number) => {
+            const parsedTanggal = formatDate(String(d.tanggal || d.Tanggal || ''));
+            const sourceSnapshot = getSnapshotSource(d);
+            return {
+              id: d.id || d.ID || `ROW-${idx + 1}`,
+              tanggal: parsedTanggal || 'Tanpa tanggal',
+              i1_rx: toNum(d.i1_rx), i1_tx: toNum(d.i1_tx),
+              i2_rx: toNum(d.i2_rx), i2_tx: toNum(d.i2_tx),
+              i3_rx: toNum(d.i3_rx), i3_tx: toNum(d.i3_tx),
+              i4_rx: toNum(d.i4_rx), i4_tx: toNum(d.i4_tx),
+              i5_rx: toNum(d.i5_rx), i5_tx: toNum(d.i5_tx),
+              ast_rx: toNum(d.ast_rx), ast_tx: toNum(d.ast_tx),
+              dhcp_cpu: d.dhcp_cpu ?? '',
+              dhcp_mem: d.dhcp_mem ?? '',
+              dhcp_disk: d.dhcp_disk ?? '',
+              sang_cpu: d.sang_cpu ?? '',
+              sang_mem: d.sang_mem ?? '',
+              sang_virt: d.sang_virt ?? '',
+              sang_disk: d.sang_disk ?? '',
+              snapshot: sourceSnapshot,
+              snapshot_url: d.snapshot_url || d.Snapshot_URL || ''
+            };
+          });
+
+        if (mapped.length > 0) {
+          setNetHistory(mapped);
+          const latestWithMetrics = [...mapped].reverse().find((r: any) =>
+            [r.i1_rx, r.i1_tx, r.i2_rx, r.i2_tx, r.i3_rx, r.i3_tx, r.i4_rx, r.i4_tx, r.i5_rx, r.i5_tx, r.ast_rx, r.ast_tx].some((v: any) => Number(v) > 0)
+          );
+          setNetData(latestWithMetrics || mapped[mapped.length - 1]);
+        }
       }
     } catch (e) {
       console.log('Error fetching net monitor', e);
@@ -601,7 +633,7 @@ const ITPage = () => {
   const dhcpCpu = parseFloat(netData?.dhcp_cpu || 0);
   const overloadRooms = latestWifi?.overloads || 0;
   const needsAttentionCount = [sangCpu > 75, dhcpCpu > 75, overloadRooms > 8].filter(Boolean).length;
-  const latestSnapshotRecord = [...netHistory].reverse().find((row: any) => row.snapshot);
+  const latestSnapshotRecord = [...netHistory].reverse().find((row: any) => getSnapshotSource(row));
 
   return (
     <div className="animate-fade-in it-dashboard-page">
@@ -874,14 +906,14 @@ const ITPage = () => {
           </button>
         </div>
 
-        {latestSnapshotRecord?.snapshot ? (
+        {latestSnapshotRecord && getSnapshotSource(latestSnapshotRecord) ? (
           <button
-            onClick={() => setSnapshotLightbox({ src: latestSnapshotRecord.snapshot, tanggal: latestSnapshotRecord.tanggal || '-' })}
+            onClick={() => setSnapshotLightbox({ src: getSnapshotSource(latestSnapshotRecord), tanggal: latestSnapshotRecord.tanggal || '-' })}
             style={{ width: '100%', border: 'none', padding: 0, background: 'transparent', cursor: 'zoom-in' }}
             title="Klik untuk lihat gambar ukuran penuh"
           >
             <img
-              src={latestSnapshotRecord.snapshot}
+              src={getSnapshotSource(latestSnapshotRecord)}
               alt={`Snapshot jaringan ${latestSnapshotRecord?.tanggal || ''}`}
               style={{ width: '100%', maxHeight: '260px', objectFit: 'contain', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'rgba(0,0,0,0.2)' }}
             />
@@ -991,19 +1023,19 @@ const ITPage = () => {
                   ))}
                   {/* Kolom Foto */}
                   <td style={{ padding: '0.5rem', textAlign: 'center' }}>
-                    {row.snapshot ? (
+                    {getSnapshotSource(row) ? (
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
                         <button
-                          onClick={() => setSnapshotLightbox({ src: row.snapshot, tanggal: row.tanggal || '-' })}
+                          onClick={() => setSnapshotLightbox({ src: getSnapshotSource(row), tanggal: row.tanggal || '-' })}
                           title="Lihat foto kondisi jaringan"
                           style={{ background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: '8px', cursor: 'pointer', padding: '4px 8px', display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--accent-blue)' }}
                         >
                           <Camera size={14} />
                           <span style={{ fontSize: '0.65rem', fontWeight: 600 }}>Lihat</span>
                         </button>
-                        {(row.snapshot_url || String(row.snapshot || '').startsWith('http')) && (
+                        {(row.snapshot_url || String(getSnapshotSource(row)).startsWith('http')) && (
                           <a
-                            href={row.snapshot_url || row.snapshot}
+                            href={row.snapshot_url || getSnapshotSource(row)}
                             target="_blank"
                             rel="noopener noreferrer"
                             style={{ fontSize: '0.62rem', color: 'var(--accent-emerald)', textDecoration: 'none' }}
@@ -1022,11 +1054,12 @@ const ITPage = () => {
                             const compressed = await compressImage(ev.target?.result as string);
                             // Simpan ke DB
                             try {
+                              const recordId = String(row.id || '').startsWith('ROW-') ? `NET-${Date.now()}` : row.id;
                               await fetch(API_URL, {
                                 method: 'POST', mode: 'no-cors',
-                                body: JSON.stringify({ action: 'FINANCE_RECORD', sheetName: 'Monitor_Net', id: row.id, tanggal: row.tanggal, snapshot: compressed })
+                                body: JSON.stringify({ action: 'FINANCE_RECORD', sheetName: 'Monitor_Net', id: recordId, tanggal: row.tanggal === 'Tanpa tanggal' ? formatDate(new Date().toISOString()) : row.tanggal, snapshot: compressed })
                               });
-                              setNetHistory(prev => prev.map(r => r.id === row.id ? { ...r, snapshot: compressed } : r));
+                              setNetHistory(prev => prev.map(r => r.id === row.id ? { ...r, id: recordId, snapshot: compressed } : r));
                             } catch { alert('Gagal upload foto.'); }
                           };
                           reader.readAsDataURL(file);
