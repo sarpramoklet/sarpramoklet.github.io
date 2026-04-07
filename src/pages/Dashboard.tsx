@@ -111,6 +111,53 @@ const formatWifiDateDisplay = (raw: any): string => {
   return `${dd} ${mm} ${yy}`;
 };
 
+type CashRow = {
+  tanggal: string;
+  keterangan: string;
+  debit: number;
+  kredit: number;
+  saldo: number;
+};
+
+const toCashNumber = (val: any) => {
+  const num = Number(val ?? 0);
+  return Number.isFinite(num) ? num : 0;
+};
+
+const normalizeCashRows = (rows: any[]): CashRow[] => {
+  return rows
+    .map((item: any) => ({
+      tanggal: String(item.tanggal || item.Tanggal || '').trim(),
+      keterangan: String(item.keterangan || item.Keterangan || '').trim(),
+      debit: toCashNumber(item.debit || item.Debit),
+      kredit: toCashNumber(item.kredit || item.Kredit),
+      saldo: toCashNumber(item.saldo || item.Saldo)
+    }))
+    .filter((item) => (item.tanggal && item.keterangan) || item.debit > 0 || item.kredit > 0);
+};
+
+const calculateTuBalance = (rows: CashRow[]) => {
+  if (rows.length === 0) return 0;
+
+  let currentBalance = 0;
+  if (rows[0].saldo > 0 && rows[0].debit === 0 && rows[0].kredit === 0) {
+    currentBalance = rows[0].saldo;
+    for (let i = 1; i < rows.length; i++) {
+      currentBalance = currentBalance + rows[i].debit - rows[i].kredit;
+    }
+    return currentBalance;
+  }
+
+  for (const item of rows) {
+    currentBalance = currentBalance + item.debit - item.kredit;
+  }
+  return currentBalance;
+};
+
+const calculateAcBalance = (rows: CashRow[]) => {
+  return rows.reduce((sum, item) => sum + item.debit - item.kredit, 0);
+};
+
 const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => {
   const currentUser = getCurrentUser();
   const isPimpinan = currentUser.roleAplikasi === ROLES.PIMPINAN;
@@ -276,21 +323,9 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         const dataTU = await respTU.json();
         
         if (dataTU && Array.isArray(dataTU) && dataTU.length > 0) {
-          let balance = 0;
-          let totalDebit = 0;
-          let totalKredit = 0;
-          let txCount = 0;
-
-          dataTU.forEach((item: any) => {
-            const d = Number(item.debit || item.Debit || 0);
-            const k = Number(item.kredit || item.Kredit || 0);
-            if (d > 0 || k > 0) {
-              totalDebit += d;
-              totalKredit += k;
-              txCount++;
-            }
-          });
-          balance = totalDebit - totalKredit;
+          const rowsTU = normalizeCashRows(dataTU);
+          const totalKredit = rowsTU.reduce((sum, item) => sum + item.kredit, 0);
+          const balance = calculateTuBalance(rowsTU);
           
           setTuFinance({ balance, expense: totalKredit });
 
@@ -309,27 +344,18 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           } else {
             setTuLastTx(null);
           }
+        } else {
+          setTuFinance({ balance: 0, expense: 0 });
+          setTuLastTx(null);
         }
 
         // Fetch Kas AC
         const respAC = await fetch(`${FINANCE_API_URL}?sheetName=Kas_AC`);
         const dataAC = await respAC.json();
         if (dataAC && Array.isArray(dataAC) && dataAC.length > 0) {
-          let balance = 0;
-          let totalDebit = 0;
-          let totalKredit = 0;
-          let txCount = 0;
-
-          dataAC.forEach((item: any) => {
-            const d = Number(item.debit || item.Debit || 0);
-            const k = Number(item.kredit || item.Kredit || 0);
-            if (d > 0 || k > 0) {
-              totalDebit += d;
-              totalKredit += k;
-              txCount++;
-            }
-          });
-          balance = totalDebit - totalKredit;
+          const rowsAC = normalizeCashRows(dataAC);
+          const totalKredit = rowsAC.reduce((sum, item) => sum + item.kredit, 0);
+          const balance = calculateAcBalance(rowsAC);
           
           setAcFinance({ balance, expense: totalKredit });
 
@@ -348,6 +374,9 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           } else {
             setAcLastTx(null);
           }
+        } else {
+          setAcFinance({ balance: 0, expense: 0 });
+          setAcLastTx(null);
         }
       } catch (error) {
         console.error("Dashboard monitor fetch error:", error);

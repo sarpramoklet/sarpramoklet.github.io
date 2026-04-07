@@ -3,6 +3,53 @@ import { Wallet, TrendingUp, TrendingDown, Plus, LayoutDashboard, History, Piggy
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 
+type CashRow = {
+  tanggal: string;
+  keterangan: string;
+  debit: number;
+  kredit: number;
+  saldo: number;
+};
+
+const toNumber = (val: any) => {
+  const num = Number(val ?? 0);
+  return Number.isFinite(num) ? num : 0;
+};
+
+const normalizeCashRows = (rows: any[]): CashRow[] => {
+  return rows
+    .map((item: any) => ({
+      tanggal: String(item.tanggal || item.Tanggal || '').trim(),
+      keterangan: String(item.keterangan || item.Keterangan || '').trim(),
+      debit: toNumber(item.debit || item.Debit),
+      kredit: toNumber(item.kredit || item.Kredit),
+      saldo: toNumber(item.saldo || item.Saldo)
+    }))
+    .filter((item) => (item.tanggal && item.keterangan) || item.debit > 0 || item.kredit > 0);
+};
+
+const calculateTuBalance = (rows: CashRow[]) => {
+  if (rows.length === 0) return 0;
+
+  let currentBalance = 0;
+  if (rows[0].saldo > 0 && rows[0].debit === 0 && rows[0].kredit === 0) {
+    currentBalance = rows[0].saldo;
+    for (let i = 1; i < rows.length; i++) {
+      currentBalance = currentBalance + rows[i].debit - rows[i].kredit;
+    }
+    return currentBalance;
+  }
+
+  for (const item of rows) {
+    currentBalance = currentBalance + item.debit - item.kredit;
+  }
+  return currentBalance;
+};
+
+const calculateAcBalance = (rows: CashRow[]) => {
+  return rows.reduce((sum, item) => sum + item.debit - item.kredit, 0);
+};
+
 const Finance = () => {
   const [activeTab, setActiveTab] = useState('history'); // Default to history as requested for better view
   const [loading, setLoading] = useState(true);
@@ -55,13 +102,17 @@ const Finance = () => {
       const [dataTU, dataAC] = await Promise.all([respTU.json(), respAC.json()]);
       
       if (Array.isArray(dataTU) && dataTU.length > 0) {
-        const lastRow = dataTU.reverse().find((r: any) => r.saldo || r.Saldo);
-        setTuBalance(Number(lastRow?.saldo || lastRow?.Saldo || 0));
+        const rowsTU = normalizeCashRows(dataTU);
+        setTuBalance(calculateTuBalance(rowsTU));
+      } else {
+        setTuBalance(0);
       }
       
       if (Array.isArray(dataAC) && dataAC.length > 0) {
-        const lastRow = dataAC.reverse().find((r: any) => r.saldo || r.Saldo);
-        setAcBalance(Number(lastRow?.saldo || lastRow?.Saldo || 0));
+        const rowsAC = normalizeCashRows(dataAC);
+        setAcBalance(calculateAcBalance(rowsAC));
+      } else {
+        setAcBalance(0);
       }
 
     } catch (error) {
