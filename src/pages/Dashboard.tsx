@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, LabelList } from 'recharts';
 import { UserCircle2, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, ShieldCheck, MessageSquare, AlertCircle, Edit3, Trash2, Wind, Briefcase, Smartphone, Activity, Coins, Camera, X } from 'lucide-react';
-import { getCurrentUser, ROLES } from '../data/organization';
+import { getCurrentUser, ROLES, USERS } from '../data/organization';
 import { getUtilityChartData } from '../data/utilities';
 
 const FINANCE_API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
@@ -53,6 +53,18 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   const [netSnapshotThumb, setNetSnapshotThumb] = useState<any>(null);
   const [netSnapshotLightbox, setNetSnapshotLightbox] = useState<{ src: string; tanggal: string } | null>(null);
   const sortedCapexProjects = capexProjects.slice().sort((a, b) => b.progress - a.progress);
+  const sarprasPersonnel = USERS
+    .filter((u) => u.roleAplikasi === ROLES.PIMPINAN || u.unit === 'Sarpras')
+    .sort((a, b) => {
+      const rank = (role: string) => {
+        if (role === ROLES.PIMPINAN) return 0;
+        if (role === ROLES.KOORDINATOR_SARPRAS) return 1;
+        return 2;
+      };
+      const diff = rank(a.roleAplikasi) - rank(b.roleAplikasi);
+      if (diff !== 0) return diff;
+      return a.nama.localeCompare(b.nama, 'id');
+    });
 
   const pickDateField = (row: any) => String(
     row?.tanggal || row?.Tanggal || row?.date || row?.Date || row?.waktu || row?.Waktu || ''
@@ -518,6 +530,53 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           <p className="page-subtitle" style={{ margin: 0, maxWidth: '800px' }}>
             Monitor penugasan, progres rutin, dan proyek tim IT, Lab & Sarana Prasarana.
           </p>
+        </div>
+      </div>
+
+      <div className="glass-panel delay-050" style={{ marginBottom: '2rem', borderLeft: '4px solid var(--accent-violet)', background: 'linear-gradient(135deg, rgba(139,92,246,0.06), transparent)' }}>
+        <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.8rem' }}>
+          <div>
+            <h3 style={{ fontSize: '1.02rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <UserCheck size={18} color="var(--accent-violet)" /> Personil Sarpras
+            </h3>
+            <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+              Susunan personil mulai Pimpinan hingga PIC operasional.
+            </p>
+          </div>
+          <span className="badge badge-info" style={{ borderColor: 'rgba(139,92,246,0.35)', color: 'var(--accent-violet)', background: 'rgba(139,92,246,0.12)' }}>
+            {sarprasPersonnel.length} Personil
+          </span>
+        </div>
+        <div style={{ padding: '1rem 1.25rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '0.8rem' }}>
+          {sarprasPersonnel.map((person) => (
+            <div key={person.id} className="glass-panel" style={{ padding: '0.85rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-subtle)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
+                <div style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.35 }}>
+                  {person.nama}
+                </div>
+                <span
+                  style={{
+                    fontSize: '0.62rem',
+                    fontWeight: 700,
+                    padding: '2px 8px',
+                    borderRadius: '999px',
+                    whiteSpace: 'nowrap',
+                    color: person.roleAplikasi === ROLES.PIMPINAN ? 'var(--accent-amber)' : person.roleAplikasi === ROLES.KOORDINATOR_SARPRAS ? 'var(--accent-blue)' : 'var(--accent-emerald)',
+                    background: person.roleAplikasi === ROLES.PIMPINAN ? 'rgba(245,158,11,0.14)' : person.roleAplikasi === ROLES.KOORDINATOR_SARPRAS ? 'rgba(59,130,246,0.14)' : 'rgba(16,185,129,0.14)',
+                    border: person.roleAplikasi === ROLES.PIMPINAN ? '1px solid rgba(245,158,11,0.3)' : person.roleAplikasi === ROLES.KOORDINATOR_SARPRAS ? '1px solid rgba(59,130,246,0.3)' : '1px solid rgba(16,185,129,0.3)'
+                  }}
+                >
+                  {person.roleAplikasi === ROLES.PIMPINAN ? 'Pimpinan' : person.roleAplikasi === ROLES.KOORDINATOR_SARPRAS ? 'Koordinator' : 'PIC'}
+                </span>
+              </div>
+              <div style={{ marginTop: '0.45rem', fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                {person.jabatan}
+              </div>
+              <div style={{ marginTop: '0.45rem', fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                NIP: {person.nip}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
