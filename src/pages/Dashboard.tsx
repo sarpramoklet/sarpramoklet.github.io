@@ -421,7 +421,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
 
     if (isLoggedIn) fetchACMonitor();
     fetchCapexProjects();
-    if (isLoggedIn) fetchWifiMonitor();
+    fetchWifiMonitor();
     fetchNetSnapshot();
 
   }, [isAuthorizedFinance, isLoggedIn]);
@@ -606,8 +606,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       )}
 
       {/* DASHBOARD WIFI MONITORING SECTION */}
-      {isLoggedIn && (
-        <div className="glass-panel delay-150" style={{ marginBottom: '2rem', background: 'linear-gradient(135deg, rgba(59,130,246,0.03), transparent)', borderLeft: '4px solid var(--accent-blue)' }}>
+      <div className="glass-panel delay-150" style={{ marginBottom: '2rem', background: 'linear-gradient(135deg, rgba(59,130,246,0.03), transparent)', borderLeft: '4px solid var(--accent-blue)' }}>
           <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <h3 style={{ fontSize: '1.05rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -673,8 +672,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
             )}
 
           </div>
-        </div>
-      )}
+      </div>
 
       {/* DASHBOARD CAPEX PROJECTS SECTION */}
       <div className="glass-panel delay-200" style={{ marginBottom: '2rem', background: 'linear-gradient(135deg, rgba(245,158,11,0.03), transparent)', borderLeft: '4px solid var(--accent-amber)' }}>
