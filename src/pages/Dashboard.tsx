@@ -46,6 +46,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   const [wifiData, setWifiData] = useState<any[]>([]);
   const [wifiLoading, setWifiLoading] = useState(false);
   const [netSnapshot, setNetSnapshot] = useState<any>(null);
+  const sortedCapexProjects = capexProjects.slice().sort((a, b) => b.progress - a.progress);
 
   useEffect(() => {
     const fetchFinanceData = async () => {
@@ -550,15 +551,16 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
             ) : capexProjects.length > 0 ? (
               <div style={{ width: '100%', height: '280px' }}>
                 <ResponsiveContainer>
-                  <BarChart data={capexProjects.slice().sort((a,b)=> b.progress - a.progress)} layout="vertical" margin={{ left: 10, right: 30 }}>
+                  <BarChart data={sortedCapexProjects} layout="vertical" margin={{ left: 10, right: 50 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" horizontal={false} />
                     <XAxis type="number" domain={[0, 100]} stroke="var(--text-muted)" fontSize={11} tickFormatter={v => `${v}%`} />
                     <YAxis dataKey="nama" type="category" width={180} stroke="var(--text-muted)" fontSize={10} tickFormatter={(val) => val.length > 25 ? val.substring(0, 25) + '...' : val} />
                     <RechartsTooltip formatter={(v: any) => [`${v}%`, 'Progres']} contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-focus)', borderRadius: '8px' }} />
                     <Bar dataKey="progress" radius={[0, 4, 4, 0]} barSize={20}>
-                      {capexProjects.map((ent, idx) => (
+                      {sortedCapexProjects.map((ent, idx) => (
                         <Cell key={`cell-${idx}`} fill={ent.progress >= 100 ? '#10b981' : ent.progress >= 50 ? '#3b82f6' : '#f59e0b'} />
                       ))}
+                      <LabelList dataKey="progress" position="right" formatter={(v: any) => `${Math.round(Number(v) || 0)}%`} style={{ fill: 'var(--text-primary)', fontSize: 11, fontWeight: 700 }} />
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>

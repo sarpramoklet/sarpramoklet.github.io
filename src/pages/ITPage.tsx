@@ -1229,14 +1229,14 @@ const ITPage = () => {
       {snapshotLightbox && (
         <div
           onClick={() => setSnapshotLightbox(null)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', zIndex: 2000, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', cursor: 'zoom-out' }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', zIndex: 2000, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', padding: '1.25rem 1.5rem 1.5rem', cursor: 'zoom-out', overflowY: 'auto' }}
         >
           <div style={{ position: 'absolute', top: '1rem', right: '1rem' }}>
             <button onClick={() => setSnapshotLightbox(null)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', color: 'white', cursor: 'pointer', padding: '8px', display: 'flex' }}>
               <X size={20} />
             </button>
           </div>
-          <div style={{ marginBottom: '0.75rem', fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={{ marginTop: '0.25rem', marginBottom: '0.75rem', fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Camera size={14} />
             <span>Kondisi Jaringan — {snapshotLightbox.tanggal}</span>
           </div>
@@ -1244,7 +1244,7 @@ const ITPage = () => {
             src={snapshotLightbox.src}
             alt={`Kondisi Jaringan ${snapshotLightbox.tanggal}`}
             onClick={e => e.stopPropagation()}
-            style={{ maxWidth: '100%', maxHeight: '80vh', borderRadius: '12px', boxShadow: '0 25px 60px rgba(0,0,0,0.5)', objectFit: 'contain', cursor: 'default' }}
+            style={{ maxWidth: '100%', maxHeight: 'calc(100vh - 120px)', borderRadius: '12px', boxShadow: '0 25px 60px rgba(0,0,0,0.5)', objectFit: 'contain', cursor: 'default' }}
           />
           <p style={{ marginTop: '0.75rem', fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>Klik di luar gambar untuk menutup</p>
         </div>
