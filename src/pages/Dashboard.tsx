@@ -786,6 +786,73 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
     </div>
   );
 
+  const infrastructureHealthSection = (
+    <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '1.5rem', background: 'linear-gradient(135deg, rgba(16,185,129,0.03), transparent)', borderLeft: '4px solid var(--accent-emerald)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Activity size={18} color="var(--accent-emerald)" /> Infrastructure Health Snapshot
+        </h3>
+        <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+          Last update: {formatSnapshotDate(netSnapshot?.tanggal || netSnapshot?.Tanggal || '')}
+        </span>
+      </div>
+
+      <div className="dashboard-grid">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+            <span style={{ color: 'var(--text-secondary)' }}>ISP Status (Avg)</span>
+            <span className="badge badge-success">Optimal</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+            <span style={{ color: 'var(--text-secondary)' }}>Server Uptime</span>
+            <span style={{ color: 'var(--accent-emerald)', fontWeight: 600 }}>99.9%</span>
+          </div>
+          <div style={{ marginTop: '0.35rem' }}>
+            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <Camera size={12} /> Snapshot terbaru
+            </div>
+            {netSnapshotThumb && getSnapshotSource(netSnapshotThumb) ? (
+              <button
+                onClick={() => setNetSnapshotLightbox({
+                  src: getSnapshotSource(netSnapshotThumb),
+                  tanggal: formatSnapshotDate(netSnapshotThumb?.tanggal || netSnapshotThumb?.Tanggal || '')
+                })}
+                title="Klik untuk zoom snapshot jaringan"
+                style={{ border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '0.25rem', background: 'rgba(0,0,0,0.2)', cursor: 'zoom-in', width: '130px', display: 'block' }}
+              >
+                <img
+                  src={getSnapshotSource(netSnapshotThumb)}
+                  alt="Thumbnail snapshot jaringan terbaru"
+                  style={{ width: '100%', height: '72px', objectFit: 'cover', borderRadius: '7px', display: 'block' }}
+                />
+              </button>
+            ) : (
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', border: '1px dashed var(--border-subtle)', borderRadius: '8px', padding: '0.55rem 0.6rem', display: 'inline-block' }}>
+                Belum ada snapshot
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
+          <div className="glass-panel" style={{ padding: '0.75rem', flex: 1, minWidth: '150px' }}>
+            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Sangfor CPU Load</div>
+            <div style={{ fontSize: '1.1rem', fontWeight: 700, color: parseInt(netSnapshot?.sang_cpu || "0") > 75 ? 'var(--accent-rose)' : 'var(--accent-emerald)' }}>
+              {netSnapshot?.sang_cpu || "80"}%
+            </div>
+          </div>
+          <div className="glass-panel" style={{ padding: '0.75rem', flex: 1, minWidth: '150px' }}>
+            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Peak Traffic Line 1</div>
+            <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>{netSnapshot?.i1_rx || "366"} <small style={{ fontWeight: 400, fontSize: '0.6rem' }}>Mbps</small></div>
+          </div>
+        </div>
+      </div>
+      <div style={{ marginTop: '1rem', textAlign: 'right' }}>
+        <a href="#/it" style={{ fontSize: '0.75rem', color: 'var(--accent-blue)', textDecoration: 'none' }}>View Network Topology Map &rarr;</a>
+      </div>
+    </div>
+  );
+
   return (
     <div className="animate-fade-in">
       {isLoggedIn && (
@@ -957,6 +1024,8 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           )}
         </div>
       </div>
+
+      {infrastructureHealthSection}
 
       {/* DASHBOARD AC MONITORING SECTION */}
       {acMonitorSection}
@@ -1296,73 +1365,6 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           </div>
         </div>
       )}
-
-
-      {/* NETWORK INFRASTRUCTURE SUMMARY */}
-      <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '1.5rem', background: 'linear-gradient(135deg, rgba(16,185,129,0.03), transparent)', borderLeft: '4px solid var(--accent-emerald)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Activity size={18} color="var(--accent-emerald)" /> Infrastructure Health Snapshot
-            </h3>
-            <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
-              Last update: {formatSnapshotDate(netSnapshot?.tanggal || netSnapshot?.Tanggal || '')}
-            </span>
-          </div>
-          
-          <div className="dashboard-grid">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                <span style={{ color: 'var(--text-secondary)' }}>ISP Status (Avg)</span>
-                <span className="badge badge-success">Optimal</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                <span style={{ color: 'var(--text-secondary)' }}>Server Uptime</span>
-                <span style={{ color: 'var(--accent-emerald)', fontWeight: 600 }}>99.9%</span>
-              </div>
-              <div style={{ marginTop: '0.35rem' }}>
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <Camera size={12} /> Snapshot terbaru
-                </div>
-                {netSnapshotThumb && getSnapshotSource(netSnapshotThumb) ? (
-                  <button
-                    onClick={() => setNetSnapshotLightbox({
-                      src: getSnapshotSource(netSnapshotThumb),
-                      tanggal: formatSnapshotDate(netSnapshotThumb?.tanggal || netSnapshotThumb?.Tanggal || '')
-                    })}
-                    title="Klik untuk zoom snapshot jaringan"
-                    style={{ border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '0.25rem', background: 'rgba(0,0,0,0.2)', cursor: 'zoom-in', width: '130px', display: 'block' }}
-                  >
-                    <img
-                      src={getSnapshotSource(netSnapshotThumb)}
-                      alt="Thumbnail snapshot jaringan terbaru"
-                      style={{ width: '100%', height: '72px', objectFit: 'cover', borderRadius: '7px', display: 'block' }}
-                    />
-                  </button>
-                ) : (
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', border: '1px dashed var(--border-subtle)', borderRadius: '8px', padding: '0.55rem 0.6rem', display: 'inline-block' }}>
-                    Belum ada snapshot
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
-              <div className="glass-panel" style={{ padding: '0.75rem', flex: 1, minWidth: '150px' }}>
-                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Sangfor CPU Load</div>
-                <div style={{ fontSize: '1.1rem', fontWeight: 700, color: parseInt(netSnapshot?.sang_cpu || "0") > 75 ? 'var(--accent-rose)' : 'var(--accent-emerald)' }}>
-                  {netSnapshot?.sang_cpu || "80"}%
-                </div>
-              </div>
-              <div className="glass-panel" style={{ padding: '0.75rem', flex: 1, minWidth: '150px' }}>
-                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Peak Traffic Line 1</div>
-                <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>{netSnapshot?.i1_rx || "366"} <small style={{ fontWeight: 400, fontSize: '0.6rem' }}>Mbps</small></div>
-              </div>
-            </div>
-          </div>
-          <div style={{ marginTop: '1rem', textAlign: 'right' }}>
-            <a href="#/it" style={{ fontSize: '0.75rem', color: 'var(--accent-blue)', textDecoration: 'none' }}>View Network Topology Map &rarr;</a>
-          </div>
-      </div>
 
       {netSnapshotLightbox && (
         <div
