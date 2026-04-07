@@ -5,7 +5,7 @@ import { getCurrentUser, ROLES, USERS } from '../data/organization';
 import { getUtilityChartData } from '../data/utilities';
 import { useProfileThumbByEmail } from '../hooks/useProfileThumbByEmail';
 import UserAvatar from '../components/UserAvatar';
-import { getMotivationForLogin } from '../utils/motivation';
+import { getMotivationForLogin, getPublicEducationalMotivation } from '../utils/motivation';
 
 const FINANCE_API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 
@@ -189,10 +189,18 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   const [netSnapshot, setNetSnapshot] = useState<any>(null);
   const [netSnapshotThumb, setNetSnapshotThumb] = useState<any>(null);
   const [netSnapshotLightbox, setNetSnapshotLightbox] = useState<{ src: string; tanggal: string } | null>(null);
+  const [publicVisitorSeed] = useState(() => {
+    const existing = localStorage.getItem('publicVisitorSeed');
+    if (existing) return existing;
+    const generated = `PUB-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    localStorage.setItem('publicVisitorSeed', generated);
+    return generated;
+  });
   const sortedCapexProjects = capexProjects.slice().sort((a, b) => b.progress - a.progress);
   const profileThumbByEmail = useProfileThumbByEmail();
   const loginSessionSeed = localStorage.getItem('loginSessionSeed') || '';
   const motivationText = getMotivationForLogin(currentUser, loginSessionSeed);
+  const publicMotivationText = getPublicEducationalMotivation(publicVisitorSeed);
 
 
   const personnelForDashboard = USERS;
@@ -868,6 +876,22 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           <p className="page-subtitle" style={{ margin: 0, maxWidth: '800px' }}>
             Monitor penugasan, progres rutin, dan proyek tim IT, Lab & Sarana Prasarana.
           </p>
+          {!isLoggedIn && (
+            <div
+              className="glass-panel"
+              style={{
+                marginTop: '0.9rem',
+                padding: '0.75rem 0.95rem',
+                maxWidth: '820px',
+                borderLeft: '3px solid var(--accent-emerald)',
+                background: 'linear-gradient(90deg, var(--accent-emerald-ghost), transparent)'
+              }}
+            >
+              <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.45, fontStyle: 'italic' }}>
+                "{publicMotivationText}"
+              </p>
+            </div>
+          )}
         </div>
       </div>
 

@@ -59,6 +59,21 @@ const CLOSINGS = [
   'Fokus pada yang berdampak, sisanya akan menyesuaikan.'
 ];
 
+const PUBLIC_EDUCATIONAL_QUOTES = [
+  'Belajar itu investasi yang nilainya terus bertambah saat ilmu dipraktikkan.',
+  'Disiplin kecil setiap hari lebih kuat daripada semangat besar yang sesekali.',
+  'Pendidikan terbaik terjadi saat rasa ingin tahu dijaga tetap hidup.',
+  'Kemajuan tim dimulai dari kebiasaan untuk mau belajar dan berbagi.',
+  'Kesalahan bukan akhir, itu bagian penting dari proses memahami.',
+  'Ilmu yang dipakai untuk melayani akan selalu punya dampak jangka panjang.',
+  'Ketekunan mengubah kemampuan biasa menjadi hasil yang luar biasa.',
+  'Terus bertanya, terus mencoba, terus bertumbuh.',
+  'Satu ide baik hari ini bisa jadi solusi besar untuk esok hari.',
+  'Kualitas belajar ditentukan oleh konsistensi, bukan kecepatan.',
+  'Belajar dengan niat baik akan melahirkan karya yang bermanfaat.',
+  'Setiap hari adalah kesempatan memperbarui cara berpikir dan cara bekerja.'
+];
+
 const hashString = (text: string) => {
   let hash = 0;
   for (let i = 0; i < text.length; i++) {
@@ -93,3 +108,9 @@ export const getMotivationForLogin = (user: User, loginSessionSeed: string) => {
   return `${opener} ${focus} ${closing}`;
 };
 
+export const getPublicEducationalMotivation = (visitorSeed: string) => {
+  const baseSeed = visitorSeed || 'public-default';
+  const dayKey = new Date().toISOString().slice(0, 10);
+  const mixedSeed = hashString(`${baseSeed}|${dayKey}`);
+  return pickByHash(PUBLIC_EDUCATIONAL_QUOTES, mixedSeed);
+};
