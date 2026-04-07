@@ -38,10 +38,10 @@ const formatDate = (dateStr: string): string => {
   const tanggalMatch = s.match(/tanggal\s+(\d{1,2}[-/]\d{2}[-/]\d{4})/i);
   if (tanggalMatch) return formatDate(tanggalMatch[1]);
   // Format d-mm-yyyy atau d/mm/yyyy (misal: "6-04-2026", "1/04/2026")
-  const dmyMatch = s.match(/^(\d{1,2})[-/](\d{2})[-/](\d{4})$/);
+  const dmyMatch = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{2}|\d{4})$/);
   if (dmyMatch) {
     const dd = dmyMatch[1].padStart(2, '0');
-    const mm = dmyMatch[2];
+    const mm = dmyMatch[2].padStart(2, '0');
     const yy = dmyMatch[3].slice(-2);
     return `${dd}-${mm}-${yy}`;
   }
@@ -87,19 +87,13 @@ const normalizeWifiDateFromDb = (raw: any): string => {
   const s = String(raw || '').trim();
   if (!s) return '';
 
-  // Kasus dari Sheet sering jadi ISO dan bisa kebalik month/day untuk input dd-mm.
+  // Jika dari Sheet menjadi ISO, gunakan tanggal lokal apa adanya (tanpa tukar day/month).
   if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
     const d = new Date(s);
     if (!isNaN(d.getTime())) {
-      let dd = d.getDate();
-      let mm = d.getMonth() + 1;
+      const dd = d.getDate();
+      const mm = d.getMonth() + 1;
       const yy = d.getFullYear() % 100;
-      // Jika ambigu (dua-duanya <=12), asumsikan tersimpan terbalik dan tukar.
-      if (dd <= 12 && mm <= 12) {
-        const tmp = dd;
-        dd = mm;
-        mm = tmp;
-      }
       return `${String(dd).padStart(2, '0')}-${String(mm).padStart(2, '0')}-${String(yy).padStart(2, '0')}`;
     }
   }
@@ -791,6 +785,7 @@ const ITPage = () => {
       await fetch(API_URL, {
         method: "POST",
         mode: "no-cors",
+        headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({
           action: 'FINANCE_RECORD',
           sheetName: 'Monitor_Wifi',
