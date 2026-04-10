@@ -16,7 +16,13 @@ import {
   Zap,
 } from 'lucide-react';
 import { getCurrentUser, ROLES } from '../data/organization';
-import { requireGeminiApiKey } from '../utils/env';
+import {
+  clearRuntimeGeminiApiKey,
+  getGeminiApiKeySource,
+  getRuntimeGeminiApiKey,
+  requireGeminiApiKey,
+  setRuntimeGeminiApiKey,
+} from '../utils/env';
 import { logAccess } from '../utils/logger';
 import { generateGeminiJsonFromImage } from '../utils/gemini';
 import {
@@ -257,6 +263,22 @@ Rules:
   return normalizeImageImportResponse(json);
 };
 
+const getReadableClassroomAiError = (message: string) => {
+  if (/reported as leaked|api key was reported as leaked/i.test(message)) {
+    return 'API key Gemini ditolak karena terdeteksi bocor. Tempel key lain di popup, key hanya disimpan untuk sesi browser ini.';
+  }
+
+  if (/api key not valid|permission denied|forbidden|403/i.test(message)) {
+    return 'API key Gemini tidak valid atau tidak diizinkan. Tempel key yang aktif di popup lalu coba baca form lagi.';
+  }
+
+  if (/belum diatur/i.test(message)) {
+    return 'Masukkan Gemini API key di popup terlebih dulu. Key hanya dipakai saat proses baca gambar dan disimpan untuk sesi browser ini.';
+  }
+
+  return `Gagal membaca gambar form. ${message}`;
+};
+
 const ClassroomMonitor = () => {
   const currentUser = getCurrentUser();
   const canManage = [
@@ -282,11 +304,20 @@ const ClassroomMonitor = () => {
   const [importError, setImportError] = useState('');
   const [importDraft, setImportDraft] = useState<ImageImportDraft | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [isGeminiKeyModalOpen, setIsGeminiKeyModalOpen] = useState(false);
+  const [geminiKeyDraft, setGeminiKeyDraft] = useState('');
+  const [geminiKeySaved, setGeminiKeySaved] = useState(getGeminiApiKeySource() === 'browser');
 
   useEffect(() => {
     fetchRows();
     logAccess(currentUser, 'Monitor Pantauan Kelas');
   }, []);
+
+  useEffect(() => {
+    if (!isImportModalOpen) return;
+    setGeminiKeyDraft(getRuntimeGeminiApiKey());
+    setGeminiKeySaved(getGeminiApiKeySource() === 'browser');
+  }, [isImportModalOpen]);
 
   const buildPayloadForEntry = (entry: ClassroomMonitorEntry) => ({
     action: 'FINANCE_RECORD',
@@ -411,6 +442,7 @@ const ClassroomMonitor = () => {
 
   const closeImportModal = () => {
     setIsImportModalOpen(false);
+    setIsGeminiKeyModalOpen(false);
     resetImportState();
   };
 
@@ -516,7 +548,7 @@ const ClassroomMonitor = () => {
     reader.readAsDataURL(file);
   };
 
-  const handleAnalyzeImage = async () => {
+  const runAnalyzeImage = async () => {
     if (!importImage) return;
     setImportLoading(true);
     setImportError('');
@@ -533,10 +565,37 @@ const ClassroomMonitor = () => {
       });
     } catch (error: any) {
       console.error('Analyze classroom form failed:', error);
-      setImportError(error?.message || 'Gagal membaca gambar form.');
+      setImportError(getReadableClassroomAiError(error?.message || 'Unknown error.'));
     } finally {
       setImportLoading(false);
     }
+  };
+
+  const handleAnalyzeImage = async () => {
+    if (!importImage) return;
+    if (!getRuntimeGeminiApiKey()) {
+      setGeminiKeyDraft(getRuntimeGeminiApiKey());
+      setGeminiKeySaved(getGeminiApiKeySource() === 'browser');
+      setIsGeminiKeyModalOpen(true);
+      setImportError('Masukkan Gemini API key di popup terlebih dulu. Key hanya disimpan untuk sesi browser aktif.');
+      return;
+    }
+
+    await runAnalyzeImage();
+  };
+
+  const handleSaveGeminiKeyAndAnalyze = async () => {
+    const trimmed = geminiKeyDraft.trim();
+    if (!trimmed) {
+      setImportError('Gemini API key belum diisi.');
+      return;
+    }
+
+    setRuntimeGeminiApiKey(trimmed);
+    setGeminiKeySaved(true);
+    setIsGeminiKeyModalOpen(false);
+    setImportError('');
+    await runAnalyzeImage();
   };
 
   const handleSaveImportDraft = async () => {
@@ -1233,6 +1292,34 @@ const ClassroomMonitor = () => {
                     {importError}
                   </div>
                 )}
+
+                <div style={{ marginTop: '0.9rem', padding: '0.85rem 0.95rem', borderRadius: '12px', background: 'rgba(59,130,246,0.07)', border: '1px solid rgba(59,130,246,0.18)' }}>
+                  <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--accent-blue)' }}>API Key Gemini per sesi browser</div>
+                  <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '0.25rem', lineHeight: 1.55 }}>
+                    Demi keamanan, key tidak ditaruh di kode. Saat mau baca form, tempel key di popup lalu sistem hanya menyimpannya untuk sesi browser aktif.
+                  </div>
+                  <div style={{ marginTop: '0.45rem', fontSize: '0.72rem', color: geminiKeySaved ? 'var(--accent-emerald)' : 'var(--text-muted)' }}>
+                    {geminiKeySaved ? 'Key sesi aktif. Anda bisa langsung baca form atau ganti key lewat tombol Kelola Key.' : 'Belum ada key sesi aktif. Tombol baca form akan membuka popup input key.'}
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap', marginTop: '0.75rem' }}>
+                    <button onClick={() => setIsGeminiKeyModalOpen(true)} className="btn btn-outline" type="button">
+                      <Zap size={16} /> Kelola Key Gemini
+                    </button>
+                    {geminiKeySaved && (
+                      <button
+                        onClick={() => {
+                          clearRuntimeGeminiApiKey();
+                          setGeminiKeyDraft('');
+                          setGeminiKeySaved(false);
+                        }}
+                        className="btn btn-outline"
+                        type="button"
+                      >
+                        <X size={16} /> Hapus Key Sesi
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
@@ -1284,6 +1371,78 @@ const ClassroomMonitor = () => {
                     </div>
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isImportModalOpen && isGeminiKeyModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.55)',
+            zIndex: 1300,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem',
+          }}
+        >
+          <div className="glass-panel" style={{ width: '100%', maxWidth: '520px', padding: '1.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1rem', color: 'var(--text-primary)' }}>Masukkan Gemini API Key</h3>
+                <p style={{ margin: '0.25rem 0 0', fontSize: '0.74rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                  Tempel key hanya saat akan baca form. Key disimpan di session browser, tidak ditaruh di source code.
+                </p>
+              </div>
+              <button
+                onClick={() => setIsGeminiKeyModalOpen(false)}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+                type="button"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>Gemini API Key</span>
+                <input
+                  type="password"
+                  value={geminiKeyDraft}
+                  onChange={(e) => setGeminiKeyDraft(e.target.value)}
+                  placeholder="Tempel Gemini API key di sini"
+                  className="input-responsive"
+                />
+              </label>
+
+              <div style={{ fontSize: '0.72rem', color: geminiKeySaved ? 'var(--accent-emerald)' : 'var(--text-muted)', lineHeight: 1.5 }}>
+                {geminiKeySaved ? 'Saat ini ada key sesi aktif. Anda bisa menggantinya kapan saja dari popup ini.' : 'Belum ada key sesi aktif untuk proses baca form.'}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+                <button
+                  onClick={() => {
+                    clearRuntimeGeminiApiKey();
+                    setGeminiKeyDraft('');
+                    setGeminiKeySaved(false);
+                    setImportError('');
+                  }}
+                  className="btn btn-outline"
+                  type="button"
+                >
+                  Reset Key
+                </button>
+                <button onClick={() => setIsGeminiKeyModalOpen(false)} className="btn btn-outline" type="button">
+                  Batal
+                </button>
+                <button onClick={handleSaveGeminiKeyAndAnalyze} className="btn btn-primary" type="button" disabled={importLoading}>
+                  {importLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                  Simpan Key & Baca Form
+                </button>
               </div>
             </div>
           </div>
