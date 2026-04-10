@@ -6,6 +6,13 @@ import { getUtilityChartData } from '../data/utilities';
 import { useProfileThumbByEmail } from '../hooks/useProfileThumbByEmail';
 import UserAvatar from '../components/UserAvatar';
 import { getMotivationForLogin, getPublicEducationalMotivation } from '../utils/motivation';
+import {
+  buildMonitorIssueSummary,
+  CLASSROOM_MONITOR_SHEET,
+  CLASSROOM_REFERENCE_TOTAL,
+  normalizeClassroomMonitorRows,
+} from '../utils/classroomMonitor';
+import type { ClassroomMonitorEntry } from '../utils/classroomMonitor';
 
 const FINANCE_API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 
@@ -175,6 +182,8 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   const [acLastTx, setAcLastTx] = useState<any>(null);
   const [piketNotes, setPiketNotes] = useState<any[]>([]);
   const [piketLoading, setPiketLoading] = useState(false);
+  const [classroomMonitorRows, setClassroomMonitorRows] = useState<ClassroomMonitorEntry[]>([]);
+  const [classroomMonitorLoading, setClassroomMonitorLoading] = useState(false);
   
   const [acMonitorData, setAcMonitorData] = useState<any>(null);
   const [acLoading, setAcLoading] = useState(false);
@@ -424,6 +433,21 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
 
     fetchPiketNotes();
 
+    const fetchClassroomMonitor = async () => {
+      setClassroomMonitorLoading(true);
+      try {
+        const resp = await fetch(`${FINANCE_API_URL}?sheetName=${CLASSROOM_MONITOR_SHEET}`);
+        const data = await resp.json();
+        const normalized = Array.isArray(data) ? normalizeClassroomMonitorRows(data) : [];
+        setClassroomMonitorRows(normalized);
+      } catch (e) {
+        console.error("Dashboard classroom monitor fetch error:", e);
+        setClassroomMonitorRows([]);
+      } finally {
+        setClassroomMonitorLoading(false);
+      }
+    };
+
     const fetchACMonitor = async () => {
       setAcLoading(true);
       try {
@@ -631,6 +655,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       }
     };
 
+    fetchClassroomMonitor();
     fetchACMonitor();
     fetchCapexProjects();
     fetchWifiMonitor();
@@ -703,6 +728,399 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       return dateValue;
     }
   };
+
+  const getClassroomStatusMeta = (score: number) => {
+    if (score >= 95) {
+      return {
+        label: 'Teladan',
+        color: 'var(--accent-emerald)',
+        bg: 'rgba(16,185,129,0.12)',
+        border: 'rgba(16,185,129,0.28)',
+      };
+    }
+    if (score >= 85) {
+      return {
+        label: 'Aman',
+        color: 'var(--accent-blue)',
+        bg: 'rgba(59,130,246,0.12)',
+        border: 'rgba(59,130,246,0.28)',
+      };
+    }
+    if (score >= 70) {
+      return {
+        label: 'Pantau',
+        color: 'var(--accent-amber)',
+        bg: 'rgba(245,158,11,0.14)',
+        border: 'rgba(245,158,11,0.28)',
+      };
+    }
+    return {
+      label: 'Prioritas',
+      color: 'var(--accent-rose)',
+      bg: 'rgba(244,63,94,0.12)',
+      border: 'rgba(244,63,94,0.28)',
+    };
+  };
+
+  const classroomRoomSummaries = Array.from({ length: CLASSROOM_REFERENCE_TOTAL }, (_, index) => {
+    const ruang = `Ruang ${index + 1}`;
+    const roomRows = classroomMonitorRows.filter((item) => item.ruang === ruang);
+    const latestRow = roomRows
+      .slice()
+      .sort((a, b) => (parseWifiDateValue(b.tanggal)?.getTime() || 0) - (parseWifiDateValue(a.tanggal)?.getTime() || 0))[0] || null;
+
+    const energyFindings = roomRows.reduce((sum, item) => sum + item.lampu + item.tv + item.ac + item.kipas + item.lainnya, 0);
+    const cleanlinessFindings = roomRows.reduce((sum, item) => sum + item.sampah + item.kotoran, 0);
+    const tidinessFindings = roomRows.reduce((sum, item) => sum + item.rapih, 0);
+    const totalFindings = roomRows.reduce((sum, item) => sum + item.total, 0);
+    const observationCount = roomRows.length;
+    const score = Math.max(
+      0,
+      100 - (energyFindings * 12) - (cleanlinessFindings * 15) - (tidinessFindings * 10) - Math.max(0, observationCount - 1) * 3
+    );
+    const status = getClassroomStatusMeta(score);
+
+    return {
+      ruang,
+      observationCount,
+      energyFindings,
+      cleanlinessFindings,
+      tidinessFindings,
+      totalFindings,
+      score,
+      status,
+      latestDate: latestRow?.tanggal || '',
+      latestDateLabel: latestRow ? formatWifiDateDisplay(latestRow.tanggal) : '-',
+      latestNote: latestRow?.keterangan || (latestRow ? buildMonitorIssueSummary(latestRow) : 'Belum ada data'),
+    };
+  });
+
+  const classroomObservedRooms = classroomRoomSummaries.filter((room) => room.observationCount > 0);
+  const classroomRoomsNeedAttention = classroomObservedRooms
+    .filter((room) => room.totalFindings > 0)
+    .sort((a, b) => b.totalFindings - a.totalFindings || a.score - b.score || a.ruang.localeCompare(b.ruang));
+  const classroomSafeRooms = classroomObservedRooms.filter((room) => room.totalFindings === 0);
+  const classroomCoverage = classroomObservedRooms.length;
+  const classroomCoverageRate = classroomCoverage > 0 ? Math.round((classroomCoverage / CLASSROOM_REFERENCE_TOTAL) * 100) : 0;
+  const classroomTotalEnergyFindings = classroomObservedRooms.reduce((sum, room) => sum + room.energyFindings, 0);
+  const classroomTotalCleanlinessFindings = classroomObservedRooms.reduce((sum, room) => sum + room.cleanlinessFindings, 0);
+  const classroomTotalTidinessFindings = classroomObservedRooms.reduce((sum, room) => sum + room.tidinessFindings, 0);
+  const classroomObservedCleanRooms = classroomObservedRooms.filter((room) => room.score >= 95).length;
+  const classroomSnapshotDate = classroomMonitorRows
+    .slice()
+    .sort((a, b) => (parseWifiDateValue(b.tanggal)?.getTime() || 0) - (parseWifiDateValue(a.tanggal)?.getTime() || 0))[0]?.tanggal || '';
+  const hasClassroomMonitorData = classroomMonitorRows.length > 0;
+  const classroomIssueComposition = [
+    { name: 'Kebersihan', value: classroomTotalCleanlinessFindings, color: '#06b6d4' },
+    { name: 'Kerapihan', value: classroomTotalTidinessFindings, color: '#8b5cf6' },
+    { name: 'Hemat energi', value: classroomTotalEnergyFindings, color: '#f59e0b' },
+  ].filter((item) => item.value > 0);
+  const classroomPriorityChartData = classroomRoomsNeedAttention.slice(0, 8).map((room) => ({
+    ruang: room.ruang.replace('Ruang ', 'R.'),
+    score: room.score,
+    temuan: room.totalFindings,
+    fill: room.status.color,
+  }));
+  const classroomFollowUpItems = classroomRoomsNeedAttention.slice(0, 5).map((room) => {
+    const recipients = room.energyFindings > 0 ? 'Guru mapel & wali kelas' : 'Wali kelas & petugas piket';
+    let action = 'Perlu penguatan budaya kelas agar kondisi ruang tetap siap dipakai berikutnya.';
+
+    if (room.cleanlinessFindings > 0 && room.energyFindings > 0) {
+      action = 'Arahkan piket kelas membereskan sampah/area lantai, lalu pastikan seluruh perangkat dimatikan sebelum ruang ditinggal.';
+    } else if (room.cleanlinessFindings > 0) {
+      action = 'Minta piket kelas menutup hari dengan sweep sampah dan cek lantai sebelum jam terakhir selesai.';
+    } else if (room.energyFindings > 0) {
+      action = 'Ingatkan guru terakhir dan ketua kelas untuk cek kipas, lampu, TV, atau AC sebelum meninggalkan ruangan.';
+    } else if (room.tidinessFindings > 0) {
+      action = 'Rapikan formasi meja kursi dan area depan kelas agar siap untuk pembelajaran berikutnya.';
+    }
+
+    return {
+      ...room,
+      recipients,
+      action,
+    };
+  });
+
+  const classroomMonitorSection = (
+    <div
+      className="glass-panel delay-100"
+      style={{
+        marginBottom: '2rem',
+        background: 'linear-gradient(135deg, rgba(6,182,212,0.08), rgba(59,130,246,0.03) 55%, transparent)',
+        borderLeft: '4px solid var(--accent-cyan)',
+      }}
+    >
+      <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+        <div>
+          <h3 style={{ fontSize: '1.05rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <AlertCircle size={18} color="var(--accent-cyan)" /> Monitor Rekap Pantauan Kelas
+          </h3>
+          <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)', maxWidth: '760px' }}>
+            Ringkasan kebersihan, kerapihan, dan awareness penghematan energi agar wali kelas dan guru cepat tahu ruang yang perlu ditindaklanjuti.
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <a href="#/classroom-monitor" className="btn btn-outline" style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}>
+            Detail & Input
+          </a>
+          <span className="badge badge-info" style={{ background: 'rgba(6,182,212,0.12)', color: 'var(--accent-cyan)', borderColor: 'rgba(6,182,212,0.28)' }}>
+            Snapshot {classroomSnapshotDate ? formatWifiDateDisplay(classroomSnapshotDate) : 'Belum ada data'}
+          </span>
+          <span className="badge badge-success">
+            Cakupan {classroomCoverage}/{CLASSROOM_REFERENCE_TOTAL} ruang
+          </span>
+        </div>
+      </div>
+
+      <div style={{ padding: '1.25rem' }}>
+        {classroomMonitorLoading ? (
+          <div style={{ padding: '3rem', display: 'flex', justifyContent: 'center' }}>
+            <Loader2 className="animate-spin" color="var(--accent-cyan)" />
+          </div>
+        ) : !hasClassroomMonitorData ? (
+          <div style={{ padding: '1rem 0' }}>
+            <div className="glass-panel" style={{ padding: '1.25rem', background: 'rgba(255,255,255,0.02)', border: '1px dashed var(--border-subtle)' }}>
+              <div style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+                Belum ada data pantauan kelas di database
+              </div>
+              <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', lineHeight: 1.6, maxWidth: '760px' }}>
+                Dashboard ini sekarang hanya menampilkan data live dari sheet `{CLASSROOM_MONITOR_SHEET}`. Silakan isi pantauan pertama dari menu <strong style={{ color: 'var(--text-primary)' }}>Monitor Kelas</strong> agar rekap untuk wali kelas dan guru langsung terbentuk otomatis.
+              </div>
+              <div style={{ marginTop: '0.9rem' }}>
+                <a href="#/classroom-monitor" className="btn btn-primary" style={{ fontSize: '0.78rem', padding: '0.5rem 0.9rem' }}>
+                  Buka Monitor Kelas
+                </a>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="stats-grid" style={{ marginBottom: '1.25rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+              <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ruang aman terpantau</div>
+                <div style={{ marginTop: '0.35rem', fontSize: '1.65rem', fontWeight: 800, color: 'var(--accent-emerald)' }}>
+                  {classroomObservedCleanRooms}
+                </div>
+                <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
+                  {classroomSafeRooms.length} ruang tanpa temuan pada snapshot terbaru.
+                </div>
+              </div>
+
+              <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Butuh tindak lanjut</div>
+                <div style={{ marginTop: '0.35rem', fontSize: '1.65rem', fontWeight: 800, color: 'var(--accent-rose)' }}>
+                  {classroomRoomsNeedAttention.length}
+                </div>
+                <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
+                  Prioritaskan koordinasi dengan wali kelas untuk ruang yang masih bermasalah.
+                </div>
+              </div>
+
+              <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Fokus temuan</div>
+                <div style={{ marginTop: '0.35rem', fontSize: '1.2rem', fontWeight: 800, color: 'var(--accent-cyan)' }}>
+                  {classroomTotalCleanlinessFindings >= classroomTotalEnergyFindings && classroomTotalCleanlinessFindings >= classroomTotalTidinessFindings
+                    ? 'Kebersihan'
+                    : classroomTotalEnergyFindings >= classroomTotalTidinessFindings
+                      ? 'Hemat energi'
+                      : 'Kerapihan'}
+                </div>
+                <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
+                  {classroomTotalCleanlinessFindings + classroomTotalEnergyFindings + classroomTotalTidinessFindings} temuan tercatat dari data pantauan.
+                </div>
+              </div>
+
+              <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Coverage monitor</div>
+                <div style={{ marginTop: '0.35rem', fontSize: '1.65rem', fontWeight: 800, color: 'var(--accent-blue)' }}>
+                  {classroomCoverageRate}%
+                </div>
+                <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
+                  Siap disambungkan ke sheet `{CLASSROOM_MONITOR_SHEET}` untuk rekap harian otomatis.
+                </div>
+              </div>
+            </div>
+
+            <div className="dashboard-grid" style={{ marginBottom: '1.25rem' }}>
+              <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', minHeight: '320px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
+                  <div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>Prioritas ruang untuk diinformasikan</div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
+                      Skor makin rendah berarti butuh perhatian lebih cepat.
+                    </div>
+                  </div>
+                  <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                    Berdasarkan form pantauan kelas
+                  </span>
+                </div>
+
+                {classroomPriorityChartData.length > 0 ? (
+                  <div style={{ width: '100%', height: '250px' }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={classroomPriorityChartData} layout="vertical" margin={{ left: 8, right: 24, top: 10, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" horizontal={false} />
+                        <XAxis type="number" domain={[0, 100]} stroke="var(--text-muted)" fontSize={11} tickFormatter={(value) => `${value}%`} />
+                        <YAxis dataKey="ruang" type="category" width={44} stroke="var(--text-muted)" fontSize={11} />
+                        <RechartsTooltip
+                          contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-focus)', borderRadius: '10px' }}
+                          formatter={(value: any, name: any) => {
+                            if (name === 'score') return [`${value}%`, 'Skor kondisi'];
+                            return [`${value}`, 'Jumlah temuan'];
+                          }}
+                          labelFormatter={(label) => `Kelas ${label}`}
+                        />
+                        <Bar dataKey="score" radius={[0, 6, 6, 0]} barSize={24}>
+                          {classroomPriorityChartData.map((item, idx) => (
+                            <Cell key={`priority-${idx}`} fill={item.fill} fillOpacity={0.9} />
+                          ))}
+                          <LabelList dataKey="score" position="right" formatter={(value: any) => `${value}%`} style={{ fill: 'var(--text-primary)', fontSize: 11, fontWeight: 700 }} />
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+                    Belum ada ruang yang membutuhkan tindak lanjut.
+                  </div>
+                )}
+              </div>
+
+              <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', minHeight: '320px', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>Sebaran jenis temuan</div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
+                  Membantu fokus pembinaan: kebersihan, kerapihan, atau penghematan energi.
+                </div>
+
+                <div style={{ flex: 1, position: 'relative', minHeight: '210px', marginTop: '0.5rem' }}>
+                  {classroomIssueComposition.length > 0 ? (
+                    <>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={classroomIssueComposition}
+                            dataKey="value"
+                            nameKey="name"
+                            innerRadius={52}
+                            outerRadius={82}
+                            paddingAngle={2}
+                          >
+                            {classroomIssueComposition.map((entry, idx) => (
+                              <Cell key={`composition-${idx}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <RechartsTooltip contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-focus)', borderRadius: '8px', fontSize: '11px' }} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                            {classroomIssueComposition.reduce((sum, item) => sum + item.value, 0)}
+                          </div>
+                          <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                            total temuan
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div style={{ paddingTop: '2.5rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+                      Belum ada data komposisi temuan.
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem', marginTop: '0.4rem' }}>
+                  {classroomIssueComposition.map((item) => (
+                    <div key={item.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', padding: '0.55rem 0.65rem', borderRadius: '10px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                        <span style={{ width: '10px', height: '10px', borderRadius: '999px', background: item.color, display: 'inline-block' }} />
+                        {item.name}
+                      </div>
+                      <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)' }}>{item.value}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="dashboard-grid" style={{ marginBottom: 0 }}>
+              <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.75rem' }}>
+                  Arahan cepat untuk wali kelas & guru
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {classroomFollowUpItems.length > 0 ? classroomFollowUpItems.map((item) => (
+                    <div key={item.ruang} style={{ padding: '0.85rem', borderRadius: '12px', background: item.status.bg, border: `1px solid ${item.status.border}` }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>{item.ruang}</span>
+                            <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '2px 8px', borderRadius: '999px', color: item.status.color, background: item.status.bg, border: `1px solid ${item.status.border}` }}>
+                              {item.status.label}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                            <strong style={{ color: 'var(--text-primary)' }}>Temuan:</strong> {item.latestNote}
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right', minWidth: '90px' }}>
+                          <div style={{ fontSize: '1rem', fontWeight: 800, color: item.status.color }}>{item.score}%</div>
+                          <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Skor kelas</div>
+                        </div>
+                      </div>
+                      <div style={{ marginTop: '0.55rem', fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                        <strong style={{ color: 'var(--text-primary)' }}>Sampaikan ke:</strong> {item.recipients}
+                      </div>
+                      <div style={{ marginTop: '0.2rem', fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.55 }}>
+                        <strong style={{ color: 'var(--text-primary)' }}>Aksi:</strong> {item.action}
+                      </div>
+                    </div>
+                  )) : (
+                    <div style={{ padding: '1rem', borderRadius: '12px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+                      Semua ruang yang terpantau berada dalam kondisi aman.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.75rem' }}>
+                  Ringkasan komunikasi harian
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
+                  <div style={{ padding: '0.8rem', borderRadius: '12px', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)' }}>
+                    <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ruang bersih & siap pakai</div>
+                    <div style={{ marginTop: '0.3rem', fontSize: '1.35rem', fontWeight: 800, color: 'var(--accent-blue)' }}>
+                      {classroomSafeRooms.length} ruang
+                    </div>
+                    <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '0.25rem', lineHeight: 1.5 }}>
+                      Contoh ruang aman: {classroomSafeRooms.slice(0, 6).map((room) => room.ruang.replace('Ruang ', 'R.')).join(', ') || '-'}
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '0.8rem', borderRadius: '12px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)' }}>
+                    <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Catatan untuk briefing guru</div>
+                    <div style={{ marginTop: '0.35rem', fontSize: '0.74rem', color: 'var(--text-secondary)', lineHeight: 1.55 }}>
+                      Tekankan budaya cek akhir kelas: sampah terangkat, lantai/area depan bersih, dan kipas/lampu/TV/AC dipastikan mati setelah KBM.
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '0.8rem', borderRadius: '12px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)' }}>
+                    <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Catatan implementasi</div>
+                    <div style={{ marginTop: '0.35rem', fontSize: '0.74rem', color: 'var(--text-secondary)', lineHeight: 1.55 }}>
+                      Section ini otomatis memakai seed dari form contoh, dan akan memakai data live saat sheet `{CLASSROOM_MONITOR_SHEET}` sudah tersedia.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
 
   const acMonitorSection = (
     <div className="glass-panel delay-100" style={{ marginBottom: '2rem', background: 'linear-gradient(135deg, rgba(59,130,246,0.03), transparent)', borderLeft: '4px solid var(--accent-blue)' }}>
@@ -894,6 +1312,8 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           )}
         </div>
       </div>
+
+      {classroomMonitorSection}
 
       {/* DASHBOARD WIFI MONITORING SECTION */}
       <div className="glass-panel delay-150" style={{ marginBottom: '2rem', background: 'linear-gradient(135deg, rgba(59,130,246,0.03), transparent)', borderLeft: '4px solid var(--accent-blue)' }}>

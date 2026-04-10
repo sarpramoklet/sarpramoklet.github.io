@@ -21,6 +21,7 @@ import Utilities from './pages/Utilities';
 import AccessLogs from './pages/AccessLogs';
 import DutyNotes from './pages/DutyNotes';
 import CapexBudget from './pages/CapexBudget';
+import ClassroomMonitor from './pages/ClassroomMonitor';
 import Login from './pages/Login';
 import { getCurrentUser } from './data/organization';
 import { logAccess } from './utils/logger';
@@ -158,6 +159,7 @@ function App() {
               <Route path="/sop" element={<ProtectedRoute isLoggedIn={isLoggedIn}><DummyPage title="SOP & Dokumen" /></ProtectedRoute>} />
               <Route path="/notifications" element={<ProtectedRoute isLoggedIn={isLoggedIn}><DummyPage title="Notifikasi Pribadi" /></ProtectedRoute>} />
               <Route path="/duty-notes" element={<ProtectedRoute isLoggedIn={isLoggedIn}><DutyNotes /></ProtectedRoute>} />
+              <Route path="/classroom-monitor" element={<ProtectedRoute isLoggedIn={isLoggedIn}><ClassroomMonitor /></ProtectedRoute>} />
               <Route path="/maintenance" element={<ProtectedRoute isLoggedIn={isLoggedIn}><DummyPage title="Jadwal Maintenance" /></ProtectedRoute>} />
               <Route path="/ac-monitor" element={<ProtectedRoute isLoggedIn={isLoggedIn}><ACMonitor /></ProtectedRoute>} />
               <Route path="/capex" element={<ProtectedRoute isLoggedIn={isLoggedIn}><CapexBudget /></ProtectedRoute>} />

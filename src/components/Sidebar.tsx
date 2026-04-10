@@ -201,7 +201,7 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
                 return allowed.includes(item.name);
               }
               if (user.unit === 'Sarpras') {
-                const allowed = [...alwaysVisible, 'Sarpras', 'Permintaan Layanan', 'Tagihan Utilitas', 'Aset & Inventaris', 'Monitor AC', 'Penugasan', 'Kinerja Personel'];
+                const allowed = [...alwaysVisible, 'Sarpras', 'Permintaan Layanan', 'Tagihan Utilitas', 'Aset & Inventaris', 'Monitor AC', 'Monitor Kelas', 'Penugasan', 'Kinerja Personel'];
                 return allowed.includes(item.name);
               }
               if (user.unit === 'Tata Kelola') {
@@ -213,6 +213,7 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
                   'KAS SARPRA',
                   'Kas Operasional TU',
                   'Kas Perawatan AC',
+                  'Monitor Kelas',
                   'Monitor CAPEX'
                 ];
                 return allowed.includes(item.name);

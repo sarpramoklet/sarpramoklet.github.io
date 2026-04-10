@@ -20,6 +20,7 @@ export const NAVIGATION = [
 
   { path: '/sop', name: 'SOP & Dokumen', icon: BookOpen, authRequired: true },
   { path: '/duty-notes', name: 'Catatan Piket', icon: BookOpen, authRequired: true },
+  { path: '/classroom-monitor', name: 'Monitor Kelas', icon: Building, authRequired: true },
 
   { path: '/capex', name: 'Monitor CAPEX', icon: Target, authRequired: true, leaderOnly: true },
 ];
