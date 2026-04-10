@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { getCurrentUser, ROLES } from '../data/organization';
 import { logAccess } from '../utils/logger';
+import { generateGeminiJsonFromImage } from '../utils/gemini';
 import {
   buildClassroomEntryId,
   buildFullDayEntries,
@@ -247,32 +248,12 @@ Rules:
 - If you are unsure, prefer leaving a column as 0 rather than inventing a mark
 - Return only JSON`;
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            { text: prompt },
-            { inline_data: { mime_type: mimeType, data: base64 } },
-          ],
-        }],
-        generationConfig: { temperature: 0.1, topP: 0.8 },
-      }),
-    }
-  );
-
-  if (!response.ok) {
-    const err = await response.json();
-    throw new Error(err.error?.message || `HTTP ${response.status}`);
-  }
-
-  const result = await response.json();
-  const text = result.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  const json = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
+  const json = await generateGeminiJsonFromImage({
+    apiKey: GEMINI_API_KEY,
+    prompt,
+    base64,
+    mimeType,
+  });
   return normalizeImageImportResponse(json);
 };
 

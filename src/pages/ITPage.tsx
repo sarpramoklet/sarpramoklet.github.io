@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Server, Wifi, Shield, Edit2, Trash2, X, Activity, Smartphone, Loader2, DatabaseBackup, TrendingUp, Upload, Sparkles, CheckCircle, AlertCircle, Image, Camera } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, LabelList } from 'recharts';
 import { getCurrentUser, ROLES } from '../data/organization';
+import { generateGeminiJsonFromImage } from '../utils/gemini';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 // Dapatkan API key gratis di https://aistudio.google.com/apikey
@@ -303,30 +304,12 @@ RULES:
 
 IMPORTANT: The values above are EXAMPLE values for the example image. Read the ACTUAL values from the provided image.`;
 
-  const resp = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [
-          { text: prompt },
-          { inline_data: { mime_type: mimeType, data: base64 } }
-        ]}],
-        generationConfig: { temperature: 0.1, topP: 0.8 }
-      })
-    }
-  );
-  if (!resp.ok) {
-    const err = await resp.json();
-    throw new Error(err.error?.message || `HTTP ${resp.status}`);
-  }
-  const result = await resp.json();
-  const text = result.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-  // Cari JSON block dalam respons (antisipasi jika model masih tambah teks)
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  const jsonStr = jsonMatch ? jsonMatch[0] : '{}';
-  const raw = JSON.parse(jsonStr);
+  const raw = await generateGeminiJsonFromImage({
+    apiKey: GEMINI_API_KEY,
+    prompt,
+    base64,
+    mimeType,
+  });
   return cleanAiResult(raw);
 };
 

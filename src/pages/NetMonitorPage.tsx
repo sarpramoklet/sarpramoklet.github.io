@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Server, Activity, Database, Loader2, DatabaseBackup, X, Plus, Camera, Upload, Sparkles, CheckCircle, AlertCircle, Image as ImageIcon } from 'lucide-react';
+import { generateGeminiJsonFromImage } from '../utils/gemini';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 const GEMINI_API_KEY = "AIzaSyD3XFX6ovEE0XhRvFg7nxxrC4Of9yEW6gE";
@@ -99,32 +100,12 @@ Rules:
 - if value is not visible use ""
 - return JSON only, no markdown/text`;
 
-  const resp = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            { text: prompt },
-            { inline_data: { mime_type: mimeType, data: base64 } }
-          ]
-        }],
-        generationConfig: { temperature: 0.1, topP: 0.8 }
-      })
-    }
-  );
-
-  if (!resp.ok) {
-    const err = await resp.json();
-    throw new Error(err.error?.message || `HTTP ${resp.status}`);
-  }
-
-  const result = await resp.json();
-  const text = result.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  const raw = JSON.parse(jsonMatch ? jsonMatch[0] : '{}');
+  const raw = await generateGeminiJsonFromImage({
+    apiKey: GEMINI_API_KEY,
+    prompt,
+    base64,
+    mimeType,
+  });
   return cleanAiResult(raw);
 };
 
