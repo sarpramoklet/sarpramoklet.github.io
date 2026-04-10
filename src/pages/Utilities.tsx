@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, LabelList } from 'recharts';
-import { Plus, ReceiptText, FileText, BarChart3, RefreshCw, Loader2, Edit3, Trash2, X, Upload, Database } from 'lucide-react';
+import { Plus, ReceiptText, FileText, BarChart3, RefreshCw, Loader2, Edit3, Trash2, X, Upload } from 'lucide-react';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 const UTILITIES_SHEET = 'Tagihan_Utilitas';
@@ -19,16 +19,6 @@ type UtilityBillRow = {
   catatan: string;
   buktiNama: string;
   updatedAt?: string;
-  source?: 'db' | 'baseline';
-};
-
-type UtilitySeedRow = {
-  bulan: string;
-  jenis: UtilityType;
-  pelanggan: string;
-  nominal: number;
-  status?: BillStatus;
-  catatan?: string;
 };
 
 type UtilityFormState = {
@@ -48,32 +38,6 @@ const CUSTOMER_PRESETS = [
   { id: 'pln_kantin', jenis: 'PLN' as const, pelanggan: 'Kantin', label: 'PLN - Kantin' },
   { id: 'pdam_yys', jenis: 'PDAM' as const, pelanggan: 'Yys Sandhikara', label: 'PDAM - Yys Sandhikara' },
 ] as const;
-
-const BASELINE_REKAP_SEED: UtilitySeedRow[] = [
-  { bulan: '2025-12', jenis: 'PLN', pelanggan: 'Yayasan Sandykara', nominal: 7336630 },
-  { bulan: '2026-01', jenis: 'PLN', pelanggan: 'Yayasan Sandykara', nominal: 4592250 },
-  { bulan: '2026-02', jenis: 'PLN', pelanggan: 'Yayasan Sandykara', nominal: 6556510 },
-  { bulan: '2026-03', jenis: 'PLN', pelanggan: 'Yayasan Sandykara', nominal: 4631850 },
-  { bulan: '2025-12', jenis: 'PLN', pelanggan: 'SMK Telkom', nominal: 9874990 },
-  { bulan: '2026-01', jenis: 'PLN', pelanggan: 'SMK Telkom', nominal: 7814800 },
-  { bulan: '2026-02', jenis: 'PLN', pelanggan: 'SMK Telkom', nominal: 11782720 },
-  { bulan: '2026-03', jenis: 'PLN', pelanggan: 'SMK Telkom', nominal: 7814800 },
-  { bulan: '2025-12', jenis: 'PLN', pelanggan: 'Kantin', nominal: 4992210 },
-  { bulan: '2026-01', jenis: 'PLN', pelanggan: 'Kantin', nominal: 2126160 },
-  { bulan: '2026-02', jenis: 'PLN', pelanggan: 'Kantin', nominal: 5994190 },
-  { bulan: '2026-03', jenis: 'PLN', pelanggan: 'Kantin', nominal: 3833910 },
-  { bulan: '2025-12', jenis: 'PDAM', pelanggan: 'Yys Sandhikara', nominal: 1041000 },
-  { bulan: '2026-01', jenis: 'PDAM', pelanggan: 'Yys Sandhikara', nominal: 1041000 },
-  { bulan: '2026-02', jenis: 'PDAM', pelanggan: 'Yys Sandhikara', nominal: 792500 },
-  { bulan: '2026-03', jenis: 'PDAM', pelanggan: 'Yys Sandhikara', nominal: 1072500 },
-];
-
-const APRIL_2026_SEED: UtilitySeedRow[] = [
-  { bulan: '2026-04', jenis: 'PLN', pelanggan: 'Yayasan Sandykara', nominal: 4155570, status: 'Lunas', catatan: 'Input awal April 2026' },
-  { bulan: '2026-04', jenis: 'PLN', pelanggan: 'SMK Telkom', nominal: 7815700, status: 'Lunas', catatan: 'Input awal April 2026' },
-  { bulan: '2026-04', jenis: 'PLN', pelanggan: 'Kantin', nominal: 2626020, status: 'Lunas', catatan: 'Input awal April 2026' },
-  { bulan: '2026-04', jenis: 'PDAM', pelanggan: 'Yys Sandhikara', nominal: 866000, status: 'Lunas', catatan: 'Input awal April 2026' },
-];
 
 const toNumber = (value: unknown) => {
   const raw = String(value ?? '').replace(/[^\d.-]/g, '');
@@ -227,6 +191,15 @@ const currentMonthValue = () => {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 };
 
+const nextMonthValue = (month: string) => {
+  if (!/^\d{4}-\d{2}$/.test(month)) return currentMonthValue();
+  const [year, mm] = month.split('-');
+  const parsedYear = parseInt(year, 10) || new Date().getFullYear();
+  const parsedMonth = (parseInt(mm, 10) || 1) - 1;
+  const next = new Date(parsedYear, parsedMonth + 1, 1);
+  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`;
+};
+
 const monthLongLabel = (month: string) => {
   if (!/^\d{4}-\d{2}$/.test(month)) return month;
   const [yyyy, mm] = month.split('-');
@@ -281,7 +254,6 @@ const normalizeRows = (rows: any[]): UtilityBillRow[] => {
       catatan,
       buktiNama,
       updatedAt,
-      source: 'db',
     };
   });
 
@@ -329,44 +301,21 @@ const Utilities = () => {
     fetchRows();
   }, []);
 
-  const baselineRows = useMemo<UtilityBillRow[]>(() => {
-    return BASELINE_REKAP_SEED.map((item) => ({
-      id: buildUtilityId(item.bulan, item.jenis, item.pelanggan),
-      bulan: item.bulan,
-      jenis: item.jenis,
-      pelanggan: item.pelanggan,
-      nominal: item.nominal,
-      status: item.status || 'Lunas',
-      catatan: item.catatan || 'Data awal rekap utilitas',
-      buktiNama: '',
-      updatedAt: '',
-      source: 'baseline',
-    }));
-  }, []);
-
-  const mergedRows = useMemo(() => {
-    const merged = new Map<string, UtilityBillRow>();
-    baselineRows.forEach((item) => merged.set(item.id, item));
-    rows.forEach((item) => merged.set(item.id, { ...item, source: 'db' }));
-    return Array.from(merged.values()).sort((a, b) => b.bulan.localeCompare(a.bulan) || a.jenis.localeCompare(b.jenis) || a.pelanggan.localeCompare(b.pelanggan));
-  }, [baselineRows, rows]);
-
-  const dbIdSet = useMemo(() => new Set(rows.map((item) => item.id)), [rows]);
-
   const monthOptions = useMemo(() => {
-    const uniq = Array.from(new Set(mergedRows.map((row) => row.bulan).filter(Boolean)));
+    const uniq = Array.from(new Set(rows.map((row) => row.bulan).filter(Boolean)));
     return uniq.sort((a, b) => b.localeCompare(a));
-  }, [mergedRows]);
+  }, [rows]);
 
   useEffect(() => {
-    if (!filterMonth && monthOptions.length > 0) {
+    if (monthOptions.length === 0) return;
+    if (!filterMonth || !monthOptions.includes(filterMonth)) {
       setFilterMonth(monthOptions[0]);
     }
   }, [filterMonth, monthOptions]);
 
   const comparisonMonths = useMemo(() => {
     const asc = [...monthOptions].sort((a, b) => a.localeCompare(b));
-    return asc.slice(-4);
+    return asc.slice(-5);
   }, [monthOptions]);
 
   const comparisonReferenceYear = comparisonMonths[comparisonMonths.length - 1]?.slice(0, 4) || '';
@@ -375,7 +324,7 @@ const Utilities = () => {
     const presetOrder = CUSTOMER_PRESETS.map((item) => customerKey(item.jenis, item.pelanggan));
     const matrix = new Map<string, { label: string; values: Record<string, number> }>();
 
-    mergedRows.forEach((item) => {
+    rows.forEach((item) => {
       const key = customerKey(item.jenis, item.pelanggan);
       if (!matrix.has(key)) {
         matrix.set(key, { label: toCustomerDisplay(item.jenis, item.pelanggan), values: {} });
@@ -395,7 +344,7 @@ const Utilities = () => {
     });
 
     return ordered.map(([key, value]) => ({ key, ...value }));
-  }, [mergedRows]);
+  }, [rows]);
 
   const monthTotal = (month: string) => {
     return customerRows.reduce((acc, row) => acc + (row.values[month] || 0), 0);
@@ -405,29 +354,28 @@ const Utilities = () => {
     return [...monthOptions]
       .sort((a, b) => a.localeCompare(b))
       .map((month) => {
-        const records = mergedRows.filter((row) => row.bulan === month);
+        const records = rows.filter((row) => row.bulan === month);
         return {
           name: monthHeaderLabel(month, comparisonReferenceYear || month.slice(0, 4)),
           PLN: records.filter((row) => row.jenis === 'PLN').reduce((acc, row) => acc + row.nominal, 0),
           PDAM: records.filter((row) => row.jenis === 'PDAM').reduce((acc, row) => acc + row.nominal, 0),
         };
       });
-  }, [mergedRows, monthOptions, comparisonReferenceYear]);
+  }, [rows, monthOptions, comparisonReferenceYear]);
 
   const detailRows = useMemo(() => {
     if (!filterMonth) return [];
-    return mergedRows
+    return rows
       .filter((row) => row.bulan === filterMonth)
       .sort((a, b) => a.jenis.localeCompare(b.jenis) || a.pelanggan.localeCompare(b.pelanggan));
-  }, [mergedRows, filterMonth]);
+  }, [rows, filterMonth]);
 
-  const monthSelectOptions = useMemo(() => {
-    const optionSet = new Set<string>([currentMonthValue(), ...monthOptions, form.bulan].filter(Boolean));
-    return Array.from(optionSet).sort((a, b) => b.localeCompare(a));
-  }, [monthOptions, form.bulan]);
+  const nextInputMonth = useMemo(() => {
+    return monthOptions[0] ? nextMonthValue(monthOptions[0]) : currentMonthValue();
+  }, [monthOptions]);
 
   const openCreateModal = () => {
-    const defaultMonth = filterMonth || monthOptions[0] || currentMonthValue();
+    const defaultMonth = nextInputMonth;
     setEditingRow(null);
     setForm(createEmptyForm(defaultMonth));
     setIsModalOpen(true);
@@ -508,7 +456,6 @@ const Utilities = () => {
       catatan: form.catatan.trim(),
       buktiNama: form.buktiNama.trim(),
       updatedAt: new Date().toISOString(),
-      source: 'db',
     };
 
     setSaving(true);
@@ -525,11 +472,6 @@ const Utilities = () => {
   };
 
   const handleDelete = async (row: UtilityBillRow) => {
-    if (!dbIdSet.has(row.id)) {
-      alert('Data ini masih baseline tampilan. Edit + Simpan dulu agar jadi data DB, baru bisa dihapus.');
-      return;
-    }
-
     if (!confirm(`Hapus tagihan ${toCustomerDisplay(row.jenis, row.pelanggan)} (${monthLongLabel(row.bulan)})?`)) return;
 
     setSaving(true);
@@ -555,42 +497,13 @@ const Utilities = () => {
     }
   };
 
-  const handleSeed = async (entries: UtilitySeedRow[], label: string) => {
-    if (!confirm(`Isi ${label} ke sheet ${UTILITIES_SHEET}?`)) return;
-
-    setSaving(true);
-    try {
-      for (const entry of entries) {
-        const payload: UtilityBillRow = {
-          id: buildUtilityId(entry.bulan, entry.jenis, entry.pelanggan),
-          bulan: entry.bulan,
-          jenis: entry.jenis,
-          pelanggan: entry.pelanggan,
-          nominal: entry.nominal,
-          status: entry.status || 'Lunas',
-          catatan: entry.catatan || `Seed ${label}`,
-          buktiNama: '',
-          updatedAt: new Date().toISOString(),
-          source: 'db',
-        };
-        await persistUtility(payload);
-      }
-      setTimeout(fetchRows, 1200);
-    } catch (error) {
-      console.error('Seed utility failed:', error);
-      alert(`Gagal menyimpan ${label}.`);
-    } finally {
-      setSaving(false);
-    }
-  };
-
   return (
     <div className="animate-fade-in" style={{ paddingBottom: '3rem' }}>
       <div className="flex-row-responsive" style={{ marginBottom: '2rem' }}>
         <div>
           <h1 className="page-title gradient-text">Manajemen Utilitas</h1>
           <p className="page-subtitle" style={{ margin: 0 }}>
-            Pemantauan tagihan listrik (PLN) dan air (PDAM) dengan CRUD ke database.
+            Data utilitas sudah sinkron ke database dan siap lanjut input bulan berikutnya.
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
@@ -620,15 +533,6 @@ const Utilities = () => {
         </button>
       </div>
 
-      <div className="glass-panel" style={{ padding: '0.85rem', marginBottom: '1.5rem', display: 'flex', flexWrap: 'wrap', gap: '0.55rem' }}>
-        <button className="btn btn-outline" onClick={() => handleSeed(BASELINE_REKAP_SEED, 'data awal Des 2025 - Mar 2026')} disabled={saving}>
-          <Database size={15} /> Isi Data Awal Rekap
-        </button>
-        <button className="btn btn-outline" onClick={() => handleSeed(APRIL_2026_SEED, 'data April 2026')} disabled={saving}>
-          <FileText size={15} /> Isi April 2026
-        </button>
-      </div>
-
       {activeTab === 'rekap' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div className="glass-panel">
@@ -636,7 +540,7 @@ const Utilities = () => {
               <BarChart3 size={24} color="var(--accent-blue)" />
               <div>
                 <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: 0 }}>Perbandingan Tagihan PLN & PDAM</h3>
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0 0' }}>Rekap biaya utilitas 4 bulan terakhir</p>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0 0' }}>Rekap biaya utilitas terbaru langsung dari database</p>
               </div>
             </div>
             <div className="table-container">
@@ -710,12 +614,7 @@ const Utilities = () => {
                   ) : (
                     detailRows.map((row) => (
                       <tr key={row.id} className="ticket-row">
-                        <td style={{ fontWeight: 700 }}>
-                          {toCustomerDisplay(row.jenis, row.pelanggan)}
-                          {row.source === 'baseline' && !dbIdSet.has(row.id) && (
-                            <span className="badge badge-warning" style={{ marginLeft: '0.5rem' }}>Baseline</span>
-                          )}
-                        </td>
+                        <td style={{ fontWeight: 700 }}>{toCustomerDisplay(row.jenis, row.pelanggan)}</td>
                         <td>
                           <span className={`badge ${row.status === 'Lunas' ? 'badge-success' : 'badge-warning'}`}>{row.status}</span>
                         </td>
@@ -856,11 +755,7 @@ const Utilities = () => {
 
               <label style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                 <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Bulan Pemakaian</span>
-                <select value={form.bulan} onChange={(e) => setForm((prev) => ({ ...prev, bulan: e.target.value }))} className="input-responsive">
-                  {monthSelectOptions.map((month) => (
-                    <option key={month} value={month}>{monthLongLabel(month)}</option>
-                  ))}
-                </select>
+                <input type="month" value={form.bulan} onChange={(e) => setForm((prev) => ({ ...prev, bulan: e.target.value }))} className="input-responsive" />
               </label>
               <label style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                 <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Total Nominal (Rp)</span>
