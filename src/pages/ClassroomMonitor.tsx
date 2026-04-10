@@ -27,7 +27,7 @@ import {
   CLASSROOM_MONITOR_SHEET,
   compareClassroomRooms,
   getClassroomDayLabel,
-  getInitialClassroomFormSeedEntries,
+  getShortClassroomLabel,
   normalizeClassroomDate,
   normalizeClassroomMonitorRows,
   normalizeClassroomRoom,
@@ -498,30 +498,6 @@ const ClassroomMonitor = () => {
     }
   };
 
-  const handleSeedInitialData = async () => {
-    if (!canManage) return;
-    if (!confirm('Kirim input awal dari form tanggal 07, 08, dan 09 April 2026 ke database?')) return;
-
-    const entries = getInitialClassroomFormSeedEntries().map((entry) => ({
-      ...entry,
-      id: buildClassroomEntryId(entry.tanggal, entry.ruang),
-    }));
-
-    setIsSubmitting(true);
-    try {
-      await persistEntries(entries);
-      upsertRowsLocally(entries);
-      setSelectedDate('2026-04-09');
-      alert('Data awal 7-9 April 2026 berhasil dikirim ke database.');
-      setTimeout(fetchRows, 2500);
-    } catch (error) {
-      console.error('Seed classroom monitor failed:', error);
-      alert('Gagal mengirim data awal ke database.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const handleImportFile = async (file: File) => {
     if (!file.type.startsWith('image/')) {
       setImportError('File harus berupa gambar.');
@@ -585,15 +561,25 @@ const ClassroomMonitor = () => {
     (a, b) => new Date(b).getTime() - new Date(a).getTime()
   );
 
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const matchesSearchFilter = (row: ClassroomMonitorEntry) => {
+    return !normalizedSearch
+      || row.ruang.toLowerCase().includes(normalizedSearch)
+      || row.keterangan.toLowerCase().includes(normalizedSearch)
+      || (row.updatedBy || '').toLowerCase().includes(normalizedSearch);
+  };
+
   const filteredRows = rows.filter((row) => {
     const matchesDate = selectedDate ? row.tanggal === selectedDate : true;
-    const search = searchTerm.trim().toLowerCase();
-    const matchesSearch = !search
-      || row.ruang.toLowerCase().includes(search)
-      || row.keterangan.toLowerCase().includes(search)
-      || (row.updatedBy || '').toLowerCase().includes(search);
-    return matchesDate && matchesSearch;
+    return matchesDate && matchesSearchFilter(row);
   });
+
+  const recapDate = selectedDate || availableDates[0] || '';
+  const dailyRecapRows = rows
+    .filter((row) => row.tanggal === recapDate && matchesSearchFilter(row))
+    .sort((left, right) => compareClassroomRooms(left.ruang, right.ruang));
+  const dailyRecapWithIssues = dailyRecapRows.filter((row) => row.total > 0);
+  const dailyRecapSafe = dailyRecapRows.filter((row) => row.total === 0);
 
   const totalRows = filteredRows.length;
   const totalWithIssues = filteredRows.filter((row) => row.total > 0).length;
@@ -635,23 +621,6 @@ const ClassroomMonitor = () => {
           )}
         </div>
       </div>
-
-      {canManage && (
-        <div className="glass-panel" style={{ padding: '1rem 1.25rem', marginBottom: '1.5rem', borderLeft: '4px solid var(--accent-amber)', background: 'linear-gradient(90deg, rgba(245,158,11,0.08), transparent)' }}>
-          <div className="flex-row-responsive" style={{ gap: '1rem', alignItems: 'center' }}>
-            <div>
-              <div style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)' }}>Input awal dari form 07-09 April 2026</div>
-              <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', marginTop: '0.2rem', lineHeight: 1.55 }}>
-                Tiga form yang Anda kirim sudah saya transkrip. Tombol ini akan mengirim hasil bacanya ke database sebagai baseline awal kondisi ruangan.
-              </div>
-            </div>
-            <button onClick={handleSeedInitialData} className="btn btn-primary" disabled={isSubmitting}>
-              {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-              Seed 07-09 Apr
-            </button>
-          </div>
-        </div>
-      )}
 
       <div className="stats-grid" style={{ marginBottom: '1.5rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
         <div className="glass-panel stat-card" style={{ padding: '1rem', borderLeft: '4px solid var(--accent-blue)' }}>
@@ -725,6 +694,76 @@ const ClassroomMonitor = () => {
             </select>
           </div>
         </div>
+      </div>
+
+      <div className="glass-panel" style={{ padding: '1rem 1.25rem', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+          <div>
+            <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: 0 }}>Rekap Harian per Kelas / Ruang</h3>
+            <p style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0 0' }}>
+              Snapshot cepat kondisi tiap lokasi pada {recapDate ? `${formatMonitorDate(recapDate)} (${getClassroomDayLabel(recapDate)})` : 'tanggal aktif'}.
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+            <span className="badge badge-success">{dailyRecapSafe.length} aman</span>
+            <span className="badge badge-danger">{dailyRecapWithIssues.length} perlu tindak lanjut</span>
+          </div>
+        </div>
+
+        {dailyRecapRows.length === 0 ? (
+          <div style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', padding: '0.4rem 0 0.2rem 0' }}>
+            Belum ada rekap harian untuk tanggal atau kata kunci yang dipilih.
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.85rem' }}>
+            {dailyRecapRows.map((row) => {
+              const energyCount = row.lampu + row.tv + row.ac + row.kipas + row.lainnya;
+              const cleanCount = row.sampah + row.kotoran;
+              const tidinessCount = row.rapih;
+              const isSafe = row.total === 0;
+
+              return (
+                <div
+                  key={`recap-${row.id}`}
+                  className="glass-panel"
+                  style={{
+                    padding: '0.9rem',
+                    background: isSafe ? 'rgba(16,185,129,0.05)' : 'rgba(244,63,94,0.05)',
+                    border: `1px solid ${isSafe ? 'rgba(16,185,129,0.18)' : 'rgba(244,63,94,0.18)'}`,
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem' }}>
+                    <div>
+                      <div style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-primary)' }}>{getShortClassroomLabel(row.ruang)}</div>
+                      <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>{row.ruang}</div>
+                    </div>
+                    <span className={`badge ${isSafe ? 'badge-success' : 'badge-danger'}`}>{isSafe ? 'Aman' : `${row.total} temuan`}</span>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '0.45rem', marginTop: '0.8rem' }}>
+                    <div style={{ padding: '0.5rem 0.45rem', borderRadius: '10px', background: 'rgba(245,158,11,0.08)', textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Energi</div>
+                      <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--accent-amber)', marginTop: '0.1rem' }}>{energyCount}</div>
+                    </div>
+                    <div style={{ padding: '0.5rem 0.45rem', borderRadius: '10px', background: 'rgba(244,63,94,0.08)', textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Bersih</div>
+                      <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--accent-rose)', marginTop: '0.1rem' }}>{cleanCount}</div>
+                    </div>
+                    <div style={{ padding: '0.5rem 0.45rem', borderRadius: '10px', background: 'rgba(59,130,246,0.08)', textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Rapih</div>
+                      <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--accent-blue)', marginTop: '0.1rem' }}>{tidinessCount}</div>
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: '0.75rem', fontSize: '0.74rem', color: isSafe ? 'var(--text-secondary)' : 'var(--text-primary)', lineHeight: 1.5 }}>
+                    {row.keterangan}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div className="glass-panel" style={{ overflow: 'hidden' }}>
