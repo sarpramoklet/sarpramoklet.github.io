@@ -580,6 +580,59 @@ const ClassroomMonitor = () => {
     .sort((left, right) => compareClassroomRooms(left.ruang, right.ruang));
   const dailyRecapWithIssues = dailyRecapRows.filter((row) => row.total > 0);
   const dailyRecapSafe = dailyRecapRows.filter((row) => row.total === 0);
+  const evaluationRows = rows.filter((row) => matchesSearchFilter(row));
+  const evaluationRoomSummaries = CLASSROOM_LOCATION_OPTIONS
+    .map((ruang) => {
+      const roomRows = evaluationRows
+        .filter((row) => row.ruang === ruang)
+        .sort((left, right) => new Date(right.tanggal).getTime() - new Date(left.tanggal).getTime());
+
+      if (roomRows.length === 0) return null;
+
+      const issueRows = roomRows.filter((row) => row.total > 0);
+      const totalFindings = roomRows.reduce((sum, row) => sum + row.total, 0);
+      const energyTotal = roomRows.reduce((sum, row) => sum + row.lampu + row.tv + row.ac + row.kipas + row.lainnya, 0);
+      const cleanTotal = roomRows.reduce((sum, row) => sum + row.sampah + row.kotoran, 0);
+      const tidinessTotal = roomRows.reduce((sum, row) => sum + row.rapih, 0);
+      const latestIssue = issueRows[0];
+      const dominantConcern = [
+        { label: 'Energi', value: energyTotal, color: 'var(--accent-amber)' },
+        { label: 'Kebersihan', value: cleanTotal, color: 'var(--accent-rose)' },
+        { label: 'Kerapihan', value: tidinessTotal, color: 'var(--accent-blue)' },
+      ].sort((left, right) => right.value - left.value)[0];
+
+      let attentionLabel = 'Aman';
+      if (totalFindings >= 5 || issueRows.length >= 3) attentionLabel = 'Perhatian penuh';
+      else if (totalFindings >= 3 || issueRows.length >= 2) attentionLabel = 'Prioritas';
+      else if (issueRows.length >= 1) attentionLabel = 'Pantau';
+
+      return {
+        ruang,
+        label: getShortClassroomLabel(ruang),
+        observations: roomRows.length,
+        issueDays: issueRows.length,
+        totalFindings,
+        energyTotal,
+        cleanTotal,
+        tidinessTotal,
+        latestIssueDate: latestIssue?.tanggal || '',
+        latestIssueNote: latestIssue?.keterangan || 'Belum ada catatan temuan.',
+        dominantConcern,
+        attentionLabel,
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => Boolean(item))
+    .sort((left, right) => {
+      return (
+        right.totalFindings - left.totalFindings ||
+        right.issueDays - left.issueDays ||
+        new Date(right.latestIssueDate || 0).getTime() - new Date(left.latestIssueDate || 0).getTime() ||
+        compareClassroomRooms(left.ruang, right.ruang)
+      );
+    });
+  const priorityRoomSummaries = evaluationRoomSummaries.filter((room) => room.totalFindings > 0);
+  const topPriorityRoom = priorityRoomSummaries[0] || null;
+  const fullAttentionCount = priorityRoomSummaries.filter((room) => room.attentionLabel === 'Perhatian penuh').length;
 
   const totalRows = filteredRows.length;
   const totalWithIssues = filteredRows.filter((row) => row.total > 0).length;
@@ -762,6 +815,112 @@ const ClassroomMonitor = () => {
                 </div>
               );
             })}
+          </div>
+        )}
+      </div>
+
+      <div className="glass-panel" style={{ padding: '1rem 1.25rem', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+          <div>
+            <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: 0 }}>Monitor Evaluasi Lokasi Prioritas</h3>
+            <p style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0 0' }}>
+              Akumulasi seluruh tanggal input per ruang untuk menandai kelas/lokasi yang paling perlu perhatian penuh.
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+            <span className="badge badge-info">{availableDates.length} tanggal input</span>
+            <span className="badge badge-danger">{priorityRoomSummaries.length} lokasi bertemuan</span>
+            <span className="badge badge-warning">{fullAttentionCount} perhatian penuh</span>
+          </div>
+        </div>
+
+        <div className="stats-grid" style={{ marginBottom: '1rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+          <div className="glass-panel stat-card" style={{ padding: '1rem', borderLeft: '4px solid var(--accent-blue)' }}>
+            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Rentang evaluasi</div>
+            <div style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--accent-blue)', marginTop: '0.3rem' }}>
+              {availableDates.length} hari
+            </div>
+            <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+              Dari {evaluationRows.length} baris input yang cocok dengan pencarian aktif.
+            </div>
+          </div>
+
+          <div className="glass-panel stat-card" style={{ padding: '1rem', borderLeft: '4px solid var(--accent-rose)' }}>
+            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ruang teratas</div>
+            <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--accent-rose)', marginTop: '0.3rem' }}>
+              {topPriorityRoom ? topPriorityRoom.label : '-'}
+            </div>
+            <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+              {topPriorityRoom ? `${topPriorityRoom.totalFindings} temuan dalam ${topPriorityRoom.issueDays} hari pantauan.` : 'Belum ada ruang prioritas.'}
+            </div>
+          </div>
+
+          <div className="glass-panel stat-card" style={{ padding: '1rem', borderLeft: '4px solid var(--accent-amber)' }}>
+            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Fokus tindak lanjut</div>
+            <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--accent-amber)', marginTop: '0.3rem' }}>
+              {topPriorityRoom?.dominantConcern?.label || '-'}
+            </div>
+            <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+              {topPriorityRoom ? `Dominan di ${topPriorityRoom.label}.` : 'Belum ada kategori dominan.'}
+            </div>
+          </div>
+        </div>
+
+        {priorityRoomSummaries.length === 0 ? (
+          <div style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', padding: '0.4rem 0 0.2rem 0' }}>
+            Belum ada temuan lintas tanggal untuk kata kunci yang dipilih.
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '0.85rem' }}>
+            {priorityRoomSummaries.slice(0, 12).map((room, index) => (
+              <div
+                key={`priority-${room.ruang}`}
+                className="glass-panel"
+                style={{
+                  padding: '0.95rem',
+                  background: room.attentionLabel === 'Perhatian penuh' ? 'rgba(244,63,94,0.07)' : 'rgba(245,158,11,0.06)',
+                  border: `1px solid ${room.attentionLabel === 'Perhatian penuh' ? 'rgba(244,63,94,0.2)' : 'rgba(245,158,11,0.2)'}`,
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem' }}>
+                  <div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Peringkat #{index + 1}</div>
+                    <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '0.2rem' }}>{room.label}</div>
+                    <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>{room.ruang}</div>
+                  </div>
+                  <span className={`badge ${room.attentionLabel === 'Perhatian penuh' ? 'badge-danger' : room.attentionLabel === 'Prioritas' ? 'badge-warning' : 'badge-info'}`}>
+                    {room.attentionLabel}
+                  </span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '0.45rem', marginTop: '0.8rem' }}>
+                  <div style={{ padding: '0.55rem', borderRadius: '10px', background: 'rgba(255,255,255,0.03)' }}>
+                    <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Hari temuan</div>
+                    <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '0.1rem' }}>{room.issueDays}/{room.observations}</div>
+                  </div>
+                  <div style={{ padding: '0.55rem', borderRadius: '10px', background: 'rgba(255,255,255,0.03)' }}>
+                    <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Total temuan</div>
+                    <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--accent-rose)', marginTop: '0.1rem' }}>{room.totalFindings}</div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap', marginTop: '0.75rem' }}>
+                  <span className="badge badge-warning">Energi {room.energyTotal}</span>
+                  <span className="badge badge-danger">Bersih {room.cleanTotal}</span>
+                  <span className="badge badge-info">Rapih {room.tidinessTotal}</span>
+                </div>
+
+                <div style={{ marginTop: '0.7rem', fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                  Fokus utama:
+                  <span style={{ color: room.dominantConcern.color, fontWeight: 700 }}> {room.dominantConcern.label}</span>
+                  {room.latestIssueDate ? ` | Temuan terakhir ${formatMonitorDate(room.latestIssueDate)}` : ''}
+                </div>
+                <div style={{ marginTop: '0.35rem', fontSize: '0.74rem', color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                  {room.latestIssueNote}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -1009,7 +1168,7 @@ const ClassroomMonitor = () => {
               </button>
             </div>
 
-            <div className="dashboard-grid" style={{ marginBottom: 0 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: 0 }}>
               <div>
                 <div
                   onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
