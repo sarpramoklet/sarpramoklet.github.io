@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Server, Activity, Database, Loader2, DatabaseBackup, X, Plus, Camera, Upload, Sparkles, CheckCircle, AlertCircle, Image as ImageIcon } from 'lucide-react';
-import { requireGeminiApiKey } from '../utils/env';
+import { clearRuntimeGeminiApiKey, getGeminiApiKeySource, getRuntimeGeminiApiKey, requireGeminiApiKey, setRuntimeGeminiApiKey } from '../utils/env';
 import { generateGeminiJsonFromImage } from '../utils/gemini';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
@@ -201,6 +201,18 @@ Rules:
   return cleanAiResult(raw);
 };
 
+const getReadableAiError = (message: string) => {
+  if (/reported as leaked|api key was reported as leaked/i.test(message)) {
+    return 'API key Gemini yang aktif ditolak karena terdeteksi bocor. Tempel key baru di kolom "Override API Key" lalu coba analisis lagi.';
+  }
+
+  if (/api key not valid|permission denied|forbidden|403/i.test(message)) {
+    return 'API key Gemini tidak valid atau tidak diizinkan. Tempel key baru di kolom "Override API Key" lalu ulangi analisis.';
+  }
+
+  return `Gagal membaca gambar. ${message}`;
+};
+
 
 // ─── Helper Components ────────────────────────────────────────────────────────
 
@@ -304,6 +316,8 @@ const NetMonitorPage = () => {
   const [aiError, setAiError] = useState('');
   const [aiResult, setAiResult] = useState<any>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [geminiKeyDraft, setGeminiKeyDraft] = useState('');
+  const [geminiKeySaved, setGeminiKeySaved] = useState(getGeminiApiKeySource() === 'browser');
 
   const [formData, setFormData] = useState({
     ...createEmptyNetForm()
@@ -317,6 +331,11 @@ const NetMonitorPage = () => {
     setAiLoading(false);
     setDragOver(false);
   };
+
+  useEffect(() => {
+    setGeminiKeyDraft(getRuntimeGeminiApiKey());
+    setGeminiKeySaved(getGeminiApiKeySource() === 'browser');
+  }, [isFormOpen]);
 
   const readLocalImageFile = (file: File) => {
     if (!file.type.startsWith('image/')) return;
@@ -781,7 +800,7 @@ const NetMonitorPage = () => {
                           date: tanggal ? toInputDate(tanggal) : prev.date
                         }));
                       } catch (err: any) {
-                        setAiError('Gagal membaca gambar. Cek API key Gemini atau isi manual. ' + (err.message || ''));
+                        setAiError(getReadableAiError(err.message || 'Unknown error.'));
                       } finally {
                         setAiLoading(false);
                       }
@@ -800,6 +819,48 @@ const NetMonitorPage = () => {
                     <span style={{ fontSize: '0.78rem', color: '#f43f5e' }}>{aiError}</span>
                   </div>
                 )}
+
+                <div style={{ marginTop: '0.75rem', padding: '0.85rem 0.95rem', borderRadius: '10px', background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.22)' }}>
+                  <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--accent-blue)' }}>Override API Key Gemini</div>
+                  <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '0.25rem', lineHeight: 1.55 }}>
+                    Pakai ini kalau key bawaan terkena blokir/leaked. Key disimpan lokal di browser ini saja.
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', marginTop: '0.75rem', alignItems: 'center' }}>
+                    <input
+                      type="password"
+                      value={geminiKeyDraft}
+                      onChange={(e) => setGeminiKeyDraft(e.target.value)}
+                      placeholder="Tempel Gemini API key baru di sini"
+                      className="input-field"
+                      style={{ flex: 1, minWidth: '240px' }}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={() => {
+                        setRuntimeGeminiApiKey(geminiKeyDraft);
+                        setGeminiKeySaved(Boolean(geminiKeyDraft.trim()));
+                        setAiError('');
+                      }}
+                    >
+                      Simpan Key
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-outline"
+                      onClick={() => {
+                        clearRuntimeGeminiApiKey();
+                        setGeminiKeyDraft('');
+                        setGeminiKeySaved(false);
+                      }}
+                    >
+                      Reset
+                    </button>
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: geminiKeySaved ? 'var(--accent-emerald)' : 'var(--text-muted)', marginTop: '0.45rem' }}>
+                    {geminiKeySaved ? 'Key browser aktif dan akan dipakai untuk analisis berikutnya.' : 'Sedang memakai key default dari environment aplikasi.'}
+                  </div>
+                </div>
 
                 {aiResult && (
                     <div style={{ marginTop: '0.75rem', padding: '0.85rem', borderRadius: '8px', border: '1px solid rgba(16,185,129,0.35)', background: 'rgba(16,185,129,0.1)' }}>

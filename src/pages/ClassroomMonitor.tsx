@@ -1154,7 +1154,7 @@ const ClassroomMonitor = () => {
       )}
 
       {isImportModalOpen && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1250, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1250, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '2rem 1rem 1rem' }}>
           <div className="glass-panel" style={{ width: '100%', maxWidth: '980px', maxHeight: '90vh', overflowY: 'auto', padding: '1.25rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', marginBottom: '1rem' }}>
               <div>
