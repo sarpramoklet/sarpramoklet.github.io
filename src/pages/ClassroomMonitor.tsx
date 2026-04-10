@@ -1,17 +1,40 @@
-import React, { useEffect, useState } from 'react';
-import { AlertTriangle, Calendar, Edit3, Info, Loader2, Plus, RefreshCw, Search, Trash2, X, Zap } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  AlertTriangle,
+  Calendar,
+  Edit3,
+  Image as ImageIcon,
+  Info,
+  Loader2,
+  Plus,
+  RefreshCw,
+  Search,
+  Sparkles,
+  Trash2,
+  Upload,
+  X,
+  Zap,
+} from 'lucide-react';
 import { getCurrentUser, ROLES } from '../data/organization';
 import { logAccess } from '../utils/logger';
 import {
+  buildClassroomEntryId,
+  buildFullDayEntries,
   buildMonitorIssueSummary,
+  CLASSROOM_LOCATION_OPTIONS,
   CLASSROOM_MONITOR_SHEET,
-  CLASSROOM_REFERENCE_TOTAL,
+  compareClassroomRooms,
   getClassroomDayLabel,
+  getInitialClassroomFormSeedEntries,
+  normalizeClassroomDate,
   normalizeClassroomMonitorRows,
+  normalizeClassroomRoom,
+  toMonitorFlag,
 } from '../utils/classroomMonitor';
-import type { ClassroomMonitorEntry } from '../utils/classroomMonitor';
+import type { ClassroomMonitorEntry, ClassroomMonitorSeedPartial } from '../utils/classroomMonitor';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
+const GEMINI_API_KEY = "AIzaSyD3XFX6ovEE0XhRvFg7nxxrC4Of9yEW6gE";
 
 type ClassroomMonitorForm = {
   tanggal: string;
@@ -27,9 +50,15 @@ type ClassroomMonitorForm = {
   keterangan: string;
 };
 
+type ImageImportDraft = {
+  tanggal: string;
+  rows: ClassroomMonitorEntry[];
+  issueRows: ClassroomMonitorEntry[];
+};
+
 const createEmptyForm = (): ClassroomMonitorForm => ({
   tanggal: new Date().toISOString().slice(0, 10),
-  ruang: 'Ruang 1',
+  ruang: CLASSROOM_LOCATION_OPTIONS[0],
   lampu: false,
   tv: false,
   ac: false,
@@ -40,8 +69,6 @@ const createEmptyForm = (): ClassroomMonitorForm => ({
   rapih: false,
   keterangan: '',
 });
-
-const roomOptions = Array.from({ length: CLASSROOM_REFERENCE_TOTAL }, (_, index) => `Ruang ${index + 1}`);
 
 const formatMonitorDate = (value: string) => {
   const parsed = new Date(value);
@@ -73,6 +100,182 @@ const getLatestDate = (items: ClassroomMonitorEntry[]) => {
     .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] || '';
 };
 
+const normalizeImportDate = (value: unknown) => {
+  const raw = String(value || '').trim();
+  if (!raw) return new Date().toISOString().slice(0, 10);
+
+  const dmy = raw.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{2}|\d{4})$/);
+  if (dmy) {
+    const dd = String(parseInt(dmy[1], 10) || 1).padStart(2, '0');
+    const mm = String(parseInt(dmy[2], 10) || 1).padStart(2, '0');
+    const yyyyRaw = parseInt(dmy[3], 10) || 0;
+    const yyyy = yyyyRaw < 100 ? 2000 + yyyyRaw : yyyyRaw;
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  const sanitized = raw.replace(/^[A-Za-z]+,\s*/g, '');
+  const monthMap: Record<string, number> = {
+    jan: 1, januari: 1,
+    feb: 2, februari: 2,
+    mar: 3, maret: 3,
+    apr: 4, april: 4,
+    mei: 5,
+    jun: 6, juni: 6,
+    jul: 7, juli: 7,
+    agt: 8, agu: 8, agustus: 8, august: 8,
+    sep: 9, september: 9,
+    okt: 10, oktober: 10,
+    nov: 11, november: 11,
+    des: 12, desember: 12,
+  };
+  const parts = sanitized.split(/\s+/);
+  if (parts.length >= 3) {
+    const dd = String(parseInt(parts[0], 10) || 1).padStart(2, '0');
+    const mm = monthMap[parts[1].toLowerCase()];
+    const yyyyRaw = parseInt(parts[2], 10) || 0;
+    if (mm) {
+      const yyyy = yyyyRaw < 100 ? 2000 + yyyyRaw : yyyyRaw;
+      return `${yyyy}-${String(mm).padStart(2, '0')}-${dd}`;
+    }
+  }
+
+  return normalizeClassroomDate(raw);
+};
+
+const compressImage = (dataUrl: string): Promise<string> =>
+  new Promise((resolve) => {
+    const img = document.createElement('img');
+    img.onload = () => {
+      const MAX = 1200;
+      let width = img.width;
+      let height = img.height;
+      if (width > MAX) {
+        height = Math.round((height * MAX) / width);
+        width = MAX;
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext('2d')!.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', 0.75));
+    };
+    img.src = dataUrl;
+  });
+
+const normalizeImageImportResponse = (raw: any): { tanggal: string; partials: ClassroomMonitorSeedPartial[] } => {
+  const tanggal = normalizeImportDate(raw?.tanggal || raw?.date);
+  const items = Array.isArray(raw?.items) ? raw.items : Array.isArray(raw?.temuan) ? raw.temuan : [];
+
+  const partials = items
+    .map((item: any) => {
+      const ruang = normalizeClassroomRoom(item?.ruang || item?.kelas || item?.room || '');
+      if (!ruang) return null;
+
+      const normalized: ClassroomMonitorSeedPartial = {
+        ruang,
+        lampu: toMonitorFlag(item?.lampu || item?.Lampu),
+        tv: toMonitorFlag(item?.tv || item?.TV),
+        ac: toMonitorFlag(item?.ac || item?.AC),
+        kipas: toMonitorFlag(item?.kipas || item?.Kipas),
+        lainnya: toMonitorFlag(item?.lainnya || item?.Lainnya),
+        sampah: toMonitorFlag(item?.sampah || item?.Sampah),
+        kotoran: toMonitorFlag(item?.kotoran || item?.Kotoran),
+        rapih: toMonitorFlag(item?.rapih || item?.Rapih),
+        keterangan: String(item?.keterangan || item?.Keterangan || '').trim(),
+      };
+
+      const hasIssue = Boolean(
+        normalized.lampu ||
+        normalized.tv ||
+        normalized.ac ||
+        normalized.kipas ||
+        normalized.lainnya ||
+        normalized.sampah ||
+        normalized.kotoran ||
+        normalized.rapih ||
+        normalized.keterangan
+      );
+
+      return hasIssue ? normalized : null;
+    })
+    .filter((item: ClassroomMonitorSeedPartial | null): item is ClassroomMonitorSeedPartial => Boolean(item))
+    .sort((left: ClassroomMonitorSeedPartial, right: ClassroomMonitorSeedPartial) => compareClassroomRooms(left.ruang, right.ruang));
+
+  return { tanggal, partials };
+};
+
+const analyzeClassroomFormImage = async (base64: string, mimeType: string) => {
+  const prompt = `You are reading an Indonesian classroom-monitoring form image titled:
+"LAPORAN PANTAUAN KEBERSIHAN DAN KERAPIHAN RUANG KELAS".
+
+The sheet layout contains:
+- Header with date such as "Selasa, 07 April 2026" or "Rabu, 08 April 2026"
+- Rows for locations: Ruang 1 to Ruang 40, Lab 1 to Lab 7, R. Studio, Aula, UKS
+- Columns for findings:
+  lampu, tv, ac, kipas, lainnya, sampah, kotoran, rapih
+- Red cells with "1" indicate the finding is present
+- Keterangan column may contain notes even when total is 0
+
+Your task:
+1. Extract the form date.
+2. Extract ONLY rows that have at least one marked finding OR non-empty keterangan.
+3. Return strict JSON only, with no markdown and no extra explanation.
+
+Output schema:
+{
+  "tanggal": "YYYY-MM-DD",
+  "items": [
+    {
+      "ruang": "Ruang 4",
+      "lampu": 0,
+      "tv": 0,
+      "ac": 0,
+      "kipas": 0,
+      "lainnya": 0,
+      "sampah": 1,
+      "kotoran": 0,
+      "rapih": 0,
+      "keterangan": ""
+    }
+  ]
+}
+
+Rules:
+- Keep room names exactly in the normalized style: "Ruang 1", "Lab 4", "R. Studio", "Aula", "UKS"
+- Use 0 or 1 for finding columns
+- If a note exists, copy it as plain text
+- If you are unsure, prefer leaving a column as 0 rather than inventing a mark
+- Return only JSON`;
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{
+          parts: [
+            { text: prompt },
+            { inline_data: { mime_type: mimeType, data: base64 } },
+          ],
+        }],
+        generationConfig: { temperature: 0.1, topP: 0.8 },
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error?.message || `HTTP ${response.status}`);
+  }
+
+  const result = await response.json();
+  const text = result.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  const json = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
+  return normalizeImageImportResponse(json);
+};
+
 const ClassroomMonitor = () => {
   const currentUser = getCurrentUser();
   const canManage = [
@@ -81,6 +284,7 @@ const ClassroomMonitor = () => {
     ROLES.PIC_ADMIN,
   ].includes(currentUser.roleAplikasi) || currentUser.unit === 'Sarpras' || currentUser.unit === 'Semua Unit';
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [rows, setRows] = useState<ClassroomMonitorEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -89,11 +293,61 @@ const ClassroomMonitor = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRow, setEditingRow] = useState<ClassroomMonitorEntry | null>(null);
   const [form, setForm] = useState<ClassroomMonitorForm>(createEmptyForm());
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importImage, setImportImage] = useState<string | null>(null);
+  const [importMime, setImportMime] = useState('image/jpeg');
+  const [importLoading, setImportLoading] = useState(false);
+  const [savingImport, setSavingImport] = useState(false);
+  const [importError, setImportError] = useState('');
+  const [importDraft, setImportDraft] = useState<ImageImportDraft | null>(null);
+  const [dragOver, setDragOver] = useState(false);
 
   useEffect(() => {
     fetchRows();
     logAccess(currentUser, 'Monitor Pantauan Kelas');
   }, []);
+
+  const buildPayloadForEntry = (entry: ClassroomMonitorEntry) => ({
+    action: 'FINANCE_RECORD',
+    sheetName: CLASSROOM_MONITOR_SHEET,
+    sheet: CLASSROOM_MONITOR_SHEET,
+    id: entry.id,
+    ID: entry.id,
+    tanggal: entry.tanggal,
+    Tanggal: entry.tanggal,
+    hari: entry.hari,
+    Hari: entry.hari,
+    ruang: entry.ruang,
+    Ruang: entry.ruang,
+    kelas: entry.ruang,
+    Kelas: entry.ruang,
+    lampu: entry.lampu,
+    Lampu: entry.lampu,
+    tv: entry.tv,
+    TV: entry.tv,
+    ac: entry.ac,
+    AC: entry.ac,
+    kipas: entry.kipas,
+    Kipas: entry.kipas,
+    lainnya: entry.lainnya,
+    Lainnya: entry.lainnya,
+    sampah: entry.sampah,
+    Sampah: entry.sampah,
+    kotoran: entry.kotoran,
+    Kotoran: entry.kotoran,
+    rapih: entry.rapih,
+    Rapih: entry.rapih,
+    total: entry.total,
+    Total: entry.total,
+    jumlah_hasil_pantauan: entry.total,
+    'Jumlah Hasil Pantauan': entry.total,
+    keterangan: entry.keterangan,
+    Keterangan: entry.keterangan,
+    updatedBy: entry.updatedBy || '',
+    UpdatedBy: entry.updatedBy || '',
+    updatedAt: entry.updatedAt || '',
+    UpdatedAt: entry.updatedAt || '',
+  });
 
   const fetchRows = async () => {
     setLoading(true);
@@ -101,19 +355,36 @@ const ClassroomMonitor = () => {
       const response = await fetch(`${API_URL}?sheetName=${CLASSROOM_MONITOR_SHEET}`);
       const data = await response.json();
       const normalized = Array.isArray(data) ? normalizeClassroomMonitorRows(data) : [];
-      const sorted = normalized.sort((a, b) => {
-        const dateDiff = new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime();
-        if (dateDiff !== 0) return dateDiff;
-        return a.ruang.localeCompare(b.ruang, 'id-ID', { numeric: true });
-      });
-
-      setRows(sorted);
-      setSelectedDate(getLatestDate(sorted));
+      setRows(normalized);
+      setSelectedDate(getLatestDate(normalized));
     } catch (error) {
       console.error('Error fetching classroom monitor data:', error);
       setRows([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const upsertRowsLocally = (incoming: ClassroomMonitorEntry[]) => {
+    setRows((prev) => {
+      const map = new Map(prev.map((item) => [item.id, item]));
+      incoming.forEach((item) => map.set(item.id, item));
+      return Array.from(map.values()).sort((left, right) => {
+        const dateDiff = new Date(right.tanggal).getTime() - new Date(left.tanggal).getTime();
+        if (dateDiff !== 0) return dateDiff;
+        return compareClassroomRooms(left.ruang, right.ruang);
+      });
+    });
+  };
+
+  const persistEntries = async (entries: ClassroomMonitorEntry[]) => {
+    for (const entry of entries) {
+      await fetch(API_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(buildPayloadForEntry(entry)),
+      });
     }
   };
 
@@ -145,6 +416,21 @@ const ClassroomMonitor = () => {
     setEditingRow(null);
     setForm(createEmptyForm());
     setIsModalOpen(false);
+  };
+
+  const resetImportState = () => {
+    setImportImage(null);
+    setImportMime('image/jpeg');
+    setImportLoading(false);
+    setSavingImport(false);
+    setImportError('');
+    setImportDraft(null);
+    setDragOver(false);
+  };
+
+  const closeImportModal = () => {
+    setIsImportModalOpen(false);
+    resetImportState();
   };
 
   const handleToggle = (field: keyof ClassroomMonitorForm) => {
@@ -183,10 +469,10 @@ const ClassroomMonitor = () => {
     e.preventDefault();
 
     const payloadEntry: ClassroomMonitorEntry = {
-      id: editingRow?.id || `KLS-${Date.now()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`,
+      id: editingRow?.id || buildClassroomEntryId(form.tanggal, form.ruang),
       tanggal: form.tanggal,
       hari: getClassroomDayLabel(form.tanggal),
-      ruang: form.ruang,
+      ruang: normalizeClassroomRoom(form.ruang),
       lampu: form.lampu ? 1 : 0,
       tv: form.tv ? 1 : 0,
       ac: form.ac ? 1 : 0,
@@ -218,62 +504,8 @@ const ClassroomMonitor = () => {
 
     setIsSubmitting(true);
     try {
-      await fetch(API_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({
-          action: 'FINANCE_RECORD',
-          sheetName: CLASSROOM_MONITOR_SHEET,
-          sheet: CLASSROOM_MONITOR_SHEET,
-          id: payloadEntry.id,
-          ID: payloadEntry.id,
-          tanggal: payloadEntry.tanggal,
-          Tanggal: payloadEntry.tanggal,
-          hari: payloadEntry.hari,
-          Hari: payloadEntry.hari,
-          ruang: payloadEntry.ruang,
-          Ruang: payloadEntry.ruang,
-          kelas: payloadEntry.ruang,
-          Kelas: payloadEntry.ruang,
-          lampu: payloadEntry.lampu,
-          Lampu: payloadEntry.lampu,
-          tv: payloadEntry.tv,
-          TV: payloadEntry.tv,
-          ac: payloadEntry.ac,
-          AC: payloadEntry.ac,
-          kipas: payloadEntry.kipas,
-          Kipas: payloadEntry.kipas,
-          lainnya: payloadEntry.lainnya,
-          Lainnya: payloadEntry.lainnya,
-          sampah: payloadEntry.sampah,
-          Sampah: payloadEntry.sampah,
-          kotoran: payloadEntry.kotoran,
-          Kotoran: payloadEntry.kotoran,
-          rapih: payloadEntry.rapih,
-          Rapih: payloadEntry.rapih,
-          total: payloadEntry.total,
-          Total: payloadEntry.total,
-          jumlah_hasil_pantauan: payloadEntry.total,
-          'Jumlah Hasil Pantauan': payloadEntry.total,
-          keterangan: payloadEntry.keterangan,
-          Keterangan: payloadEntry.keterangan,
-          updatedBy: payloadEntry.updatedBy,
-          UpdatedBy: payloadEntry.updatedBy,
-          updatedAt: payloadEntry.updatedAt,
-          UpdatedAt: payloadEntry.updatedAt,
-        }),
-      });
-
-      setRows((prev) => {
-        const next = prev.filter((item) => item.id !== payloadEntry.id);
-        next.unshift(payloadEntry);
-        return next.sort((a, b) => {
-          const dateDiff = new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime();
-          if (dateDiff !== 0) return dateDiff;
-          return a.ruang.localeCompare(b.ruang, 'id-ID', { numeric: true });
-        });
-      });
+      await persistEntries([payloadEntry]);
+      upsertRowsLocally([payloadEntry]);
       setSelectedDate(payloadEntry.tanggal);
       closeModal();
       setTimeout(fetchRows, 2500);
@@ -282,6 +514,89 @@ const ClassroomMonitor = () => {
       alert('Gagal menyimpan monitor pantauan kelas ke database.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleSeedInitialData = async () => {
+    if (!canManage) return;
+    if (!confirm('Kirim input awal dari form tanggal 07, 08, dan 09 April 2026 ke database?')) return;
+
+    const entries = getInitialClassroomFormSeedEntries().map((entry) => ({
+      ...entry,
+      id: buildClassroomEntryId(entry.tanggal, entry.ruang),
+    }));
+
+    setIsSubmitting(true);
+    try {
+      await persistEntries(entries);
+      upsertRowsLocally(entries);
+      setSelectedDate('2026-04-09');
+      alert('Data awal 7-9 April 2026 berhasil dikirim ke database.');
+      setTimeout(fetchRows, 2500);
+    } catch (error) {
+      console.error('Seed classroom monitor failed:', error);
+      alert('Gagal mengirim data awal ke database.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleImportFile = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      setImportError('File harus berupa gambar.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const original = String(event.target?.result || '');
+      const compressed = await compressImage(original);
+      setImportImage(compressed);
+      setImportMime(file.type || 'image/jpeg');
+      setImportError('');
+      setImportDraft(null);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleAnalyzeImage = async () => {
+    if (!importImage) return;
+    setImportLoading(true);
+    setImportError('');
+
+    try {
+      const base64 = importImage.split(',')[1] || '';
+      const parsed = await analyzeClassroomFormImage(base64, importMime);
+      const rowsForDate = buildFullDayEntries(parsed.tanggal, parsed.partials, `${currentUser.nama} (AI Import)`, new Date().toISOString())
+        .map((entry) => ({ ...entry, id: buildClassroomEntryId(entry.tanggal, entry.ruang) }));
+      setImportDraft({
+        tanggal: parsed.tanggal,
+        rows: rowsForDate,
+        issueRows: rowsForDate.filter((entry) => entry.total > 0 || entry.keterangan !== 'Aman, tidak ada temuan.'),
+      });
+    } catch (error: any) {
+      console.error('Analyze classroom form failed:', error);
+      setImportError(error?.message || 'Gagal membaca gambar form.');
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const handleSaveImportDraft = async () => {
+    if (!importDraft) return;
+    setSavingImport(true);
+    try {
+      await persistEntries(importDraft.rows);
+      upsertRowsLocally(importDraft.rows);
+      setSelectedDate(importDraft.tanggal);
+      closeImportModal();
+      alert(`Hasil baca form tanggal ${formatMonitorDate(importDraft.tanggal)} berhasil disimpan ke database.`);
+      setTimeout(fetchRows, 2500);
+    } catch (error) {
+      console.error('Save import draft failed:', error);
+      alert('Gagal menyimpan hasil baca gambar ke database.');
+    } finally {
+      setSavingImport(false);
     }
   };
 
@@ -318,8 +633,8 @@ const ClassroomMonitor = () => {
       <div className="flex-row-responsive" style={{ marginBottom: '2rem', gap: '1rem' }}>
         <div>
           <h1 className="page-title gradient-text">Monitor Pantauan Kelas</h1>
-          <p className="page-subtitle" style={{ margin: 0, maxWidth: '880px' }}>
-            Rekap harian kondisi ruang kelas untuk kebersihan, kerapihan, dan penghematan energi yang tersimpan di sheet `{CLASSROOM_MONITOR_SHEET}`.
+          <p className="page-subtitle" style={{ margin: 0, maxWidth: '920px' }}>
+            Rekap harian kondisi ruang belajar, laboratorium, dan area pendukung untuk kebersihan, kerapihan, dan penghematan energi di sheet `{CLASSROOM_MONITOR_SHEET}`.
           </p>
         </div>
 
@@ -328,12 +643,34 @@ const ClassroomMonitor = () => {
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Sync Live
           </button>
           {canManage && (
-            <button onClick={handleOpenCreate} className="btn btn-primary">
-              <Plus size={16} /> Tambah Pantauan
-            </button>
+            <>
+              <button onClick={() => setIsImportModalOpen(true)} className="btn btn-outline">
+                <Upload size={16} /> Import Gambar Form
+              </button>
+              <button onClick={handleOpenCreate} className="btn btn-primary">
+                <Plus size={16} /> Tambah Pantauan
+              </button>
+            </>
           )}
         </div>
       </div>
+
+      {canManage && (
+        <div className="glass-panel" style={{ padding: '1rem 1.25rem', marginBottom: '1.5rem', borderLeft: '4px solid var(--accent-amber)', background: 'linear-gradient(90deg, rgba(245,158,11,0.08), transparent)' }}>
+          <div className="flex-row-responsive" style={{ gap: '1rem', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)' }}>Input awal dari form 07-09 April 2026</div>
+              <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', marginTop: '0.2rem', lineHeight: 1.55 }}>
+                Tiga form yang Anda kirim sudah saya transkrip. Tombol ini akan mengirim hasil bacanya ke database sebagai baseline awal kondisi ruangan.
+              </div>
+            </div>
+            <button onClick={handleSeedInitialData} className="btn btn-primary" disabled={isSubmitting}>
+              {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+              Seed 07-09 Apr
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="stats-grid" style={{ marginBottom: '1.5rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
         <div className="glass-panel stat-card" style={{ padding: '1rem', borderLeft: '4px solid var(--accent-blue)' }}>
@@ -347,12 +684,12 @@ const ClassroomMonitor = () => {
         </div>
 
         <div className="glass-panel stat-card" style={{ padding: '1rem', borderLeft: '4px solid var(--accent-emerald)' }}>
-          <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ruang aman</div>
+          <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Lokasi aman</div>
           <div style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--accent-emerald)', marginTop: '0.3rem' }}>
             {totalRows - totalWithIssues}
           </div>
           <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-            Dari {totalRows} ruang yang tampil pada filter aktif.
+            Dari {totalRows} lokasi yang tampil pada filter aktif.
           </div>
         </div>
 
@@ -412,9 +749,9 @@ const ClassroomMonitor = () => {
       <div className="glass-panel" style={{ overflow: 'hidden' }}>
         <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
           <div>
-            <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: 0 }}>Detail Temuan per Ruang</h3>
+            <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: 0 }}>Detail Temuan per Lokasi</h3>
             <p style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0 0' }}>
-              Data ini yang dipakai dashboard untuk rekap informasi ke wali kelas dan guru.
+              Data ini dipakai dashboard untuk rekap informasi ke wali kelas, guru, dan tim sarpras.
             </p>
           </div>
 
@@ -429,7 +766,7 @@ const ClassroomMonitor = () => {
             <thead>
               <tr>
                 <th>Tanggal</th>
-                <th>Ruang</th>
+                <th>Lokasi</th>
                 <th>Energi</th>
                 <th>Kebersihan</th>
                 <th>Kerapihan</th>
@@ -470,7 +807,7 @@ const ClassroomMonitor = () => {
                     <td>
                       <span className={`badge ${row.total > 0 ? 'badge-danger' : 'badge-success'}`}>{row.total}</span>
                     </td>
-                    <td style={{ maxWidth: '320px' }}>
+                    <td style={{ maxWidth: '340px' }}>
                       <div style={{ fontSize: '0.83rem', color: 'var(--text-primary)', lineHeight: 1.45 }}>{row.keterangan}</div>
                     </td>
                     <td>
@@ -526,7 +863,7 @@ const ClassroomMonitor = () => {
                   {editingRow ? 'Edit Pantauan Kelas' : 'Tambah Pantauan Kelas'}
                 </h3>
                 <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.74rem', color: 'var(--text-secondary)' }}>
-                  Simpan data ke DB agar dashboard rekap otomatis ikut ter-update.
+                  Simpan satu lokasi ke DB. Untuk satu form penuh, gunakan fitur import gambar.
                 </p>
               </div>
               <button onClick={closeModal} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
@@ -548,13 +885,13 @@ const ClassroomMonitor = () => {
                 </label>
 
                 <label style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Ruang kelas</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Lokasi</span>
                   <select
                     value={form.ruang}
                     onChange={(e) => setForm((prev) => ({ ...prev, ruang: e.target.value }))}
                     className="input-responsive"
                   >
-                    {roomOptions.map((room) => (
+                    {CLASSROOM_LOCATION_OPTIONS.map((room) => (
                       <option key={room} value={room}>{room}</option>
                     ))}
                   </select>
@@ -573,7 +910,7 @@ const ClassroomMonitor = () => {
                       { key: 'tv', label: 'TV aktif' },
                       { key: 'ac', label: 'AC menyala' },
                       { key: 'kipas', label: 'Kipas menyala' },
-                      { key: 'lainnya', label: 'Perangkat lain menyala' },
+                      { key: 'lainnya', label: 'Perangkat lain / jendela' },
                     ].map((item) => (
                       <label key={item.key} style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
                         <input
@@ -618,7 +955,7 @@ const ClassroomMonitor = () => {
                   onChange={(e) => setForm((prev) => ({ ...prev, keterangan: e.target.value }))}
                   className="input-responsive"
                   rows={4}
-                  placeholder="Contoh: Lantai kotor, perlu koordinasi dengan wali kelas."
+                  placeholder="Contoh: Jendela terbuka, koordinasi wali kelas, atau ekskul sedang memakai ruang."
                   style={{ resize: 'vertical' }}
                 />
               </label>
@@ -633,6 +970,143 @@ const ClassroomMonitor = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {isImportModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1250, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: '980px', maxHeight: '90vh', overflowY: 'auto', padding: '1.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', marginBottom: '1rem' }}>
+              <div>
+                <h3 style={{ fontSize: '1.05rem', margin: 0, color: 'var(--text-primary)' }}>Import Gambar Form Pantauan</h3>
+                <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.74rem', color: 'var(--text-secondary)' }}>
+                  Upload scan/foto form, biarkan AI membaca tabelnya, lalu simpan hasil review ke database.
+                </p>
+              </div>
+              <button onClick={closeImportModal} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="dashboard-grid" style={{ marginBottom: 0 }}>
+              <div>
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDragOver(false);
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) handleImportFile(file);
+                  }}
+                  style={{
+                    border: `2px dashed ${dragOver ? 'var(--accent-cyan)' : importImage ? 'var(--accent-emerald)' : 'var(--border-subtle)'}`,
+                    borderRadius: '16px',
+                    padding: importImage ? '1rem' : '2rem 1rem',
+                    textAlign: 'center',
+                    background: importImage ? 'rgba(16,185,129,0.05)' : 'rgba(255,255,255,0.02)',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleImportFile(file);
+                    }}
+                  />
+
+                  {importImage ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem', alignItems: 'center' }}>
+                      <img src={importImage} alt="Preview form pantauan kelas" style={{ maxWidth: '100%', maxHeight: '420px', borderRadius: '10px', objectFit: 'contain' }} />
+                      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+                        <button onClick={() => fileInputRef.current?.click()} className="btn btn-outline" type="button">
+                          <ImageIcon size={16} /> Ganti Gambar
+                        </button>
+                        <button onClick={handleAnalyzeImage} className="btn btn-primary" type="button" disabled={importLoading}>
+                          {importLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                          Baca Form dengan AI
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.9rem' }}>
+                      <Upload size={34} color="var(--accent-cyan)" />
+                      <div style={{ fontSize: '0.88rem', color: 'var(--text-primary)', fontWeight: 700 }}>
+                        Tarik gambar form ke sini atau pilih file
+                      </div>
+                      <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', maxWidth: '420px', lineHeight: 1.55 }}>
+                        Cocok untuk scan/screenshot form seperti contoh tanggal 07, 08, dan 09 April 2026.
+                      </div>
+                      <button onClick={() => fileInputRef.current?.click()} className="btn btn-primary" type="button">
+                        <Upload size={16} /> Pilih Gambar
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {importError && (
+                  <div style={{ marginTop: '0.9rem', padding: '0.8rem 0.9rem', borderRadius: '12px', background: 'rgba(244,63,94,0.08)', border: '1px solid rgba(244,63,94,0.2)', color: 'var(--accent-rose)', fontSize: '0.76rem', lineHeight: 1.5 }}>
+                    {importError}
+                  </div>
+                )}
+              </div>
+
+              <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
+                <div style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--text-primary)' }}>Draft hasil baca</div>
+                <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '0.2rem', lineHeight: 1.5 }}>
+                  Setelah AI membaca gambar, Anda bisa review tanggal dan temuan yang terdeteksi sebelum semua baris disimpan ke DB.
+                </div>
+
+                {!importDraft ? (
+                  <div style={{ padding: '1.6rem 0', color: 'var(--text-secondary)', fontSize: '0.78rem' }}>
+                    Belum ada draft. Upload gambar lalu klik <strong style={{ color: 'var(--text-primary)' }}>Baca Form dengan AI</strong>.
+                  </div>
+                ) : (
+                  <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                    <div style={{ padding: '0.8rem', borderRadius: '12px', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)' }}>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tanggal terbaca</div>
+                      <div style={{ marginTop: '0.25rem', fontSize: '1.05rem', fontWeight: 800, color: 'var(--accent-blue)' }}>
+                        {formatMonitorDate(importDraft.tanggal)}
+                      </div>
+                      <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                        {importDraft.rows.length} baris akan dikirim, {importDraft.issueRows.length} lokasi berisi temuan atau catatan.
+                      </div>
+                    </div>
+
+                    <div style={{ maxHeight: '360px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                      {importDraft.issueRows.length === 0 ? (
+                        <div style={{ color: 'var(--text-secondary)', fontSize: '0.78rem' }}>
+                          AI tidak menemukan temuan/catatan pada gambar ini.
+                        </div>
+                      ) : importDraft.issueRows.map((row) => (
+                        <div key={row.id} style={{ padding: '0.75rem 0.8rem', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
+                            <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)' }}>{row.ruang}</div>
+                            <span className={`badge ${row.total > 0 ? 'badge-danger' : 'badge-info'}`}>{row.total}</span>
+                          </div>
+                          <div style={{ marginTop: '0.3rem', fontSize: '0.74rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                            {row.keterangan}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', flexWrap: 'wrap' }}>
+                      <button onClick={closeImportModal} className="btn btn-outline" type="button">Tutup</button>
+                      <button onClick={handleSaveImportDraft} className="btn btn-primary" type="button" disabled={savingImport}>
+                        {savingImport ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+                        Simpan Hasil Baca ke DB
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}

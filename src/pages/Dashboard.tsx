@@ -8,8 +8,11 @@ import UserAvatar from '../components/UserAvatar';
 import { getMotivationForLogin, getPublicEducationalMotivation } from '../utils/motivation';
 import {
   buildMonitorIssueSummary,
+  CLASSROOM_LOCATION_OPTIONS,
   CLASSROOM_MONITOR_SHEET,
   CLASSROOM_REFERENCE_TOTAL,
+  compareClassroomRooms,
+  getShortClassroomLabel,
   normalizeClassroomMonitorRows,
 } from '../utils/classroomMonitor';
 import type { ClassroomMonitorEntry } from '../utils/classroomMonitor';
@@ -762,8 +765,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
     };
   };
 
-  const classroomRoomSummaries = Array.from({ length: CLASSROOM_REFERENCE_TOTAL }, (_, index) => {
-    const ruang = `Ruang ${index + 1}`;
+  const classroomRoomSummaries = CLASSROOM_LOCATION_OPTIONS.map((ruang) => {
     const roomRows = classroomMonitorRows.filter((item) => item.ruang === ruang);
     const latestRow = roomRows
       .slice()
@@ -798,7 +800,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   const classroomObservedRooms = classroomRoomSummaries.filter((room) => room.observationCount > 0);
   const classroomRoomsNeedAttention = classroomObservedRooms
     .filter((room) => room.totalFindings > 0)
-    .sort((a, b) => b.totalFindings - a.totalFindings || a.score - b.score || a.ruang.localeCompare(b.ruang));
+    .sort((a, b) => b.totalFindings - a.totalFindings || a.score - b.score || compareClassroomRooms(a.ruang, b.ruang));
   const classroomSafeRooms = classroomObservedRooms.filter((room) => room.totalFindings === 0);
   const classroomCoverage = classroomObservedRooms.length;
   const classroomCoverageRate = classroomCoverage > 0 ? Math.round((classroomCoverage / CLASSROOM_REFERENCE_TOTAL) * 100) : 0;
@@ -816,7 +818,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
     { name: 'Hemat energi', value: classroomTotalEnergyFindings, color: '#f59e0b' },
   ].filter((item) => item.value > 0);
   const classroomPriorityChartData = classroomRoomsNeedAttention.slice(0, 8).map((room) => ({
-    ruang: room.ruang.replace('Ruang ', 'R.'),
+    ruang: getShortClassroomLabel(room.ruang),
     score: room.score,
     temuan: room.totalFindings,
     fill: room.status.color,
@@ -868,7 +870,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
             Snapshot {classroomSnapshotDate ? formatWifiDateDisplay(classroomSnapshotDate) : 'Belum ada data'}
           </span>
           <span className="badge badge-success">
-            Cakupan {classroomCoverage}/{CLASSROOM_REFERENCE_TOTAL} ruang
+            Cakupan {classroomCoverage}/{CLASSROOM_REFERENCE_TOTAL} lokasi
           </span>
         </div>
       </div>
@@ -903,7 +905,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                   {classroomObservedCleanRooms}
                 </div>
                 <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
-                  {classroomSafeRooms.length} ruang tanpa temuan pada snapshot terbaru.
+                  {classroomSafeRooms.length} lokasi tanpa temuan pada snapshot terbaru.
                 </div>
               </div>
 
@@ -1093,10 +1095,10 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                   <div style={{ padding: '0.8rem', borderRadius: '12px', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)' }}>
                     <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ruang bersih & siap pakai</div>
                     <div style={{ marginTop: '0.3rem', fontSize: '1.35rem', fontWeight: 800, color: 'var(--accent-blue)' }}>
-                      {classroomSafeRooms.length} ruang
+                      {classroomSafeRooms.length} lokasi
                     </div>
                     <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '0.25rem', lineHeight: 1.5 }}>
-                      Contoh ruang aman: {classroomSafeRooms.slice(0, 6).map((room) => room.ruang.replace('Ruang ', 'R.')).join(', ') || '-'}
+                      Contoh lokasi aman: {classroomSafeRooms.slice(0, 6).map((room) => getShortClassroomLabel(room.ruang)).join(', ') || '-'}
                     </div>
                   </div>
 
