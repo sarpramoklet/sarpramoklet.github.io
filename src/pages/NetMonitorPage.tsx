@@ -46,6 +46,46 @@ const formatDate = (dateStr: string): string => {
   return s;
 };
 
+const getSystemDateInput = (): string => {
+  const now = new Date();
+  const yyyy = String(now.getFullYear());
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+};
+
+const isShortDate = (dateStr: string): boolean => /^\d{2}-\d{2}-\d{2}$/.test(dateStr);
+
+const toInputDate = (dateStr: string): string => {
+  const norm = formatDate(dateStr);
+  const p = norm.split('-');
+  if (p.length === 3) return `20${p[2]}-${p[1]}-${p[0]}`;
+  return getSystemDateInput();
+};
+
+const normalizeDateForSave = (value: string): string => {
+  const formatted = formatDate(value || '');
+  if (isShortDate(formatted)) return formatted;
+  return formatDate(getSystemDateInput());
+};
+
+const netIdFromDate = (dateStr: string): string => {
+  const d = formatDate(dateStr);
+  const p = d.split('-');
+  if (p.length !== 3) return '';
+  return `NET-${p[0]}${p[1]}${p[2]}`;
+};
+
+const parseDateSortTs = (dateStr: string): number => {
+  const formatted = formatDate(dateStr || '');
+  const parts = formatted.split('-');
+  if (parts.length !== 3) return 0;
+  const dd = parseInt(parts[0], 10) || 1;
+  const mm = (parseInt(parts[1], 10) || 1) - 1;
+  const yy = parseInt(parts[2], 10) || 0;
+  return new Date(2000 + yy, mm, dd).getTime();
+};
+
 const cleanNum = (v: any): string => {
   if (v === null || v === undefined || v === '') return '';
   const s = String(v).replace(/[^0-9.]/g, '').trim();
@@ -75,6 +115,58 @@ const cleanAiResult = (raw: any): any => {
     }
   }
   return cleaned;
+};
+
+const NET_FIELD_KEYS = [
+  'i1_rx', 'i1_tx', 'i2_rx', 'i2_tx', 'i3_rx', 'i3_tx',
+  'i4_rx', 'i4_tx', 'i5_rx', 'i5_tx', 'ast_rx', 'ast_tx',
+  'dhcp_cpu', 'dhcp_mem', 'dhcp_disk',
+  'sang_cpu', 'sang_mem', 'sang_virt', 'sang_disk'
+] as const;
+
+const createEmptyNetForm = () => ({
+  date: getSystemDateInput(),
+  i1_rx: '', i1_tx: '',
+  i2_rx: '', i2_tx: '',
+  i3_rx: '', i3_tx: '',
+  i4_rx: '', i4_tx: '',
+  i5_rx: '', i5_tx: '',
+  ast_rx: '', ast_tx: '',
+  dhcp_cpu: '', dhcp_mem: '', dhcp_disk: '',
+  sang_cpu: '', sang_mem: '', sang_virt: '', sang_disk: ''
+});
+
+const buildNetPayload = (formData: Record<string, string>, snapshot: string) => {
+  const tanggal = normalizeDateForSave(formData.date || getSystemDateInput());
+  const id = netIdFromDate(tanggal) || `NET-${Date.now()}`;
+  const { date, ...fields } = formData;
+
+  return {
+    action: 'FINANCE_RECORD',
+    sheetName: 'Monitor_Net',
+    sheet: 'Monitor_Net',
+    id,
+    ID: id,
+    tanggal,
+    Tanggal: tanggal,
+    snapshot,
+    Snapshot: snapshot,
+    ...fields
+  };
+};
+
+const buildNetUiRecord = (payload: Record<string, any>) => {
+  const record: Record<string, any> = {
+    id: payload.id,
+    tanggal: payload.tanggal,
+    snapshot: payload.snapshot || '',
+  };
+
+  NET_FIELD_KEYS.forEach((key) => {
+    record[key] = payload[key] || '';
+  });
+
+  return record;
 };
 
 const analyzeTrafficImage = async (base64: string, mimeType: string): Promise<any> => {
@@ -214,34 +306,28 @@ const NetMonitorPage = () => {
   const [dragOver, setDragOver] = useState(false);
 
   const [formData, setFormData] = useState({
-    date: '',
-    i1_rx: '', i1_tx: '',
-    i2_rx: '', i2_tx: '',
-    i3_rx: '', i3_tx: '',
-    i4_rx: '', i4_tx: '',
-    i5_rx: '', i5_tx: '',
-    ast_rx: '', ast_tx: '',
-    dhcp_cpu: '', dhcp_mem: '', dhcp_disk: '',
-    sang_cpu: '', sang_mem: '', sang_virt: '', sang_disk: ''
+    ...createEmptyNetForm()
   });
 
   const resetNetForm = () => {
-    setFormData({
-      date: '',
-      i1_rx: '', i1_tx: '',
-      i2_rx: '', i2_tx: '',
-      i3_rx: '', i3_tx: '',
-      i4_rx: '', i4_tx: '',
-      i5_rx: '', i5_tx: '',
-      ast_rx: '', ast_tx: '',
-      dhcp_cpu: '', dhcp_mem: '', dhcp_disk: '',
-      sang_cpu: '', sang_mem: '', sang_virt: '', sang_disk: ''
-    });
+    setFormData(createEmptyNetForm());
     setUploadImage(null);
     setAiResult(null);
     setAiError('');
     setAiLoading(false);
     setDragOver(false);
+  };
+
+  const readLocalImageFile = (file: File) => {
+    if (!file.type.startsWith('image/')) return;
+    setUploadMime(file.type);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setUploadImage(ev.target?.result as string);
+      setAiResult(null);
+      setAiError('');
+    };
+    reader.readAsDataURL(file);
   };
 
   // Kompres gambar via Canvas → JPEG 40% quality agar muat di GSheets cell
@@ -266,8 +352,9 @@ const NetMonitorPage = () => {
       const resp = await fetch(`${API_URL}?sheetName=Monitor_Net`);
       const data = await resp.json();
       if (data && Array.isArray(data) && data.length > 0) {
-        setNetData(data[data.length - 1]);
-        setHistoryData([...data].reverse().slice(0, 7));
+        const sorted = [...data].sort((left: any, right: any) => parseDateSortTs(String(right.tanggal || right.Tanggal || '')) - parseDateSortTs(String(left.tanggal || left.Tanggal || '')));
+        setNetData(sorted[0]);
+        setHistoryData(sorted.slice(0, 7));
       } else {
         // Fallback sample agar tabel tetap tampil
         const sample = [{
@@ -320,24 +407,25 @@ const NetMonitorPage = () => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const tanggal = formData.date ? formatDate(formData.date) : formatDate(new Date().toISOString());
       const snapshotData = uploadImage ? await compressImage(uploadImage) : '';
+      const payload = buildNetPayload(formData, snapshotData);
       await fetch(API_URL, {
         method: 'POST',
         mode: 'no-cors',
-        body: JSON.stringify({
-          action: 'FINANCE_RECORD',
-          sheetName: 'Monitor_Net',
-          id: `NET-${Date.now()}`,
-          tanggal,
-          snapshot: snapshotData,
-          ...formData
-        })
+        body: JSON.stringify(payload)
       });
-      alert('Update berhasil disimpan!');
+
+      const savedRecord = buildNetUiRecord(payload);
+      setNetData(savedRecord);
+      setHistoryData((prev) => {
+        const next = [savedRecord, ...prev.filter((item) => String(item.id || item.ID || '') !== payload.id)];
+        return next.slice(0, 7);
+      });
+
+      alert('Update status network berhasil disimpan ke DB!');
       setIsFormOpen(false);
       resetNetForm();
-      setTimeout(fetchData, 1500);
+      setTimeout(fetchData, 1200);
     } catch { alert('Gagal menyimpan'); }
     finally { setSubmitting(false); }
   };
@@ -636,18 +724,9 @@ const NetMonitorPage = () => {
                   onDrop={e => {
                     e.preventDefault();
                     setDragOver(false);
-                    const file = e.dataTransfer.files[0];
-                    if (file && file.type.startsWith('image/')) {
-                      setUploadMime(file.type);
-                      const reader = new FileReader();
-                      reader.onload = ev => {
-                        setUploadImage(ev.target?.result as string);
-                        setAiResult(null);
-                        setAiError('');
-                      };
-                      reader.readAsDataURL(file);
-                    }
-                  }}
+                      const file = e.dataTransfer.files[0];
+                      if (file) readLocalImageFile(file);
+                    }}
                   onClick={() => fileInputRef.current?.click()}
                   style={{
                     border: `2px dashed ${dragOver ? 'var(--accent-blue)' : uploadImage ? 'var(--accent-emerald)' : 'var(--border-subtle)'}`,
@@ -667,14 +746,7 @@ const NetMonitorPage = () => {
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
-                      setUploadMime(file.type);
-                      const reader = new FileReader();
-                      reader.onload = ev => {
-                        setUploadImage(ev.target?.result as string);
-                        setAiResult(null);
-                        setAiError('');
-                      };
-                      reader.readAsDataURL(file);
+                      readLocalImageFile(file);
                     }}
                   />
                   {uploadImage ? (
@@ -706,7 +778,7 @@ const NetMonitorPage = () => {
                         setFormData(prev => ({
                           ...prev,
                           ...fields,
-                          date: tanggal || prev.date
+                          date: tanggal ? toInputDate(tanggal) : prev.date
                         }));
                       } catch (err: any) {
                         setAiError('Gagal membaca gambar. Cek API key Gemini atau isi manual. ' + (err.message || ''));
@@ -730,7 +802,7 @@ const NetMonitorPage = () => {
                 )}
 
                 {aiResult && (
-                  <div style={{ marginTop: '0.75rem', padding: '0.85rem', borderRadius: '8px', border: '1px solid rgba(16,185,129,0.35)', background: 'rgba(16,185,129,0.1)' }}>
+                    <div style={{ marginTop: '0.75rem', padding: '0.85rem', borderRadius: '8px', border: '1px solid rgba(16,185,129,0.35)', background: 'rgba(16,185,129,0.1)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.45rem' }}>
                       <CheckCircle size={15} color="#10b981" />
                       <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#10b981' }}>Data monitor berhasil dibaca dari gambar</span>
@@ -749,6 +821,15 @@ const NetMonitorPage = () => {
                   </div>
                 )}
 
+                {aiResult && (
+                  <div style={{ marginTop: '0.75rem', padding: '0.85rem 0.95rem', borderRadius: '10px', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.22)' }}>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--accent-blue)' }}>Draft siap disimpan ke DB</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem', lineHeight: 1.55 }}>
+                      Hasil AI sudah masuk ke field di bawah. Review atau koreksi bila perlu, lalu klik <b style={{ color: 'var(--text-primary)' }}>Simpan ke DB</b>.
+                    </div>
+                  </div>
+                )}
+
                 {!uploadImage && (
                   <div style={{ marginTop: '0.75rem', padding: '0.7rem 0.85rem', borderRadius: '8px', border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(99,102,241,0.08)', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                     <ImageIcon size={14} color="#6366f1" />
@@ -761,9 +842,8 @@ const NetMonitorPage = () => {
                 <div style={{ gridColumn: '1 / -1' }}>
                   <label style={{ fontSize: '0.8rem', display: 'block', marginBottom: '0.4rem', color: 'var(--text-secondary)' }}>Tanggal</label>
                   <input
-                    type="text"
+                    type="date"
                     className="input-field"
-                    placeholder="Senin, 07 Apr 2026"
                     value={formData.date}
                     onChange={e => setFormData(p => ({ ...p, date: e.target.value }))}
                     style={{ width: '100%' }}
