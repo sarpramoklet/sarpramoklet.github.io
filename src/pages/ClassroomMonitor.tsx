@@ -1385,9 +1385,9 @@ const ClassroomMonitor = () => {
             background: 'rgba(0,0,0,0.55)',
             zIndex: 1300,
             display: 'flex',
-            alignItems: 'center',
+            alignItems: 'flex-start',
             justifyContent: 'center',
-            padding: '1rem',
+            padding: '3.5rem 1rem 1rem',
           }}
         >
           <div className="glass-panel" style={{ width: '100%', maxWidth: '520px', padding: '1.25rem' }}>
