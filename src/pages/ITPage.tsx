@@ -2,11 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Server, Wifi, Shield, Edit2, Trash2, X, Activity, Smartphone, Loader2, DatabaseBackup, TrendingUp, Upload, Sparkles, CheckCircle, AlertCircle, Image, Camera } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, LabelList } from 'recharts';
 import { getCurrentUser, ROLES } from '../data/organization';
+import { requireGeminiApiKey } from '../utils/env';
 import { generateGeminiJsonFromImage } from '../utils/gemini';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
-// Dapatkan API key gratis di https://aistudio.google.com/apikey
-const GEMINI_API_KEY = "AIzaSyD3XFX6ovEE0XhRvFg7nxxrC4Of9yEW6gE";
 
 const initialDeviceData = [
   { id: 1, date: '31 Mar 2026', count: 1529, overloads: 13, note: '1.529 Client (13 Ruang Overload) - Hari Awal' },
@@ -305,7 +304,7 @@ RULES:
 IMPORTANT: The values above are EXAMPLE values for the example image. Read the ACTUAL values from the provided image.`;
 
   const raw = await generateGeminiJsonFromImage({
-    apiKey: GEMINI_API_KEY,
+    apiKey: requireGeminiApiKey(),
     prompt,
     base64,
     mimeType,

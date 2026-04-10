@@ -16,6 +16,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { getCurrentUser, ROLES } from '../data/organization';
+import { requireGeminiApiKey } from '../utils/env';
 import { logAccess } from '../utils/logger';
 import { generateGeminiJsonFromImage } from '../utils/gemini';
 import {
@@ -35,7 +36,6 @@ import {
 import type { ClassroomMonitorEntry, ClassroomMonitorSeedPartial } from '../utils/classroomMonitor';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
-const GEMINI_API_KEY = "AIzaSyD3XFX6ovEE0XhRvFg7nxxrC4Of9yEW6gE";
 
 type ClassroomMonitorForm = {
   tanggal: string;
@@ -249,7 +249,7 @@ Rules:
 - Return only JSON`;
 
   const json = await generateGeminiJsonFromImage({
-    apiKey: GEMINI_API_KEY,
+    apiKey: requireGeminiApiKey(),
     prompt,
     base64,
     mimeType,

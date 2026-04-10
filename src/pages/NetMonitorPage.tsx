@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Server, Activity, Database, Loader2, DatabaseBackup, X, Plus, Camera, Upload, Sparkles, CheckCircle, AlertCircle, Image as ImageIcon } from 'lucide-react';
+import { requireGeminiApiKey } from '../utils/env';
 import { generateGeminiJsonFromImage } from '../utils/gemini';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
-const GEMINI_API_KEY = "AIzaSyD3XFX6ovEE0XhRvFg7nxxrC4Of9yEW6gE";
 
 const monthMap: any = {
   Jan: 0, Feb: 1, Mar: 2, Apr: 3, Mei: 4, Jun: 5,
@@ -101,7 +101,7 @@ Rules:
 - return JSON only, no markdown/text`;
 
   const raw = await generateGeminiJsonFromImage({
-    apiKey: GEMINI_API_KEY,
+    apiKey: requireGeminiApiKey(),
     prompt,
     base64,
     mimeType,
