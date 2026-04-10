@@ -132,6 +132,12 @@ type CashRow = {
   saldo: number;
 };
 
+type UtilityChartPoint = {
+  name: string;
+  PLN: number;
+  PDAM: number;
+};
+
 const toCashNumber = (val: any) => {
   const num = Number(val ?? 0);
   return Number.isFinite(num) ? num : 0;
@@ -171,6 +177,112 @@ const calculateAcBalance = (rows: CashRow[]) => {
   return rows.reduce((sum, item) => sum + item.debit - item.kredit, 0);
 };
 
+const normalizeUtilityMonth = (value: any): string => {
+  const raw = String(value ?? '').trim().replace(/^'+/, '');
+  if (!raw) return '';
+
+  if (/^\d{4}-\d{2}$/.test(raw)) return raw;
+
+  if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
+    const parsed = new Date(raw);
+    if (!Number.isNaN(parsed.getTime())) {
+      const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Jakarta',
+        year: 'numeric',
+        month: '2-digit',
+      });
+      const parts = formatter.formatToParts(parsed);
+      const year = parts.find((part) => part.type === 'year')?.value || '1970';
+      const month = parts.find((part) => part.type === 'month')?.value || '01';
+      return `${year}-${month}`;
+    }
+    return raw.slice(0, 7);
+  }
+
+  const parsed = new Date(raw);
+  if (!Number.isNaN(parsed.getTime())) {
+    return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  return '';
+};
+
+const parseLegacyUtilityId = (value: any) => {
+  const id = String(value || '').trim().toUpperCase();
+  if (!id.startsWith('UTL-')) return null;
+
+  const parts = id.split('-').filter(Boolean);
+  if (parts.length < 3) return null;
+
+  let month = '';
+  if (/^\d{6}$/.test(parts[1])) {
+    month = `${parts[1].slice(0, 4)}-${parts[1].slice(4, 6)}`;
+  } else {
+    const shortMonthMap: Record<string, string> = {
+      JAN: '01',
+      FEB: '02',
+      MAR: '03',
+      APR: '04',
+      MEI: '05',
+      JUN: '06',
+      JUL: '07',
+      AGT: '08',
+      SEP: '09',
+      OKT: '10',
+      NOV: '11',
+      DES: '12',
+    };
+    const match = parts[1].match(/^([A-Z]{3})(\d{2})$/);
+    if (match && shortMonthMap[match[1]]) {
+      month = `20${match[2]}-${shortMonthMap[match[1]]}`;
+    }
+  }
+
+  let jenis = '';
+  if (parts[2] === 'PLN' || parts[2] === 'PDAM') {
+    jenis = parts[2];
+  } else {
+    const tail = parts[parts.length - 1];
+    if (tail === 'PLN' || tail === 'PDAM') jenis = tail;
+  }
+
+  if (!month || !jenis) return null;
+  return { month, jenis };
+};
+
+const buildUtilityChartFromRows = (rows: any[]): UtilityChartPoint[] => {
+  const monthTotals = new Map<string, { PLN: number; PDAM: number }>();
+
+  rows.forEach((row: any) => {
+    const legacy = parseLegacyUtilityId(row.ID || row.id);
+    const bulan = normalizeUtilityMonth(row.Bulan || row.bulan || row.tanggal || row.Tanggal || legacy?.month);
+    const jenisRaw = String(row.Jenis || row.jenis || row.type || row.Type || legacy?.jenis || '').trim().toUpperCase();
+    const jenis = jenisRaw === 'PDAM' ? 'PDAM' : 'PLN';
+    const nominal = Number(row.Nominal || row.nominal || row.amount || row.Amount || 0) || 0;
+
+    if (!bulan || nominal <= 0) return;
+
+    const current = monthTotals.get(bulan) || { PLN: 0, PDAM: 0 };
+    current[jenis] += nominal;
+    monthTotals.set(bulan, current);
+  });
+
+  const monthKeys = Array.from(monthTotals.keys()).sort((a, b) => a.localeCompare(b)).slice(-5);
+  const referenceYear = monthKeys[monthKeys.length - 1]?.slice(0, 4) || '';
+
+  return monthKeys.map((month) => {
+    const totals = monthTotals.get(month) || { PLN: 0, PDAM: 0 };
+    const [year, mm] = month.split('-');
+    const monthIndex = Math.max(0, Math.min(11, (parseInt(mm, 10) || 1) - 1));
+    const shortName = monthList[monthIndex] || 'Jan';
+    return {
+      name: year === referenceYear ? shortName : `${shortName} ${year.slice(-2)}`,
+      PLN: totals.PLN,
+      PDAM: totals.PDAM,
+    };
+  });
+};
+
 const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => {
   const currentUser = getCurrentUser();
   const isPimpinan = currentUser.roleAplikasi === ROLES.PIMPINAN;
@@ -197,6 +309,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   const [wifiData, setWifiData] = useState<any[]>([]);
   const [wifiLoading, setWifiLoading] = useState(false);
   const [netTrafficHistory, setNetTrafficHistory] = useState<any[]>([]);
+  const [utilityChartData, setUtilityChartData] = useState<UtilityChartPoint[]>(getUtilityChartData());
   const [trafficView, setTrafficView] = useState<'rx' | 'tx'>('rx');
   const [netSnapshot, setNetSnapshot] = useState<any>(null);
   const [netSnapshotThumb, setNetSnapshotThumb] = useState<any>(null);
@@ -658,11 +771,30 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       }
     };
 
+    const fetchUtilityChart = async () => {
+      try {
+        const resp = await fetch(`${FINANCE_API_URL}?sheetName=Tagihan_Utilitas`);
+        const data = await resp.json();
+        if (Array.isArray(data) && data.length > 0) {
+          const chartRows = buildUtilityChartFromRows(data);
+          if (chartRows.length > 0) {
+            setUtilityChartData(chartRows);
+            return;
+          }
+        }
+        setUtilityChartData(getUtilityChartData());
+      } catch (e) {
+        console.error("Dashboard utility fetch error:", e);
+        setUtilityChartData(getUtilityChartData());
+      }
+    };
+
     fetchClassroomMonitor();
     fetchACMonitor();
     fetchCapexProjects();
     fetchWifiMonitor();
     fetchNetSnapshot();
+    fetchUtilityChart();
 
   }, [isAuthorizedFinance, isLoggedIn]);
 
@@ -1862,7 +1994,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           </div>
           <div style={{ flex: 1, minHeight: 0, marginTop: '1rem' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={getUtilityChartData()} margin={{ top: 25, right: 10, left: -20, bottom: 0 }}>
+              <BarChart data={utilityChartData} margin={{ top: 25, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
                 <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
                 <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `Rp${v/1000000}jt`} />
@@ -1894,7 +2026,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           </div>
           <div style={{ flex: 1, minHeight: 0, marginTop: '1rem' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={getUtilityChartData()} margin={{ top: 25, right: 10, left: -20, bottom: 0 }}>
+              <BarChart data={utilityChartData} margin={{ top: 25, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
                 <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
                 <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `Rp${(v/1000000).toFixed(1)}jt`} />
