@@ -823,7 +823,7 @@ const NetMonitorPage = () => {
                 <div style={{ marginTop: '0.75rem', padding: '0.85rem 0.95rem', borderRadius: '10px', background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.22)' }}>
                   <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--accent-blue)' }}>Override API Key Gemini</div>
                   <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '0.25rem', lineHeight: 1.55 }}>
-                    Pakai ini kalau key bawaan terkena blokir/leaked. Key disimpan lokal di browser ini saja.
+                    Pakai ini kalau key bawaan terkena blokir/leaked. Key hanya disimpan untuk sesi browser aktif.
                   </div>
                   <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', marginTop: '0.75rem', alignItems: 'center' }}>
                     <input
@@ -858,7 +858,7 @@ const NetMonitorPage = () => {
                     </button>
                   </div>
                   <div style={{ fontSize: '0.72rem', color: geminiKeySaved ? 'var(--accent-emerald)' : 'var(--text-muted)', marginTop: '0.45rem' }}>
-                    {geminiKeySaved ? 'Key browser aktif dan akan dipakai untuk analisis berikutnya.' : 'Sedang memakai key default dari environment aplikasi.'}
+                    {geminiKeySaved ? 'Key sesi browser aktif dan akan dipakai sampai tab/browser ditutup.' : 'Sedang memakai key default dari environment aplikasi.'}
                   </div>
                 </div>
 
