@@ -6,9 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "check:secrets": "node scripts/check-secrets.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
-    "predeploy": "npm run build",
+    "predeploy": "npm run check:secrets && npm run build",
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
