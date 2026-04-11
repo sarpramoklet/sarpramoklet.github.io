@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Loader2, X, RefreshCw, Edit3, Trash2 } from 'lucide-react';
 import { USERS, getCurrentUser } from '../data/organization';
-import { logAccess } from '../utils/logger';
 import { useProfileThumbByEmail } from '../hooks/useProfileThumbByEmail';
 import UserAvatar from '../components/UserAvatar';
 
@@ -43,7 +42,6 @@ const DutyNotes = () => {
 
   useEffect(() => {
     fetchNotes();
-    logAccess(getCurrentUser(), 'Catatan Piket');
   }, []);
 
   const formatDate = (dateValue: any) => {

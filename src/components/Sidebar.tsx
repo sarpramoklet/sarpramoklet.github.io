@@ -4,6 +4,7 @@ import { UserCircle2, X, Sun, Moon, LogOut, LogIn } from 'lucide-react';
 import { getCurrentUser, ROLES } from '../data/organization';
 import { useProfileThumbByEmail } from '../hooks/useProfileThumbByEmail';
 import UserAvatar from './UserAvatar';
+import { logButtonClick, logLogoutEvent, logMenuClick } from '../utils/logger';
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -83,7 +84,12 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
             {setIsLightMode && (
               <button 
                 className="theme-toggle-btn"
-                onClick={() => setIsLightMode(!isLightMode)}
+                onClick={() => {
+                  if (isLoggedIn) {
+                    logButtonClick(currentUser, isLightMode ? 'Ganti ke tema gelap' : 'Ganti ke tema terang', 'Sidebar', 'Toggle tema aplikasi');
+                  }
+                  setIsLightMode(!isLightMode);
+                }}
                 style={{ padding: '6px', border: 'none', background: 'transparent' }}
                 title={isLightMode ? "Ganti ke Tema Gelap" : "Ganti ke Tema Terang"}
               >
@@ -97,6 +103,7 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
             <button 
               className="btn btn-outline" 
               onClick={() => {
+                logLogoutEvent(currentUser);
                 localStorage.removeItem('userEmail');
                 localStorage.removeItem('userPicture');
                 localStorage.removeItem('loginSessionSeed');
@@ -240,7 +247,12 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
                   key={item.path}
                   to={item.path}
                   className={`nav-item ${isActive ? 'active' : ''}`}
-                  onClick={handleClose}
+                  onClick={() => {
+                    if (isLoggedIn) {
+                      logMenuClick(currentUser, item.name, item.path);
+                    }
+                    handleClose();
+                  }}
                 >
                   <Icon className="nav-icon" />
                   <span>{item.name}</span>

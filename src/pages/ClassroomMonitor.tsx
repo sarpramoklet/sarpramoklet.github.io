@@ -23,7 +23,6 @@ import {
   requireGeminiApiKey,
   setRuntimeGeminiApiKey,
 } from '../utils/env';
-import { logAccess } from '../utils/logger';
 import { generateGeminiJsonFromImage } from '../utils/gemini';
 import {
   buildClassroomEntryId,
@@ -310,7 +309,6 @@ const ClassroomMonitor = () => {
 
   useEffect(() => {
     fetchRows();
-    logAccess(currentUser, 'Monitor Pantauan Kelas');
   }, []);
 
   useEffect(() => {

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Wind, Search, Edit3, Save, Loader2, X, RefreshCw, AlertTriangle, CheckCircle, CloudUpload, History as HistoryIcon, Plus } from 'lucide-react';
 import { getCurrentUser, ROLES } from '../data/organization';
-import { logAccess } from '../utils/logger';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 const SHEET_NAME = "Monitor_AC";
@@ -51,7 +50,6 @@ const ACMonitor = () => {
 
   useEffect(() => {
     fetchData();
-    logAccess(currentUser, 'Monitor AC');
   }, []);
 
   const fetchData = async () => {

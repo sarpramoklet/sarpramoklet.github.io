@@ -24,6 +24,7 @@ import CapexBudget from './pages/CapexBudget';
 import ClassroomMonitor from './pages/ClassroomMonitor';
 import Login from './pages/Login';
 import { getCurrentUser } from './data/organization';
+import { NAVIGATION } from './navigation';
 import { logAccess } from './utils/logger';
 
 // Scroll to top component when route changes
@@ -37,6 +38,26 @@ const ScrollToTop = () => {
     }
     window.scrollTo(0, 0);
   }, [pathname]);
+  return null;
+};
+
+const getPageNameFromPath = (pathname: string) => {
+  const matchedRoute = NAVIGATION.find((item) => item.path === pathname);
+  if (matchedRoute) return matchedRoute.name;
+  if (pathname === '/login') return 'Login';
+  if (pathname === '/') return 'Dashboard';
+  return pathname.replace('/', '').replace(/-/g, ' ') || 'Dashboard';
+};
+
+const RouteActivityTracker = ({ isLoggedIn }: { isLoggedIn: boolean }) => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    if (!isLoggedIn || pathname === '/login') return;
+    const currentUser = getCurrentUser();
+    logAccess(currentUser, getPageNameFromPath(pathname), pathname);
+  }, [isLoggedIn, pathname]);
+
   return null;
 };
 
@@ -77,12 +98,9 @@ function App() {
   });
 
   useEffect(() => {
-    if (isLoggedIn) {
-      if (!localStorage.getItem('loginSessionSeed')) {
-        localStorage.setItem('loginSessionSeed', `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`);
-      }
-      const user = getCurrentUser();
-      logAccess(user);
+    if (!isLoggedIn) return;
+    if (!localStorage.getItem('loginSessionSeed')) {
+      localStorage.setItem('loginSessionSeed', `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`);
     }
   }, [isLoggedIn]);
 
@@ -99,6 +117,7 @@ function App() {
   return (
     <Router>
       <ScrollToTop />
+      <RouteActivityTracker isLoggedIn={isLoggedIn} />
       <div className="app-layout">
         <Sidebar 
           isOpen={isSidebarOpen} 
