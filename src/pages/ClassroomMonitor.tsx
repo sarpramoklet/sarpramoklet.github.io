@@ -637,7 +637,12 @@ const ClassroomMonitor = () => {
     .sort((left, right) => compareClassroomRooms(left.ruang, right.ruang));
   const dailyRecapWithIssues = dailyRecapRows.filter((row) => row.total > 0);
   const dailyRecapSafe = dailyRecapRows.filter((row) => row.total === 0);
-  const evaluationRows = rows.filter((row) => matchesSearchFilter(row));
+  const EVALUATION_CUTOFF_DAYS = 6;
+  const latestDateInData = availableDates[0] || '';
+  const cutoffDates = availableDates.slice(0, EVALUATION_CUTOFF_DAYS);
+  const evaluationRows = rows.filter(
+    (row) => matchesSearchFilter(row) && (!latestDateInData || cutoffDates.includes(row.tanggal))
+  );
   const evaluationRoomSummaries = CLASSROOM_LOCATION_OPTIONS
     .map((ruang) => {
       const roomRows = evaluationRows
@@ -881,12 +886,12 @@ const ClassroomMonitor = () => {
           <div>
             <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: 0 }}>Monitor Evaluasi Lokasi Prioritas</h3>
             <p style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0 0' }}>
-              Akumulasi seluruh tanggal input per ruang untuk menandai kelas/lokasi yang paling perlu perhatian penuh.
+              Akumulasi <strong>{EVALUATION_CUTOFF_DAYS} hari terakhir</strong> per ruang untuk menandai kelas/lokasi yang paling perlu perhatian penuh.
             </p>
           </div>
 
           <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
-            <span className="badge badge-info">{availableDates.length} tanggal input</span>
+            <span className="badge badge-info">{cutoffDates.length}/{availableDates.length} hari (cutoff {EVALUATION_CUTOFF_DAYS})</span>
             <span className="badge badge-danger">{priorityRoomSummaries.length} lokasi bertemuan</span>
             <span className="badge badge-warning">{fullAttentionCount} perhatian penuh</span>
           </div>
@@ -896,10 +901,10 @@ const ClassroomMonitor = () => {
           <div className="glass-panel stat-card" style={{ padding: '1rem', borderLeft: '4px solid var(--accent-blue)' }}>
             <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Rentang evaluasi</div>
             <div style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--accent-blue)', marginTop: '0.3rem' }}>
-              {availableDates.length} hari
+              {cutoffDates.length} <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>/ {availableDates.length} hari</span>
             </div>
             <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-              Dari {evaluationRows.length} baris input yang cocok dengan pencarian aktif.
+              Cutoff {EVALUATION_CUTOFF_DAYS} hari terakhir · {evaluationRows.length} baris data
             </div>
           </div>
 
