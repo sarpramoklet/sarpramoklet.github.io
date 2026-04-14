@@ -902,8 +902,10 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   const _cmDow = _cmToday.getDay(); // 0=Min,1=Sen,...,6=Sab
   const _cmCutoff = new Date(_cmToday);
   _cmCutoff.setDate(_cmCutoff.getDate() - (_cmDow === 0 ? 6 : _cmDow - 1));
+  const _cmPad = (n: number) => String(n).padStart(2, '0');
+  const _cmCutoffStr = `${_cmCutoff.getFullYear()}-${_cmPad(_cmCutoff.getMonth()+1)}-${_cmPad(_cmCutoff.getDate())}`;
   const classroomWeekRows = classroomMonitorRows.filter(
-    (row) => { const d = new Date(row.tanggal); d.setHours(0,0,0,0); return d >= _cmCutoff; }
+    (row) => row.tanggal >= _cmCutoffStr
   );
 
   const classroomRoomSummaries = CLASSROOM_LOCATION_OPTIONS.map((ruang) => {

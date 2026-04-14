@@ -645,7 +645,12 @@ const ClassroomMonitor = () => {
   const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
   const cutoffDate = new Date(today);
   cutoffDate.setDate(cutoffDate.getDate() - daysFromMonday);
-  const cutoffDates = availableDates.filter((d) => new Date(d) >= cutoffDate);
+  // Bandingkan sebagai string ISO agar tidak ada masalah UTC vs local timezone
+  const cutoffIso = cutoffDate.toISOString().slice(0, 10); // 'YYYY-MM-DD' local time trick
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const cutoffStr = `${cutoffDate.getFullYear()}-${pad(cutoffDate.getMonth()+1)}-${pad(cutoffDate.getDate())}`;
+  const cutoffDates = availableDates.filter((d) => d >= cutoffStr);
+  void cutoffIso; // suppress unused warning
   const evaluationRows = rows.filter(
     (row) => matchesSearchFilter(row) && cutoffDates.includes(row.tanggal)
   );
