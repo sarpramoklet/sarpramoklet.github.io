@@ -99,6 +99,38 @@ const formatMonitorDateTime = (value?: string) => {
   }).format(parsed);
 };
 
+const toLocalIsoDate = (value: Date) => {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getActiveWorkweekRange = (anchor = new Date()) => {
+  const today = new Date(anchor);
+  today.setHours(0, 0, 0, 0);
+
+  const dayOfWeek = today.getDay();
+  const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - daysFromMonday);
+
+  const friday = new Date(monday);
+  friday.setDate(monday.getDate() + 4);
+
+  const end = today.getTime() < friday.getTime() ? today : friday;
+  const elapsedWorkdays = Math.max(1, Math.min(dayOfWeek === 0 ? 5 : dayOfWeek, 5));
+
+  return {
+    start: toLocalIsoDate(monday),
+    end: toLocalIsoDate(end),
+    monday,
+    friday,
+    endDate: end,
+    elapsedWorkdays,
+  };
+};
+
 const getLatestDate = (items: ClassroomMonitorEntry[]) => {
   return items
     .map((item) => item.tanggal)
@@ -637,22 +669,13 @@ const ClassroomMonitor = () => {
     .sort((left, right) => compareClassroomRooms(left.ruang, right.ruang));
   const dailyRecapWithIssues = dailyRecapRows.filter((row) => row.total > 0);
   const dailyRecapSafe = dailyRecapRows.filter((row) => row.total === 0);
-  const EVALUATION_CUTOFF_DAYS = 6;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  // Cutoff = Senin minggu ini (reset setiap Senin)
-  const dayOfWeek = today.getDay(); // 0=Minggu, 1=Senin, ..., 6=Sabtu
-  const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-  const cutoffDate = new Date(today);
-  cutoffDate.setDate(cutoffDate.getDate() - daysFromMonday);
-  // Bandingkan sebagai string ISO agar tidak ada masalah UTC vs local timezone
-  const cutoffIso = cutoffDate.toISOString().slice(0, 10); // 'YYYY-MM-DD' local time trick
-  const pad = (n: number) => String(n).padStart(2, '0');
-  const cutoffStr = `${cutoffDate.getFullYear()}-${pad(cutoffDate.getMonth()+1)}-${pad(cutoffDate.getDate())}`;
-  const cutoffDates = availableDates.filter((d) => d >= cutoffStr);
-  void cutoffIso; // suppress unused warning
+  const activeWorkweek = getActiveWorkweekRange();
+  const activeWorkweekLabel = `${formatMonitorDate(activeWorkweek.start)} - ${formatMonitorDate(activeWorkweek.end)}`;
   const evaluationRows = rows.filter(
-    (row) => matchesSearchFilter(row) && cutoffDates.includes(row.tanggal)
+    (row) => matchesSearchFilter(row) && row.tanggal >= activeWorkweek.start && row.tanggal <= activeWorkweek.end
+  );
+  const evaluationDates = Array.from(new Set(evaluationRows.map((row) => row.tanggal).filter(Boolean))).sort(
+    (a, b) => new Date(a).getTime() - new Date(b).getTime()
   );
   const evaluationRoomSummaries = CLASSROOM_LOCATION_OPTIONS
     .map((ruang) => {
@@ -706,6 +729,7 @@ const ClassroomMonitor = () => {
   const priorityRoomSummaries = evaluationRoomSummaries.filter((room) => room.totalFindings > 0);
   const topPriorityRoom = priorityRoomSummaries[0] || null;
   const fullAttentionCount = priorityRoomSummaries.filter((room) => room.attentionLabel === 'Perhatian penuh').length;
+  const workweekCoverageLabel = `${evaluationDates.length}/${activeWorkweek.elapsedWorkdays} hari kerja`;
 
   const totalRows = filteredRows.length;
   const totalWithIssues = filteredRows.filter((row) => row.total > 0).length;
@@ -897,25 +921,45 @@ const ClassroomMonitor = () => {
           <div>
             <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: 0 }}>Monitor Evaluasi Lokasi Prioritas</h3>
             <p style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0 0' }}>
-              Akumulasi <strong>minggu ini (Senin – hari ini)</strong> per ruang — reset otomatis setiap Senin.
+              Akumulasi <strong>minggu kerja aktif (Senin - Jumat)</strong> per ruang. Sabtu dan Minggu tidak dihitung, lalu rekap mulai lagi setiap Senin.
             </p>
           </div>
 
           <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
-            <span className="badge badge-info">{cutoffDates.length} hari minggu ini</span>
-            <span className="badge badge-danger">{priorityRoomSummaries.length} lokasi bertemuan</span>
+            <span className="badge badge-info">{workweekCoverageLabel}</span>
+            <span className="badge badge-danger">{priorityRoomSummaries.length} lokasi dengan temuan</span>
             <span className="badge badge-warning">{fullAttentionCount} perhatian penuh</span>
+          </div>
+        </div>
+
+        <div
+          className="glass-panel"
+          style={{
+            padding: '0.8rem 0.9rem',
+            marginBottom: '1rem',
+            background: 'rgba(59,130,246,0.06)',
+            border: '1px solid rgba(59,130,246,0.16)',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', color: 'var(--text-primary)' }}>
+              <Calendar size={16} color="var(--accent-blue)" />
+              <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>Periode rekap: {activeWorkweekLabel}</span>
+            </div>
+            <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>
+              Maksimal 5 hari kerja per minggu, otomatis refresh saat masuk Senin baru.
+            </div>
           </div>
         </div>
 
         <div className="stats-grid" style={{ marginBottom: '1rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
           <div className="glass-panel stat-card" style={{ padding: '1rem', borderLeft: '4px solid var(--accent-blue)' }}>
-            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Periode minggu ini</div>
+            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Periode minggu kerja</div>
             <div style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--accent-blue)', marginTop: '0.3rem' }}>
-              {cutoffDates.length} hari
+              {workweekCoverageLabel}
             </div>
             <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-              Senin s.d. hari ini · {evaluationRows.length} baris data
+              {activeWorkweekLabel} · {evaluationRows.length} baris data
             </div>
           </div>
 
