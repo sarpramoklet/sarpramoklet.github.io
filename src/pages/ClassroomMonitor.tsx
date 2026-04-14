@@ -640,8 +640,11 @@ const ClassroomMonitor = () => {
   const EVALUATION_CUTOFF_DAYS = 6;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  // Cutoff = Senin minggu ini (reset setiap Senin)
+  const dayOfWeek = today.getDay(); // 0=Minggu, 1=Senin, ..., 6=Sabtu
+  const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
   const cutoffDate = new Date(today);
-  cutoffDate.setDate(cutoffDate.getDate() - (EVALUATION_CUTOFF_DAYS - 1)); // hari ini - 5 = 6 hari inklusif
+  cutoffDate.setDate(cutoffDate.getDate() - daysFromMonday);
   const cutoffDates = availableDates.filter((d) => new Date(d) >= cutoffDate);
   const evaluationRows = rows.filter(
     (row) => matchesSearchFilter(row) && cutoffDates.includes(row.tanggal)
@@ -889,12 +892,12 @@ const ClassroomMonitor = () => {
           <div>
             <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: 0 }}>Monitor Evaluasi Lokasi Prioritas</h3>
             <p style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0 0' }}>
-              Akumulasi <strong>{EVALUATION_CUTOFF_DAYS} hari terakhir</strong> per ruang untuk menandai kelas/lokasi yang paling perlu perhatian penuh.
+              Akumulasi <strong>minggu ini (Senin – hari ini)</strong> per ruang — reset otomatis setiap Senin.
             </p>
           </div>
 
           <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
-            <span className="badge badge-info">{cutoffDates.length}/{availableDates.length} hari (cutoff {EVALUATION_CUTOFF_DAYS})</span>
+            <span className="badge badge-info">{cutoffDates.length} hari minggu ini</span>
             <span className="badge badge-danger">{priorityRoomSummaries.length} lokasi bertemuan</span>
             <span className="badge badge-warning">{fullAttentionCount} perhatian penuh</span>
           </div>
@@ -902,12 +905,12 @@ const ClassroomMonitor = () => {
 
         <div className="stats-grid" style={{ marginBottom: '1rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
           <div className="glass-panel stat-card" style={{ padding: '1rem', borderLeft: '4px solid var(--accent-blue)' }}>
-            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Rentang evaluasi</div>
+            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Periode minggu ini</div>
             <div style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--accent-blue)', marginTop: '0.3rem' }}>
-              {cutoffDates.length} <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>/ {availableDates.length} hari</span>
+              {cutoffDates.length} hari
             </div>
             <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-              Cutoff {EVALUATION_CUTOFF_DAYS} hari terakhir · {evaluationRows.length} baris data
+              Senin s.d. hari ini · {evaluationRows.length} baris data
             </div>
           </div>
 
