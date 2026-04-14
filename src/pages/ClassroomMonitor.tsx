@@ -638,10 +638,13 @@ const ClassroomMonitor = () => {
   const dailyRecapWithIssues = dailyRecapRows.filter((row) => row.total > 0);
   const dailyRecapSafe = dailyRecapRows.filter((row) => row.total === 0);
   const EVALUATION_CUTOFF_DAYS = 6;
-  const latestDateInData = availableDates[0] || '';
-  const cutoffDates = availableDates.slice(0, EVALUATION_CUTOFF_DAYS);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const cutoffDate = new Date(today);
+  cutoffDate.setDate(cutoffDate.getDate() - (EVALUATION_CUTOFF_DAYS - 1)); // hari ini - 5 = 6 hari inklusif
+  const cutoffDates = availableDates.filter((d) => new Date(d) >= cutoffDate);
   const evaluationRows = rows.filter(
-    (row) => matchesSearchFilter(row) && (!latestDateInData || cutoffDates.includes(row.tanggal))
+    (row) => matchesSearchFilter(row) && cutoffDates.includes(row.tanggal)
   );
   const evaluationRoomSummaries = CLASSROOM_LOCATION_OPTIONS
     .map((ruang) => {
