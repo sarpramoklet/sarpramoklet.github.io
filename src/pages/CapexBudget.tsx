@@ -3,7 +3,7 @@ import {
   Building2, FlaskConical, BookOpen, Monitor, TrendingUp, Edit3, X,
   Save, Loader2, RefreshCw, AlertTriangle, CheckCircle, Clock, BarChart3,
   ChevronDown, ChevronRight, DollarSign, Target, Activity, Plus, Trash2,
-  Receipt, CalendarDays, FileText, Briefcase
+  Receipt, CalendarDays, FileText, Briefcase, Cpu, Zap
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from 'recharts';
 import { getCurrentUser, ROLES } from '../data/organization';
@@ -25,6 +25,8 @@ const BUDGET_MASTER: BudgetItem[] = [
   { id: 'CAPEX-1233101', akun: '1233101', deskripsi: 'SarPen Laboratorium',    anggaran: 700576820  },
   { id: 'CAPEX-1233201', akun: '1233201', deskripsi: 'Sarana Pendidikan',      anggaran: 731701609  },
   { id: 'CAPEX-1234101', akun: '1234101', deskripsi: 'Inventaris Kantor',      anggaran: 2885730    },
+  { id: 'CAPEX-1235101', akun: '1235101', deskripsi: 'Alat Pengolah Data',     anggaran: 0          },
+  { id: 'CAPEX-1236101', akun: '1236101', deskripsi: 'Alat Catu Daya',         anggaran: 0          },
 ];
 
 /* ─── Transaction (realisasi entry) ─── */
@@ -44,12 +46,16 @@ const ACCOUNT_ICONS: Record<string, any> = {
   '1233101': FlaskConical,
   '1233201': BookOpen,
   '1234101': Monitor,
+  '1235101': Cpu,
+  '1236101': Zap,
 };
 const ACCOUNT_COLORS: Record<string, string> = {
   '1232101': 'var(--accent-blue)',
   '1233101': 'var(--accent-violet)',
   '1233201': 'var(--accent-emerald)',
   '1234101': 'var(--accent-rose)',
+  '1235101': '#f97316',
+  '1236101': '#a78bfa',
 };
 
 /* ─── Projects ─── */
