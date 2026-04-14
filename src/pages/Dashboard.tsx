@@ -897,8 +897,17 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
     };
   };
 
+  // Cutoff: Senin minggu ini s.d. hari ini (sinkron dengan halaman Monitor Pantauan Kelas)
+  const _cmToday = new Date(); _cmToday.setHours(0, 0, 0, 0);
+  const _cmDow = _cmToday.getDay(); // 0=Min,1=Sen,...,6=Sab
+  const _cmCutoff = new Date(_cmToday);
+  _cmCutoff.setDate(_cmCutoff.getDate() - (_cmDow === 0 ? 6 : _cmDow - 1));
+  const classroomWeekRows = classroomMonitorRows.filter(
+    (row) => { const d = new Date(row.tanggal); d.setHours(0,0,0,0); return d >= _cmCutoff; }
+  );
+
   const classroomRoomSummaries = CLASSROOM_LOCATION_OPTIONS.map((ruang) => {
-    const roomRows = classroomMonitorRows.filter((item) => item.ruang === ruang);
+    const roomRows = classroomWeekRows.filter((item) => item.ruang === ruang);
     const latestRow = roomRows
       .slice()
       .sort((a, b) => (parseWifiDateValue(b.tanggal)?.getTime() || 0) - (parseWifiDateValue(a.tanggal)?.getTime() || 0))[0] || null;
@@ -940,10 +949,10 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   const classroomTotalCleanlinessFindings = classroomObservedRooms.reduce((sum, room) => sum + room.cleanlinessFindings, 0);
   const classroomTotalTidinessFindings = classroomObservedRooms.reduce((sum, room) => sum + room.tidinessFindings, 0);
   const classroomObservedCleanRooms = classroomObservedRooms.filter((room) => room.score >= 95).length;
-  const classroomSnapshotDate = classroomMonitorRows
+  const classroomSnapshotDate = classroomWeekRows
     .slice()
     .sort((a, b) => (parseWifiDateValue(b.tanggal)?.getTime() || 0) - (parseWifiDateValue(a.tanggal)?.getTime() || 0))[0]?.tanggal || '';
-  const hasClassroomMonitorData = classroomMonitorRows.length > 0;
+  const hasClassroomMonitorData = classroomWeekRows.length > 0;
   const classroomIssueComposition = [
     { name: 'Kebersihan', value: classroomTotalCleanlinessFindings, color: '#06b6d4' },
     { name: 'Kerapihan', value: classroomTotalTidinessFindings, color: '#8b5cf6' },
