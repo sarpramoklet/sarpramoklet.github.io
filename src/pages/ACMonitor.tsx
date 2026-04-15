@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Wind, Search, Edit3, Save, Loader2, X, RefreshCw, AlertTriangle, CheckCircle, CloudUpload, History as HistoryIcon, Plus } from 'lucide-react';
 import { getCurrentUser, ROLES } from '../data/organization';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 const SHEET_NAME = "Monitor_AC";
 const SHEET_HISTORY = "Riwayat_AC";
+const isTroubleCondition = (kondisi: string) => kondisi === 'Perbaikan' || kondisi === 'Rusak';
 
 export interface ACData {
   id: string;
@@ -30,6 +32,7 @@ export interface ACHistory {
 }
 
 const ACMonitor = () => {
+  const [searchParams] = useSearchParams();
   const [acList, setAcList] = useState<ACData[]>([]);
   const [historyList, setHistoryList] = useState<ACHistory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,6 +50,8 @@ const ACMonitor = () => {
   const currentUser = getCurrentUser();
   const canUpdate = [ROLES.PIMPINAN, ROLES.KOORDINATOR_SARPRAS, ROLES.PIC_IT_SUPPORT].includes(currentUser.roleAplikasi) || 
                     currentUser.unit === 'Sarpras';
+  const focusMode = searchParams.get('focus');
+  const troubleOnly = focusMode === 'trouble';
 
   useEffect(() => {
     fetchData();
@@ -378,16 +383,22 @@ const ACMonitor = () => {
     }
   };
 
-  const filteredList = acList.filter(ac => 
-    `Ruang ${ac.ruang}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ac.status.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ac.kondisi.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ac.merk.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredList = acList.filter(ac => {
+    const matchesSearch =
+      `Ruang ${ac.ruang}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ac.status.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ac.kondisi.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ac.merk.toLowerCase().includes(searchTerm.toLowerCase());
+
+    if (!matchesSearch) return false;
+    if (!troubleOnly) return true;
+    return isTroubleCondition(ac.kondisi);
+  });
+  const troubleRooms = acList.filter(ac => isTroubleCondition(ac.kondisi));
 
   // Stats
   const totalTerpasang = acList.filter(a => a.status === 'Terpasang').length;
-  const totalRusak = acList.filter(a => a.kondisi === 'Perbaikan' || a.kondisi === 'Rusak').length;
+  const totalRusak = troubleRooms.length;
 
   return (
     <div className="animate-fade-in" style={{ paddingBottom: '3rem' }}>
@@ -402,6 +413,23 @@ const ACMonitor = () => {
           <p className="page-subtitle" style={{ margin: 0 }}>Pemantauan ketersediaan dan kondisi pendingin ruangan (Ruang 1 - 40)</p>
         </div>
       </div>
+
+      {troubleOnly && (
+        <div className="glass-panel" style={{ padding: '1rem 1.25rem', marginBottom: '1.5rem', border: '1px solid var(--accent-rose-ghost)', background: 'linear-gradient(135deg, rgba(225,29,72,0.08), rgba(225,29,72,0.02))' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--accent-rose)', marginBottom: '0.25rem' }}>Fokus Perbaikan AC Aktif</div>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                Menampilkan AC yang kondisinya <strong style={{ color: 'var(--text-primary)' }}>Perbaikan</strong> atau <strong style={{ color: 'var(--text-primary)' }}>Rusak</strong>.
+                {troubleRooms.length > 0 ? ` Ruang terdampak: ${troubleRooms.map(ac => ac.ruang).join(', ')}.` : ' Saat ini belum ada ruang yang masuk kategori tersebut.'}
+              </div>
+            </div>
+            <Link to="/ac-monitor" className="btn btn-outline" style={{ whiteSpace: 'nowrap' }}>
+              Lihat Semua AC
+            </Link>
+          </div>
+        </div>
+      )}
 
       {loading && acList.length === 0 ? (
         <div style={{ padding: '4rem', display: 'flex', justifyContent: 'center', color: 'var(--text-muted)' }}>
@@ -447,10 +475,16 @@ const ACMonitor = () => {
             </button>
           </div>
 
+          {!loading && filteredList.length === 0 && (
+            <div className="glass-panel" style={{ padding: '1.25rem', marginBottom: '1.5rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+              {troubleOnly ? 'Belum ada AC yang masuk kategori mati/perbaikan untuk filter ini.' : 'Data AC tidak ditemukan untuk pencarian ini.'}
+            </div>
+          )}
+
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
             {filteredList.map((ac) => {
               const isTerpasang = ac.status === 'Terpasang';
-              const isTrouble = ac.kondisi === 'Perbaikan' || ac.kondisi === 'Rusak';
+              const isTrouble = isTroubleCondition(ac.kondisi);
               let borderColor = 'var(--border-subtle)';
               
               if (isTerpasang) {
