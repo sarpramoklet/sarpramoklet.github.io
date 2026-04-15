@@ -15,6 +15,7 @@ import Finance from './pages/Finance';
 import OperationalCash from './pages/OperationalCash';
 import ACCash from './pages/ACCash';
 import ACMonitor from './pages/ACMonitor';
+import ACHistory from './pages/ACHistory';
 import Assignment from './pages/Assignment';
 import Performance from './pages/Performance';
 import Utilities from './pages/Utilities';
@@ -173,6 +174,7 @@ function App() {
               <Route path="/finance" element={<ProtectedRoute isLoggedIn={isLoggedIn}><Finance /></ProtectedRoute>} />
               <Route path="/operational-cash" element={<ProtectedRoute isLoggedIn={isLoggedIn}><OperationalCash /></ProtectedRoute>} />
               <Route path="/ac-cash" element={<ProtectedRoute isLoggedIn={isLoggedIn}><ACCash /></ProtectedRoute>} />
+              <Route path="/ac-history" element={<ProtectedRoute isLoggedIn={isLoggedIn}><ACHistory /></ProtectedRoute>} />
               <Route path="/logs" element={<ProtectedRoute isLoggedIn={isLoggedIn}><AccessLogs /></ProtectedRoute>} />
               <Route path="/assignment" element={<ProtectedRoute isLoggedIn={isLoggedIn}><Assignment /></ProtectedRoute>} />
               <Route path="/projects" element={<ProtectedRoute isLoggedIn={isLoggedIn}><DummyPage title="Proyek & Pengembangan" /></ProtectedRoute>} />

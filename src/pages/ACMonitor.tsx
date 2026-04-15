@@ -402,7 +402,7 @@ const ACMonitor = () => {
 
   return (
     <div className="animate-fade-in" style={{ paddingBottom: '3rem' }}>
-      <div className="flex-row-responsive" style={{ marginBottom: '2rem', alignItems: 'flex-start' }}>
+      <div className="flex-row-responsive" style={{ marginBottom: '2rem', alignItems: 'flex-start', gap: '1rem' }}>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
             <div style={{ padding: '0.6rem', background: 'var(--accent-blue-ghost)', color: 'var(--accent-blue)', borderRadius: '10px' }}>
@@ -412,6 +412,9 @@ const ACMonitor = () => {
           </div>
           <p className="page-subtitle" style={{ margin: 0 }}>Pemantauan ketersediaan dan kondisi pendingin ruangan (Ruang 1 - 40)</p>
         </div>
+        <Link to="/ac-history" className="btn btn-outline" style={{ whiteSpace: 'nowrap' }}>
+          Rekap Riwayat AC
+        </Link>
       </div>
 
       {troubleOnly && (
