@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   AlertTriangle,
   Calendar,
@@ -311,6 +312,8 @@ const getReadableClassroomAiError = (message: string) => {
 };
 
 const ClassroomMonitor = () => {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const currentUser = getCurrentUser();
   const canManage = [
     ROLES.PIMPINAN,
@@ -397,8 +400,12 @@ const ClassroomMonitor = () => {
       const response = await fetch(`${API_URL}?sheetName=${CLASSROOM_MONITOR_SHEET}`);
       const data = await response.json();
       const normalized = Array.isArray(data) ? normalizeClassroomMonitorRows(data) : [];
+      const requestedDate = normalizeClassroomDate(searchParams.get('date') || '');
+      const nextSelectedDate = normalized.some((row) => row.tanggal === requestedDate)
+        ? requestedDate
+        : getLatestDate(normalized);
       setRows(normalized);
-      setSelectedDate(getLatestDate(normalized));
+      setSelectedDate(nextSelectedDate);
     } catch (error) {
       console.error('Error fetching classroom monitor data:', error);
       setRows([]);
@@ -736,6 +743,11 @@ const ClassroomMonitor = () => {
   const totalEnergy = filteredRows.reduce((sum, row) => sum + row.lampu + row.tv + row.ac + row.kipas + row.lainnya, 0);
   const totalClean = filteredRows.reduce((sum, row) => sum + row.sampah + row.kotoran + row.rapih, 0);
 
+  const handleOpenIssueFocus = () => {
+    if (!recapDate || dailyRecapWithIssues.length === 0) return;
+    navigate(`/classroom-monitor/focus?date=${encodeURIComponent(recapDate)}`);
+  };
+
   if (loading && rows.length === 0) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh', flexDirection: 'column', gap: '1rem' }}>
@@ -857,7 +869,20 @@ const ClassroomMonitor = () => {
 
           <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
             <span className="badge badge-success">{dailyRecapSafe.length} aman</span>
-            <span className="badge badge-danger">{dailyRecapWithIssues.length} perlu tindak lanjut</span>
+            <button
+              type="button"
+              onClick={handleOpenIssueFocus}
+              disabled={dailyRecapWithIssues.length === 0}
+              className="badge badge-danger"
+              style={{
+                cursor: dailyRecapWithIssues.length > 0 ? 'pointer' : 'not-allowed',
+                opacity: dailyRecapWithIssues.length > 0 ? 1 : 0.6,
+                background: 'var(--accent-rose-ghost)',
+              }}
+              title={dailyRecapWithIssues.length > 0 ? 'Buka halaman fokus tindak lanjut kelas' : 'Tidak ada kelas yang perlu ditindaklanjuti'}
+            >
+              {dailyRecapWithIssues.length} perlu tindak lanjut
+            </button>
           </div>
         </div>
 

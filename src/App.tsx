@@ -22,6 +22,7 @@ import AccessLogs from './pages/AccessLogs';
 import DutyNotes from './pages/DutyNotes';
 import CapexBudget from './pages/CapexBudget';
 import ClassroomMonitor from './pages/ClassroomMonitor';
+import ClassroomPriorityFocus from './pages/ClassroomPriorityFocus';
 import Login from './pages/Login';
 import { getCurrentUser } from './data/organization';
 import { NAVIGATION } from './navigation';
@@ -179,6 +180,7 @@ function App() {
               <Route path="/notifications" element={<ProtectedRoute isLoggedIn={isLoggedIn}><DummyPage title="Notifikasi Pribadi" /></ProtectedRoute>} />
               <Route path="/duty-notes" element={<ProtectedRoute isLoggedIn={isLoggedIn}><DutyNotes /></ProtectedRoute>} />
               <Route path="/classroom-monitor" element={<ProtectedRoute isLoggedIn={isLoggedIn}><ClassroomMonitor /></ProtectedRoute>} />
+              <Route path="/classroom-monitor/focus" element={<ProtectedRoute isLoggedIn={isLoggedIn}><ClassroomPriorityFocus /></ProtectedRoute>} />
               <Route path="/maintenance" element={<ProtectedRoute isLoggedIn={isLoggedIn}><DummyPage title="Jadwal Maintenance" /></ProtectedRoute>} />
               <Route path="/ac-monitor" element={<ProtectedRoute isLoggedIn={isLoggedIn}><ACMonitor /></ProtectedRoute>} />
               <Route path="/capex" element={<ProtectedRoute isLoggedIn={isLoggedIn}><CapexBudget /></ProtectedRoute>} />
