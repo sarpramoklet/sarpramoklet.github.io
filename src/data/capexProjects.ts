@@ -1,6 +1,7 @@
 export interface CapexProjectRecord {
   id: string;
   nama: string;
+  deskripsi: string;
   progress: number;
   lastUpdated: string;
   updatedBy: string;
@@ -11,6 +12,7 @@ export const DEFAULT_CAPEX_PROJECTS: CapexProjectRecord[] = [
   {
     id: 'PRJ-1',
     nama: 'Peremajaan keramik pada 3 ruang kelas (R.1 – R.3)',
+    deskripsi: '',
     progress: 0,
     lastUpdated: '',
     updatedBy: '-',
@@ -19,6 +21,7 @@ export const DEFAULT_CAPEX_PROJECTS: CapexProjectRecord[] = [
   {
     id: 'PRJ-2',
     nama: 'Peremajaan talang air pada dak beton lantai 3',
+    deskripsi: '',
     progress: 0,
     lastUpdated: '',
     updatedBy: '-',
@@ -27,6 +30,7 @@ export const DEFAULT_CAPEX_PROJECTS: CapexProjectRecord[] = [
   {
     id: 'PRJ-3',
     nama: 'Peremajaan dak beton masjid',
+    deskripsi: '',
     progress: 0,
     lastUpdated: '',
     updatedBy: '-',
@@ -35,6 +39,7 @@ export const DEFAULT_CAPEX_PROJECTS: CapexProjectRecord[] = [
   {
     id: 'PRJ-4',
     nama: 'Peremajaan cat dinding pada 10 ruang kelas (R.7 – R.16)',
+    deskripsi: '',
     progress: 0,
     lastUpdated: '',
     updatedBy: '-',
@@ -43,6 +48,7 @@ export const DEFAULT_CAPEX_PROJECTS: CapexProjectRecord[] = [
   {
     id: 'PRJ-5',
     nama: 'Peremajaan beton lapangan olahraga (basket)',
+    deskripsi: '',
     progress: 0,
     lastUpdated: '',
     updatedBy: '-',
@@ -51,6 +57,7 @@ export const DEFAULT_CAPEX_PROJECTS: CapexProjectRecord[] = [
   {
     id: 'PRJ-6',
     nama: 'Pengadaan interior Laboratorium TEFA (Lab. 3)',
+    deskripsi: '',
     progress: 0,
     lastUpdated: '',
     updatedBy: '-',
@@ -59,6 +66,7 @@ export const DEFAULT_CAPEX_PROJECTS: CapexProjectRecord[] = [
   {
     id: 'PRJ-7',
     nama: 'Pembangunan Malang Techno Park (Lanjutan)',
+    deskripsi: '',
     progress: 0,
     lastUpdated: '',
     updatedBy: '-',
@@ -89,6 +97,7 @@ const normalizeProject = (row: Record<string, unknown>): CapexProjectRecord | nu
   return {
     id,
     nama,
+    deskripsi: String(normalized.deskripsi || normalized.description || '').trim(),
     progress: toSafeNumber(normalized.progress),
     lastUpdated: String(normalized.lastupdated || ''),
     updatedBy: String(normalized.updatedby || ''),
