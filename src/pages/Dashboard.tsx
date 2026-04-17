@@ -799,15 +799,20 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
     fetchNetSnapshot();
     fetchUtilityChart();
 
-    // Fetch Moklet Service Dashboard data via CORS proxy
+    // Fetch Moklet Service Dashboard data langsung (membutuhkan session cookie & CORS)
     const fetchMokletService = async () => {
+      if (!isLoggedIn || currentUser?.email !== 'hadi@smktelkom-mlg.sch.id') return;
+      
       setMokletService(prev => ({ ...prev, loading: true, error: false }));
       try {
-        const PROXY = 'https://api.allorigins.win/raw?url=';
-        const TARGET = encodeURIComponent('https://service.smktelkom-mlg.sch.id/administrator/dashboard');
-        const resp = await fetch(`${PROXY}${TARGET}`, { signal: AbortSignal.timeout(12000) });
+        const TARGET = 'https://service.smktelkom-mlg.sch.id/administrator/dashboard';
+        const resp = await fetch(TARGET, { 
+          signal: AbortSignal.timeout(12000),
+          credentials: 'include' // Kirim cookie session jika ada
+        });
         if (!resp.ok) throw new Error('fetch failed');
         const html = await resp.text();
+        
         // Parse Inertia.js page data
         const match = html.match(/data-page="([^"]+)"/);
         if (match) {
@@ -834,16 +839,20 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         } else {
           // Fallback: parse from visible text/badges
           const nums = [...html.matchAll(/<span[^>]*class="[^"]*badge[^"]*"[^>]*>(\d+)<\/span>/g)].map(m => parseInt(m[1]));
-          setMokletService(prev => ({ ...prev, loading: false, error: nums.length === 0 }));
+          if (nums.length === 0) throw new Error('No data found');
+          setMokletService(prev => ({ ...prev, loading: false, error: false }));
         }
       } catch (e) {
         console.warn('Moklet Service fetch failed:', e);
         setMokletService(prev => ({ ...prev, loading: false, error: true }));
       }
     };
-    fetchMokletService();
-    const mokletInterval = setInterval(fetchMokletService, 5 * 60 * 1000); // refresh every 5 mins
-    return () => clearInterval(mokletInterval);
+    
+    if (isLoggedIn && currentUser?.email === 'hadi@smktelkom-mlg.sch.id') {
+      fetchMokletService();
+      const mokletInterval = setInterval(fetchMokletService, 5 * 60 * 1000); // refresh every 5 mins
+      return () => clearInterval(mokletInterval);
+    }
 
   }, [isAuthorizedFinance, isLoggedIn]);
 
