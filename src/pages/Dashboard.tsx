@@ -1003,7 +1003,6 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   const classroomTotalEnergyFindings = classroomObservedRooms.reduce((sum, room) => sum + room.energyFindings, 0);
   const classroomTotalCleanlinessFindings = classroomObservedRooms.reduce((sum, room) => sum + room.cleanlinessFindings, 0);
   const classroomTotalTidinessFindings = classroomObservedRooms.reduce((sum, room) => sum + room.tidinessFindings, 0);
-  const classroomObservedCleanRooms = classroomObservedRooms.filter((room) => room.score >= 95).length;
   const classroomSnapshotDate = classroomWeekRows
     .slice()
     .sort((a, b) => (parseWifiDateValue(b.tanggal)?.getTime() || 0) - (parseWifiDateValue(a.tanggal)?.getTime() || 0))[0]?.tanggal || '';
@@ -1098,7 +1097,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
               <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
                 <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ruang aman terpantau</div>
                 <div style={{ marginTop: '0.35rem', fontSize: '1.65rem', fontWeight: 800, color: 'var(--accent-emerald)' }}>
-                  {classroomObservedCleanRooms}
+                  {classroomSafeRooms.length}
                 </div>
                 <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
                   {classroomSafeRooms.length} lokasi tanpa temuan pada snapshot terbaru.
