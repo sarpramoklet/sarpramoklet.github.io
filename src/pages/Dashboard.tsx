@@ -808,7 +808,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       setMokletService(prev => ({ ...prev, loading: true, error: false }));
       try {
         // Jalur fetch via perantara Google Apps Script untuk melewati CORS
-        const GAS_URL = 'https://script.google.com/a/macros/smktelkom-mlg.sch.id/s/AKfycbzmWZmR_WffSeUvw02HWtnKIyCbxMJqCW6LITyj-X9OzHB1Pm0Lgt9VxODfOfK_dEQQ8A/exec'; 
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbxbLH1_wSHenGnEsIRIZwMoNAL6xaVngx0-3_TuHlUjsbtWONJn4sXdqJrN1IQ6gmgRlg/exec'; 
         
         if (!GAS_URL) {
           throw new Error('URL GAS belum di-set');
