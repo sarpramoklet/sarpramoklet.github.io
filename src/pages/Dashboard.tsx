@@ -308,6 +308,23 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   const [capexProjects, setCapexProjects] = useState<any[]>([]);
   const [capexLoading, setCapexLoading] = useState(false);
 
+  // Moklet Service Dashboard data
+  const [mokletService, setMokletService] = useState<{
+    complaints: { waitingConfirmation: number; onProcess: number } | null;
+    roomReservation: { waitingConfirmation: number; activeReservation: number } | null;
+    toolsLoan: { waitingConfirmation: number; haveNotReturn: number } | null;
+    loading: boolean;
+    lastUpdated: Date | null;
+    error: boolean;
+  }>({
+    complaints: null,
+    roomReservation: null,
+    toolsLoan: null,
+    loading: false,
+    lastUpdated: null,
+    error: false,
+  });
+
   const [wifiData, setWifiData] = useState<any[]>([]);
   const [wifiLoading, setWifiLoading] = useState(false);
   const [netTrafficHistory, setNetTrafficHistory] = useState<any[]>([]);
@@ -781,6 +798,52 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
     fetchWifiMonitor();
     fetchNetSnapshot();
     fetchUtilityChart();
+
+    // Fetch Moklet Service Dashboard data via CORS proxy
+    const fetchMokletService = async () => {
+      setMokletService(prev => ({ ...prev, loading: true, error: false }));
+      try {
+        const PROXY = 'https://api.allorigins.win/raw?url=';
+        const TARGET = encodeURIComponent('https://service.smktelkom-mlg.sch.id/administrator/dashboard');
+        const resp = await fetch(`${PROXY}${TARGET}`, { signal: AbortSignal.timeout(12000) });
+        if (!resp.ok) throw new Error('fetch failed');
+        const html = await resp.text();
+        // Parse Inertia.js page data
+        const match = html.match(/data-page="([^"]+)"/);
+        if (match) {
+          const raw = match[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&#039;/g, "'");
+          const pageData = JSON.parse(raw);
+          const props = pageData?.props || {};
+          setMokletService({
+            complaints: props.complaintWaitingForConfirmation !== undefined ? {
+              waitingConfirmation: Number(props.complaintWaitingForConfirmation ?? 0),
+              onProcess: Number(props.complaintOnProcess ?? 0),
+            } : null,
+            roomReservation: props.roomReservationWaitingForConfirmation !== undefined ? {
+              waitingConfirmation: Number(props.roomReservationWaitingForConfirmation ?? 0),
+              activeReservation: Number(props.activeRoomReservation ?? 0),
+            } : null,
+            toolsLoan: props.toolsLoanWaitingForConfirmation !== undefined ? {
+              waitingConfirmation: Number(props.toolsLoanWaitingForConfirmation ?? 0),
+              haveNotReturn: Number(props.toolsLoanHaveNotReturn ?? 0),
+            } : null,
+            loading: false,
+            lastUpdated: new Date(),
+            error: false,
+          });
+        } else {
+          // Fallback: parse from visible text/badges
+          const nums = [...html.matchAll(/<span[^>]*class="[^"]*badge[^"]*"[^>]*>(\d+)<\/span>/g)].map(m => parseInt(m[1]));
+          setMokletService(prev => ({ ...prev, loading: false, error: nums.length === 0 }));
+        }
+      } catch (e) {
+        console.warn('Moklet Service fetch failed:', e);
+        setMokletService(prev => ({ ...prev, loading: false, error: true }));
+      }
+    };
+    fetchMokletService();
+    const mokletInterval = setInterval(fetchMokletService, 5 * 60 * 1000); // refresh every 5 mins
+    return () => clearInterval(mokletInterval);
 
   }, [isAuthorizedFinance, isLoggedIn]);
 
@@ -1455,6 +1518,111 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
               </p>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* ── Moklet Service Integration Boxes ── */}
+      <div style={{ marginBottom: '2rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem', gap: '1rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: mokletService.error ? '#f87171' : mokletService.loading ? '#fbbf24' : '#34d399', boxShadow: `0 0 6px ${mokletService.error ? '#f8717160' : mokletService.loading ? '#fbbf2460' : '#34d39960'}` }} />
+            <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Moklet Service — Status Layanan</span>
+            <a href="https://service.smktelkom-mlg.sch.id/administrator/dashboard" target="_blank" rel="noopener noreferrer"
+              style={{ fontSize: '0.7rem', color: 'var(--accent-blue)', textDecoration: 'none', opacity: 0.8 }}>↗ Buka</a>
+          </div>
+          {mokletService.lastUpdated && (
+            <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+              Update: {mokletService.lastUpdated.toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit' })}
+            </span>
+          )}
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+
+          {/* Box 1: Complaints */}
+          <div className="glass-panel" style={{ padding: '1.25rem', border: '1px solid rgba(251,146,60,0.25)', background: 'linear-gradient(135deg, rgba(251,146,60,0.05), transparent)', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'linear-gradient(90deg, #f97316, #fb923c)' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1rem' }}>
+              <div style={{ padding: '0.45rem', background: 'rgba(249,115,22,0.15)', borderRadius: '8px', color: '#f97316', display: 'flex' }}>
+                <AlertCircle size={16} />
+              </div>
+              <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#f97316' }}>Pengaduan</span>
+            </div>
+            {mokletService.loading ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '1rem' }}><Loader2 size={20} className="animate-spin" color="#f97316" /></div>
+            ) : mokletService.error || !mokletService.complaints ? (
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center', padding: '0.75rem 0' }}>Data tidak tersedia – login diperlukan</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Menunggu Konfirmasi</span>
+                  <span style={{ fontWeight: 800, fontSize: '1.3rem', color: '#f97316', lineHeight: 1 }}>{mokletService.complaints.waitingConfirmation}</span>
+                </div>
+                <div style={{ height: '1px', background: 'var(--border-subtle)' }} />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Sedang Diproses</span>
+                  <span style={{ fontWeight: 800, fontSize: '1.3rem', color: '#fb923c', lineHeight: 1 }}>{mokletService.complaints.onProcess}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Box 2: Room Reservation */}
+          <div className="glass-panel" style={{ padding: '1.25rem', border: '1px solid rgba(52,211,153,0.25)', background: 'linear-gradient(135deg, rgba(52,211,153,0.05), transparent)', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'linear-gradient(90deg, #10b981, #34d399)' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1rem' }}>
+              <div style={{ padding: '0.45rem', background: 'rgba(16,185,129,0.15)', borderRadius: '8px', color: '#10b981', display: 'flex' }}>
+                <Calendar size={16} />
+              </div>
+              <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#10b981' }}>Peminjaman Ruang</span>
+            </div>
+            {mokletService.loading ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '1rem' }}><Loader2 size={20} className="animate-spin" color="#10b981" /></div>
+            ) : mokletService.error || !mokletService.roomReservation ? (
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center', padding: '0.75rem 0' }}>Data tidak tersedia – login diperlukan</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Menunggu Konfirmasi</span>
+                  <span style={{ fontWeight: 800, fontSize: '1.3rem', color: '#6b7280', lineHeight: 1 }}>{mokletService.roomReservation.waitingConfirmation}</span>
+                </div>
+                <div style={{ height: '1px', background: 'var(--border-subtle)' }} />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Reservasi Aktif</span>
+                  <span style={{ fontWeight: 800, fontSize: '1.3rem', color: '#10b981', lineHeight: 1 }}>{mokletService.roomReservation.activeReservation}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Box 3: Tools Loan */}
+          <div className="glass-panel" style={{ padding: '1.25rem', border: '1px solid rgba(59,130,246,0.25)', background: 'linear-gradient(135deg, rgba(59,130,246,0.05), transparent)', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'linear-gradient(90deg, #3b82f6, #60a5fa)' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1rem' }}>
+              <div style={{ padding: '0.45rem', background: 'rgba(59,130,246,0.15)', borderRadius: '8px', color: '#3b82f6', display: 'flex' }}>
+                <Briefcase size={16} />
+              </div>
+              <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#3b82f6' }}>Peminjaman Alat</span>
+            </div>
+            {mokletService.loading ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '1rem' }}><Loader2 size={20} className="animate-spin" color="#3b82f6" /></div>
+            ) : mokletService.error || !mokletService.toolsLoan ? (
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center', padding: '0.75rem 0' }}>Data tidak tersedia – login diperlukan</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Menunggu Konfirmasi</span>
+                  <span style={{ fontWeight: 800, fontSize: '1.3rem', color: '#6b7280', lineHeight: 1 }}>{mokletService.toolsLoan.waitingConfirmation}</span>
+                </div>
+                <div style={{ height: '1px', background: 'var(--border-subtle)' }} />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Belum Dikembalikan</span>
+                  <span style={{ fontWeight: 800, fontSize: '1.3rem', color: '#3b82f6', lineHeight: 1 }}>{mokletService.toolsLoan.haveNotReturn}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
         </div>
       </div>
 
