@@ -5,7 +5,7 @@ import {
   ChevronDown, ChevronRight, DollarSign, Target, Activity, Plus, Trash2,
   Receipt, CalendarDays, FileText, Briefcase, Cpu, Zap
 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell, LabelList } from 'recharts';
 import { getCurrentUser, ROLES } from '../data/organization';
 import { DEFAULT_CAPEX_PROJECTS, encodeCapexProjectNama, getNextCapexProjectId, mergeCapexProjects, type CapexProjectRecord } from '../data/capexProjects';
 
@@ -612,19 +612,48 @@ const CapexBudget = () => {
              <h3 style={{ margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.05rem', color: 'var(--text-primary)' }}>
                <BarChart3 size={18} color="var(--accent-blue)" /> Grafik Penyelesaian Proyek CAPEX
              </h3>
-             <div style={{ width: '100%', height: '320px' }}>
+             <div style={{ width: '100%', height: `${Math.max(380, projects.length * 42)}px` }}>
                 <ResponsiveContainer>
-                  <BarChart data={projects.slice().sort((a,b)=> b.progress - a.progress)} layout="vertical" margin={{ left: 10, right: 30 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" horizontal={false} />
-                    <XAxis type="number" domain={[0, 100]} stroke="var(--text-muted)" fontSize={11} tickFormatter={v => `${v}%`} />
-                    <YAxis dataKey="nama" type="category" width={180} stroke="var(--text-muted)" fontSize={10} tickFormatter={(val) => val.length > 25 ? val.substring(0, 25) + '...' : val} />
-                    <RechartsTooltip formatter={(v: any) => [`${v}%`, 'Progres']} contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-focus)', borderRadius: '8px' }} />
-                    <Bar dataKey="progress" radius={[0, 4, 4, 0]} barSize={20}>
-                      {projects.map((ent, idx) => (
-                        <Cell key={`cell-${idx}`} fill={ent.progress >= 100 ? '#10b981' : ent.progress >= 50 ? '#3b82f6' : '#f59e0b'} />
-                      ))}
-                    </Bar>
-                  </BarChart>
+                  {(() => {
+                    const sorted = projects.slice().sort((a, b) => b.progress - a.progress);
+                    return (
+                      <BarChart data={sorted} layout="vertical" margin={{ left: 10, right: 60 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" horizontal={false} />
+                        <XAxis type="number" domain={[0, 100]} stroke="var(--text-muted)" fontSize={11} tickFormatter={v => `${v}%`} />
+                        <YAxis
+                          dataKey="nama"
+                          type="category"
+                          width={220}
+                          stroke="var(--text-muted)"
+                          fontSize={10}
+                          tickFormatter={(val) => {
+                            const i = sorted.findIndex(p => p.nama === val);
+                            return i >= 0 ? `${i + 1}. ${val}` : val;
+                          }}
+                          tick={{ fill: 'var(--text-secondary)', fontSize: 10 }}
+                        />
+                        <RechartsTooltip
+                          formatter={(v: any) => [`${v}%`, 'Progres']}
+                          labelFormatter={(label) => {
+                            const i = sorted.findIndex(p => p.nama === label);
+                            return i >= 0 ? `${i + 1}. ${label}` : label;
+                          }}
+                          contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-focus)', borderRadius: '8px' }}
+                        />
+                        <Bar dataKey="progress" radius={[0, 4, 4, 0]} barSize={20}>
+                          {sorted.map((ent, idx) => (
+                            <Cell key={`cell-${idx}`} fill={ent.progress >= 100 ? '#10b981' : ent.progress >= 50 ? '#3b82f6' : '#f59e0b'} />
+                          ))}
+                          <LabelList
+                            dataKey="progress"
+                            position="right"
+                            formatter={(v: any) => `${v}%`}
+                            style={{ fill: 'var(--text-primary)', fontSize: 11, fontWeight: 700 }}
+                          />
+                        </Bar>
+                      </BarChart>
+                    );
+                  })()}
                 </ResponsiveContainer>
              </div>
           </div>
