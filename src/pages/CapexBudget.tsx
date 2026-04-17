@@ -553,7 +553,12 @@ const CapexBudget = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '2rem' }}>
           <div className="glass-panel" style={{ padding: '1rem 1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
             <div>
-              <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>Pekerjaan CAPEX</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.25rem', flexWrap: 'wrap' }}>
+                <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Pekerjaan CAPEX</div>
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--accent-blue)', background: 'var(--accent-blue-ghost)', padding: '0.2rem 0.55rem', borderRadius: '999px' }}>
+                  {projects.length} pekerjaan
+                </span>
+              </div>
               <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                 Koordinator Sarpras dan pimpinan bisa menambahkan pekerjaan baru, lalu progresnya tetap diupdate mingguan.
               </div>
@@ -597,14 +602,20 @@ const CapexBudget = () => {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border-subtle)' }}>
+                  <th style={{ padding: '1rem', textAlign: 'center', fontWeight: 600, color: 'var(--text-secondary)', width: '72px' }}>No.</th>
                   <th style={{ padding: '1rem', textAlign: 'left', fontWeight: 600, color: 'var(--text-secondary)' }}>Daftar Pekerjaan / Pengadaan</th>
                   <th style={{ padding: '1rem', textAlign: 'left', fontWeight: 600, color: 'var(--text-secondary)', width: '250px' }}>Progres</th>
                   <th style={{ padding: '1rem', textAlign: 'right', fontWeight: 600, color: 'var(--text-secondary)', width: '150px' }}>Aksi</th>
                 </tr>
               </thead>
               <tbody>
-                {projects.map(prj => (
+                {projects.map((prj, idx) => (
                   <tr key={prj.id} style={{ borderBottom: '1px solid var(--border-subtle)' }} className="hover-bg">
+                    <td style={{ padding: '1rem', textAlign: 'center' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: '34px', height: '34px', borderRadius: '999px', background: 'rgba(59,130,246,0.14)', color: 'var(--accent-blue)', fontWeight: 800, fontSize: '0.82rem' }}>
+                        {idx + 1}
+                      </span>
+                    </td>
                     <td style={{ padding: '1rem' }}>
                       <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.2rem' }}>{prj.nama}</div>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Updated: {prj.lastUpdated ? fmtDate(prj.lastUpdated) : '-'} oleh {prj.updatedBy}</div>
