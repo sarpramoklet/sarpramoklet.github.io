@@ -35,9 +35,9 @@ const initialDeviceData = [
   { id: 4, date: '6 Apr 2026', count: 1359, overloads: 4, note: '1.359 Client (4 Ruang Overload) - Rekor Terendah! Sisa 4 Titik Kritis (R.7, R.23, R.37, R.1)' }
 ];
 
-const monthMap: any = { 
-  'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'Mei': 4, 'Jun': 5, 
-  'Jul': 6, 'Agt': 7, 'Sep': 8, 'Okt': 9, 'Nov': 10, 'Des': 11 
+const monthMap: any = {
+  'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'Mei': 4, 'Jun': 5,
+  'Jul': 6, 'Agt': 7, 'Sep': 8, 'Okt': 9, 'Nov': 10, 'Des': 11
 };
 const monthList = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
 const ONT_SERIES = [
@@ -289,7 +289,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   const currentUser = getCurrentUser();
   const isPimpinan = currentUser.roleAplikasi === ROLES.PIMPINAN;
   const isAuthorizedFinance = isPimpinan || currentUser.roleAplikasi === ROLES.PIC_ADMIN;
-  
+
   const [financeLoading, setFinanceLoading] = useState(true);
   const [internalFinance, setInternalFinance] = useState({ balance: 0, expense: 0, categories: [] as any[] });
   const [tuFinance, setTuFinance] = useState<{ balance: number; expense: number }>({ balance: 0, expense: 0 });
@@ -301,7 +301,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   const [piketLoading, setPiketLoading] = useState(false);
   const [classroomMonitorRows, setClassroomMonitorRows] = useState<ClassroomMonitorEntry[]>([]);
   const [classroomMonitorLoading, setClassroomMonitorLoading] = useState(false);
-  
+
   const [acMonitorData, setAcMonitorData] = useState<any>(null);
   const [acLoading, setAcLoading] = useState(false);
 
@@ -441,7 +441,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         // Fetch Internal Sarpra Finance
         const respInternal = await fetch(`${FINANCE_API_URL}?sheetName=Finance`);
         const dataInternal = await respInternal.json();
-        
+
         if (dataInternal && Array.isArray(dataInternal)) {
           const mapped = dataInternal.map((item: any) => ({
             amount: Number(item.amount || item.Amount || 0),
@@ -450,7 +450,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           }));
           const income = mapped.filter(i => i.type === 'income').reduce((a, b) => a + b.amount, 0);
           const expense = mapped.filter(i => i.type === 'expense').reduce((a, b) => a + b.amount, 0);
-          
+
           const cats: any = {};
           mapped.filter(i => i.type === 'expense').forEach(i => {
             cats[i.category] = (cats[i.category] || 0) + i.amount;
@@ -479,12 +479,12 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         // Fetch Kas TU
         const respTU = await fetch(`${FINANCE_API_URL}?sheetName=Kas_TU`);
         const dataTU = await respTU.json();
-        
+
         if (dataTU && Array.isArray(dataTU) && dataTU.length > 0) {
           const rowsTU = normalizeCashRows(dataTU);
           const totalKredit = rowsTU.reduce((sum, item) => sum + item.kredit, 0);
           const balance = calculateTuBalance(rowsTU);
-          
+
           setTuFinance({ balance, expense: totalKredit });
 
           const latestTU = pickLatestRow(dataTU, (item: any) =>
@@ -514,7 +514,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           const rowsAC = normalizeCashRows(dataAC);
           const totalKredit = rowsAC.reduce((sum, item) => sum + item.kredit, 0);
           const balance = calculateAcBalance(rowsAC);
-          
+
           setAcFinance({ balance, expense: totalKredit });
 
           const latestAC = pickLatestRow(dataAC, (item: any) =>
@@ -542,7 +542,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         setFinanceLoading(false);
       }
     };
-    
+
     if (isLoggedIn && isAuthorizedFinance) fetchFinanceData();
     else setFinanceLoading(false);
 
@@ -591,14 +591,14 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         const data = await resp.json();
         if (data && Array.isArray(data)) {
           let terpasang = 0, belum = 0, baik = 0, perbaikan = 0, rusak = 0;
-          
+
           let fetchedMap = new Map();
           data.forEach(item => {
             const ruang = parseInt(item.ruang || item.Ruang);
             if (!isNaN(ruang)) fetchedMap.set(ruang, item);
           });
-          
-          for (let i=1; i<=40; i++) {
+
+          for (let i = 1; i <= 40; i++) {
             let status = 'Belum Terpasang';
             let kondisi = '-';
             if (fetchedMap.has(i)) {
@@ -608,13 +608,13 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
               if (i >= 1 && i <= 6) { status = 'Terpasang'; kondisi = 'Baik'; }
               else if ((i >= 17 && i <= 20) || (i >= 25 && i <= 40)) { status = 'Terpasang'; kondisi = 'Baik'; }
             }
-            
+
             if (status === 'Terpasang') terpasang++; else belum++;
             if (kondisi === 'Baik') baik++;
             else if (kondisi === 'Perbaikan') perbaikan++;
             else if (kondisi === 'Rusak') rusak++;
           }
-          
+
           setAcMonitorData({ terpasang, belum, baik, perbaikan, rusak, total: 40 });
         }
       } catch (e) {
@@ -623,7 +623,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         setAcLoading(false);
       }
     };
-    
+
     const fetchCapexProjects = async () => {
       setCapexLoading(true);
       try {
@@ -638,14 +638,14 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         setCapexLoading(false);
       }
     };
-    
+
     const fetchWifiMonitor = async () => {
       setWifiLoading(true);
       try {
         const resp = await fetch(`${FINANCE_API_URL}?sheetName=Monitor_Wifi`);
         const data = await resp.json();
         if (data && Array.isArray(data) && data.length > 0) {
-          const mapped = data.filter((d:any) => (d.id || d.ID) && (d.tanggal || d.Tanggal)).map((item:any) => {
+          const mapped = data.filter((d: any) => (d.id || d.ID) && (d.tanggal || d.Tanggal)).map((item: any) => {
             const dateStr = String(item.tanggal || item.Tanggal || '').trim();
             const parsed = parseWifiDateValue(dateStr);
 
@@ -664,7 +664,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
 
           setWifiData(mapped.map(({ _sortTs, ...rest }) => rest));
         } else {
-           setWifiData(initialDeviceData.map((d) => ({ ...d, date: formatWifiDateDisplay(d.date) }))); // Fallback to demo layout logic
+          setWifiData(initialDeviceData.map((d) => ({ ...d, date: formatWifiDateDisplay(d.date) }))); // Fallback to demo layout logic
         }
       } catch (e) {
         setWifiData(initialDeviceData.map((d) => ({ ...d, date: formatWifiDateDisplay(d.date) })));
@@ -804,22 +804,22 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
     const fetchMokletService = async () => {
       // Hanya berjalan jika user sudah login sbg pimpinan
       if (!isLoggedIn || currentUser?.email !== 'hadi@smktelkom-mlg.sch.id') return;
-      
+
       setMokletService(prev => ({ ...prev, loading: true, error: false }));
       try {
         // Jalur fetch via perantara Google Apps Script untuk melewati CORS
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbxbLH1_wSHenGnEsIRIZwMoNAL6xaVngx0-3_TuHlUjsbtWONJn4sXdqJrN1IQ6gmgRlg/exec'; 
-        
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbyWfmqPwj18OXgX8fqrN254vzDaih5Q7x42X7Txavw9Y50er2fYMXRh0MEXk8tkMZjYwQ/exec';
+
         if (!GAS_URL) {
           throw new Error('URL GAS belum di-set');
         }
 
         const resp = await fetch(GAS_URL, { signal: AbortSignal.timeout(15000) });
         if (!resp.ok) throw new Error('fetch GAS failed');
-        
+
         const data = await resp.json();
         if (data.error) throw new Error(data.message);
-        
+
         setMokletService({
           complaints: {
             waitingConfirmation: data.complaints.waiting,
@@ -842,7 +842,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         setMokletService(prev => ({ ...prev, loading: false, error: true }));
       }
     };
-    
+
     if (isLoggedIn && currentUser?.email === 'hadi@smktelkom-mlg.sch.id') {
       fetchMokletService();
       const mokletInterval = setInterval(fetchMokletService, 5 * 60 * 1000); // refresh every 5 mins
@@ -853,22 +853,22 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
 
   const handleDeletePiket = async (id: string, keterangan: string) => {
     if (!confirm(`Hapus catatan dari "${keterangan}"?`)) return;
-    
+
     setPiketLoading(true);
     try {
       await fetch(FINANCE_API_URL, {
         method: "POST",
         mode: "no-cors",
         headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify({ 
-          action: 'DELETE_RECORD', 
+        body: JSON.stringify({
+          action: 'DELETE_RECORD',
           sheetName: 'Piket',
           sheet: 'Piket',
           id: id,
           ID: id
         })
       });
-      
+
       setPiketNotes(prev => prev.filter(n => n.id !== id));
       // Refresh after a delay
       setTimeout(() => {
@@ -884,15 +884,15 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
 
   const isAuthorizedToManagePiket = (noteSender: string) => {
     if (!isLoggedIn || !currentUser) return false;
-    
+
     const sender = (noteSender || '').trim().toLowerCase();
     const currentName = (currentUser.nama || '').trim().toLowerCase();
     const role = (currentUser.roleAplikasi || '').toLowerCase();
-    
-    return sender === currentName || 
-           role.includes('pimpinan') || 
-           role.includes('admin') ||
-           role.includes('executive');
+
+    return sender === currentName ||
+      role.includes('pimpinan') ||
+      role.includes('admin') ||
+      role.includes('executive');
   };
 
   const formatIDR = (val: number) => {
@@ -904,13 +904,13 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
     try {
       const d = new Date(dateValue);
       if (isNaN(d.getTime())) return dateValue;
-      
+
       const dd = String(d.getDate()).padStart(2, '0');
       const mmm = monthList[d.getMonth()] || 'Jan';
       const yy = String(d.getFullYear()).slice(-2);
       const hh = String(d.getHours()).padStart(2, '0');
       const mm = String(d.getMinutes()).padStart(2, '0');
-      
+
       return `${dd} ${mmm} ${yy} ${hh}:${mm}`;
     } catch (e) {
       return dateValue;
@@ -956,7 +956,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   const _cmCutoff = new Date(_cmToday);
   _cmCutoff.setDate(_cmCutoff.getDate() - (_cmDow === 0 ? 6 : _cmDow - 1));
   const _cmPad = (n: number) => String(n).padStart(2, '0');
-  const _cmCutoffStr = `${_cmCutoff.getFullYear()}-${_cmPad(_cmCutoff.getMonth()+1)}-${_cmPad(_cmCutoff.getDate())}`;
+  const _cmCutoffStr = `${_cmCutoff.getFullYear()}-${_cmPad(_cmCutoff.getMonth() + 1)}-${_cmPad(_cmCutoff.getDate())}`;
   const classroomWeekRows = classroomMonitorRows.filter(
     (row) => row.tanggal >= _cmCutoffStr
   );
@@ -1527,185 +1527,185 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
 
       {/* ── Moklet Service Integration Boxes (hanya saat login) ── */}
       {isLoggedIn && (
-      <div style={{ marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem', gap: '1rem', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: mokletService.error ? '#f87171' : mokletService.loading ? '#fbbf24' : '#34d399', boxShadow: `0 0 6px ${mokletService.error ? '#f8717160' : mokletService.loading ? '#fbbf2460' : '#34d39960'}` }} />
-            <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Moklet Service — Status Layanan</span>
-            <a href="https://service.smktelkom-mlg.sch.id/administrator/dashboard" target="_blank" rel="noopener noreferrer"
-              style={{ fontSize: '0.7rem', color: 'var(--accent-blue)', textDecoration: 'none', opacity: 0.8 }}>↗ Buka</a>
+        <div style={{ marginBottom: '2rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem', gap: '1rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: mokletService.error ? '#f87171' : mokletService.loading ? '#fbbf24' : '#34d399', boxShadow: `0 0 6px ${mokletService.error ? '#f8717160' : mokletService.loading ? '#fbbf2460' : '#34d39960'}` }} />
+              <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Moklet Service — Status Layanan</span>
+              <a href="https://service.smktelkom-mlg.sch.id/administrator/dashboard" target="_blank" rel="noopener noreferrer"
+                style={{ fontSize: '0.7rem', color: 'var(--accent-blue)', textDecoration: 'none', opacity: 0.8 }}>↗ Buka</a>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              {isPimpinan && (
+                <button
+                  onClick={() => setMokletRefresh(prev => prev + 1)}
+                  disabled={mokletService.loading}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                    fontSize: '0.72rem', fontWeight: 600, padding: '0.35rem 0.75rem',
+                    background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-subtle)',
+                    borderRadius: '6px', cursor: mokletService.loading ? 'not-allowed' : 'pointer', opacity: mokletService.loading ? 0.7 : 1
+                  }}
+                >
+                  <RefreshCw size={12} className={mokletService.loading ? "animate-spin" : ""} />
+                  Refresh Data
+                </button>
+              )}
+              {mokletService.lastUpdated && (
+                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                  Update: {mokletService.lastUpdated.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              )}
+            </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            {isPimpinan && (
-              <button
-                onClick={() => setMokletRefresh(prev => prev + 1)}
-                disabled={mokletService.loading}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
-                  fontSize: '0.72rem', fontWeight: 600, padding: '0.35rem 0.75rem',
-                  background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-subtle)',
-                  borderRadius: '6px', cursor: mokletService.loading ? 'not-allowed' : 'pointer', opacity: mokletService.loading ? 0.7 : 1
-                }}
-              >
-                <RefreshCw size={12} className={mokletService.loading ? "animate-spin" : ""} />
-                Refresh Data
-              </button>
-            )}
-            {mokletService.lastUpdated && (
-              <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-                Update: {mokletService.lastUpdated.toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit' })}
-              </span>
-            )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+
+            {/* Box 1: Complaints */}
+            <div className="glass-panel" style={{ padding: '1.25rem', border: '1px solid rgba(251,146,60,0.25)', background: 'linear-gradient(135deg, rgba(251,146,60,0.05), transparent)', position: 'relative', overflow: 'hidden' }}>
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'linear-gradient(90deg, #f97316, #fb923c)' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1rem' }}>
+                <div style={{ padding: '0.45rem', background: 'rgba(249,115,22,0.15)', borderRadius: '8px', color: '#f97316', display: 'flex' }}>
+                  <AlertCircle size={16} />
+                </div>
+                <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#f97316' }}>Pengaduan</span>
+              </div>
+              {mokletService.loading && !mokletService.complaints ? (
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '1rem' }}><Loader2 size={20} className="animate-spin" color="#f97316" /></div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', opacity: mokletService.loading ? 0.5 : 1, transition: 'opacity 0.2s' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Menunggu Konfirmasi</span>
+                    <span style={{ fontWeight: 800, fontSize: '1.3rem', color: '#f97316', lineHeight: 1 }}>{mokletService.complaints?.waitingConfirmation ?? '-'}</span>
+                  </div>
+                  <div style={{ height: '1px', background: 'var(--border-subtle)' }} />
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Sedang Diproses</span>
+                    <span style={{ fontWeight: 800, fontSize: '1.3rem', color: '#fb923c', lineHeight: 1 }}>{mokletService.complaints?.onProcess ?? '-'}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Box 2: Room Reservation */}
+            <div className="glass-panel" style={{ padding: '1.25rem', border: '1px solid rgba(52,211,153,0.25)', background: 'linear-gradient(135deg, rgba(52,211,153,0.05), transparent)', position: 'relative', overflow: 'hidden' }}>
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'linear-gradient(90deg, #10b981, #34d399)' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1rem' }}>
+                <div style={{ padding: '0.45rem', background: 'rgba(16,185,129,0.15)', borderRadius: '8px', color: '#10b981', display: 'flex' }}>
+                  <Calendar size={16} />
+                </div>
+                <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#10b981' }}>Peminjaman Ruang</span>
+              </div>
+              {mokletService.loading && !mokletService.roomReservation ? (
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '1rem' }}><Loader2 size={20} className="animate-spin" color="#10b981" /></div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', opacity: mokletService.loading ? 0.5 : 1, transition: 'opacity 0.2s' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Menunggu Konfirmasi</span>
+                    <span style={{ fontWeight: 800, fontSize: '1.3rem', color: '#6b7280', lineHeight: 1 }}>{mokletService.roomReservation?.waitingConfirmation ?? '-'}</span>
+                  </div>
+                  <div style={{ height: '1px', background: 'var(--border-subtle)' }} />
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Reservasi Aktif</span>
+                    <span style={{ fontWeight: 800, fontSize: '1.3rem', color: '#10b981', lineHeight: 1 }}>{mokletService.roomReservation?.activeReservation ?? '-'}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Box 3: Tools Loan */}
+            <div className="glass-panel" style={{ padding: '1.25rem', border: '1px solid rgba(59,130,246,0.25)', background: 'linear-gradient(135deg, rgba(59,130,246,0.05), transparent)', position: 'relative', overflow: 'hidden' }}>
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'linear-gradient(90deg, #3b82f6, #60a5fa)' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1rem' }}>
+                <div style={{ padding: '0.45rem', background: 'rgba(59,130,246,0.15)', borderRadius: '8px', color: '#3b82f6', display: 'flex' }}>
+                  <Briefcase size={16} />
+                </div>
+                <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#3b82f6' }}>Peminjaman Alat</span>
+              </div>
+              {mokletService.loading && !mokletService.toolsLoan ? (
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '1rem' }}><Loader2 size={20} className="animate-spin" color="#3b82f6" /></div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', opacity: mokletService.loading ? 0.5 : 1, transition: 'opacity 0.2s' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Menunggu Konfirmasi</span>
+                    <span style={{ fontWeight: 800, fontSize: '1.3rem', color: '#6b7280', lineHeight: 1 }}>{mokletService.toolsLoan?.waitingConfirmation ?? '-'}</span>
+                  </div>
+                  <div style={{ height: '1px', background: 'var(--border-subtle)' }} />
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Belum Dikembalikan</span>
+                    <span style={{ fontWeight: 800, fontSize: '1.3rem', color: '#3b82f6', lineHeight: 1 }}>{mokletService.toolsLoan?.haveNotReturn ?? '-'}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
           </div>
         </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
-
-          {/* Box 1: Complaints */}
-          <div className="glass-panel" style={{ padding: '1.25rem', border: '1px solid rgba(251,146,60,0.25)', background: 'linear-gradient(135deg, rgba(251,146,60,0.05), transparent)', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'linear-gradient(90deg, #f97316, #fb923c)' }} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1rem' }}>
-              <div style={{ padding: '0.45rem', background: 'rgba(249,115,22,0.15)', borderRadius: '8px', color: '#f97316', display: 'flex' }}>
-                <AlertCircle size={16} />
-              </div>
-              <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#f97316' }}>Pengaduan</span>
-            </div>
-            {mokletService.loading && !mokletService.complaints ? (
-              <div style={{ display: 'flex', justifyContent: 'center', padding: '1rem' }}><Loader2 size={20} className="animate-spin" color="#f97316" /></div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', opacity: mokletService.loading ? 0.5 : 1, transition: 'opacity 0.2s' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Menunggu Konfirmasi</span>
-                  <span style={{ fontWeight: 800, fontSize: '1.3rem', color: '#f97316', lineHeight: 1 }}>{mokletService.complaints?.waitingConfirmation ?? '-'}</span>
-                </div>
-                <div style={{ height: '1px', background: 'var(--border-subtle)' }} />
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Sedang Diproses</span>
-                  <span style={{ fontWeight: 800, fontSize: '1.3rem', color: '#fb923c', lineHeight: 1 }}>{mokletService.complaints?.onProcess ?? '-'}</span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Box 2: Room Reservation */}
-          <div className="glass-panel" style={{ padding: '1.25rem', border: '1px solid rgba(52,211,153,0.25)', background: 'linear-gradient(135deg, rgba(52,211,153,0.05), transparent)', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'linear-gradient(90deg, #10b981, #34d399)' }} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1rem' }}>
-              <div style={{ padding: '0.45rem', background: 'rgba(16,185,129,0.15)', borderRadius: '8px', color: '#10b981', display: 'flex' }}>
-                <Calendar size={16} />
-              </div>
-              <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#10b981' }}>Peminjaman Ruang</span>
-            </div>
-            {mokletService.loading && !mokletService.roomReservation ? (
-              <div style={{ display: 'flex', justifyContent: 'center', padding: '1rem' }}><Loader2 size={20} className="animate-spin" color="#10b981" /></div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', opacity: mokletService.loading ? 0.5 : 1, transition: 'opacity 0.2s' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Menunggu Konfirmasi</span>
-                  <span style={{ fontWeight: 800, fontSize: '1.3rem', color: '#6b7280', lineHeight: 1 }}>{mokletService.roomReservation?.waitingConfirmation ?? '-'}</span>
-                </div>
-                <div style={{ height: '1px', background: 'var(--border-subtle)' }} />
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Reservasi Aktif</span>
-                  <span style={{ fontWeight: 800, fontSize: '1.3rem', color: '#10b981', lineHeight: 1 }}>{mokletService.roomReservation?.activeReservation ?? '-'}</span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Box 3: Tools Loan */}
-          <div className="glass-panel" style={{ padding: '1.25rem', border: '1px solid rgba(59,130,246,0.25)', background: 'linear-gradient(135deg, rgba(59,130,246,0.05), transparent)', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'linear-gradient(90deg, #3b82f6, #60a5fa)' }} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1rem' }}>
-              <div style={{ padding: '0.45rem', background: 'rgba(59,130,246,0.15)', borderRadius: '8px', color: '#3b82f6', display: 'flex' }}>
-                <Briefcase size={16} />
-              </div>
-              <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#3b82f6' }}>Peminjaman Alat</span>
-            </div>
-            {mokletService.loading && !mokletService.toolsLoan ? (
-              <div style={{ display: 'flex', justifyContent: 'center', padding: '1rem' }}><Loader2 size={20} className="animate-spin" color="#3b82f6" /></div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', opacity: mokletService.loading ? 0.5 : 1, transition: 'opacity 0.2s' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Menunggu Konfirmasi</span>
-                  <span style={{ fontWeight: 800, fontSize: '1.3rem', color: '#6b7280', lineHeight: 1 }}>{mokletService.toolsLoan?.waitingConfirmation ?? '-'}</span>
-                </div>
-                <div style={{ height: '1px', background: 'var(--border-subtle)' }} />
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Belum Dikembalikan</span>
-                  <span style={{ fontWeight: 800, fontSize: '1.3rem', color: '#3b82f6', lineHeight: 1 }}>{mokletService.toolsLoan?.haveNotReturn ?? '-'}</span>
-                </div>
-              </div>
-            )}
-          </div>
-
-        </div>
-      </div>
       )}
 
       {classroomMonitorSection}
 
       {/* DASHBOARD WIFI MONITORING SECTION */}
       <div className="glass-panel delay-150" style={{ marginBottom: '2rem', background: 'linear-gradient(135deg, rgba(59,130,246,0.03), transparent)', borderLeft: '4px solid var(--accent-blue)' }}>
-          <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <h3 style={{ fontSize: '1.05rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Smartphone size={18} color="var(--accent-blue)" /> Pemantauan Trend Perangkat (WiFi Client)
-              </h3>
-              <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Grafik total riwayat perangkat terhubung harian</p>
-            </div>
-            <a href="#/it" className="btn btn-outline" style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}>Detail & Update &rarr;</a>
+        <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h3 style={{ fontSize: '1.05rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Smartphone size={18} color="var(--accent-blue)" /> Pemantauan Trend Perangkat (WiFi Client)
+            </h3>
+            <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Grafik total riwayat perangkat terhubung harian</p>
           </div>
-          
-          <div style={{ padding: '1.25rem' }}>
-            {wifiLoading ? (
-               <div style={{ padding: '3rem', display: 'flex', justifyContent: 'center' }}><Loader2 className="animate-spin" color="var(--accent-blue)" /></div>
-            ) : (
-              <div style={{ width: '100%', height: '280px' }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={wifiData} margin={{ top: 28, right: 20, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                    <XAxis
-                      dataKey="date"
-                      stroke="var(--text-muted)"
-                      fontSize={11}
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(val) => formatWifiDateDisplay(val)}
-                    />
-                    <YAxis
-                      domain={['dataMin - 50', 'dataMax + 50']}
-                      stroke="var(--text-muted)"
-                      fontSize={11}
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(1)}k` : v}
-                    />
-                    <RechartsTooltip
-                      contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-focus)', borderRadius: '8px', fontSize: '11px' }}
-                      formatter={(value: any) => [`${Number(value).toLocaleString()} Perangkat`, 'Total Client']}
-                      labelFormatter={(label) => formatWifiDateDisplay(label)}
-                    />
-                    <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={60}>
-                      {wifiData.map((entry: any, index: number) => {
-                        const counts = wifiData.map((d: any) => d.count);
-                        const min = Math.min(...counts);
-                        const max = Math.max(...counts);
-                        const prev = index > 0 ? wifiData[index - 1].count : entry.count;
-                        let color = '#3b82f6';
-                        if (entry.count === min) color = '#10b981';
-                        else if (entry.count === max) color = '#f43f5e';
-                        else color = entry.count < prev ? '#22c55e' : '#f87171';
-                        return <Cell key={`cell-${index}`} fill={color} fillOpacity={0.85} />;
-                      })}
-                      <LabelList dataKey="count" position="top" style={{ fontSize: '10px', fontWeight: 700, fill: 'var(--text-secondary)' }} formatter={(v: any) => Number(v).toLocaleString()} />
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            )}
+          <a href="#/it" className="btn btn-outline" style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}>Detail & Update &rarr;</a>
+        </div>
 
-          </div>
+        <div style={{ padding: '1.25rem' }}>
+          {wifiLoading ? (
+            <div style={{ padding: '3rem', display: 'flex', justifyContent: 'center' }}><Loader2 className="animate-spin" color="var(--accent-blue)" /></div>
+          ) : (
+            <div style={{ width: '100%', height: '280px' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={wifiData} margin={{ top: 28, right: 20, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                  <XAxis
+                    dataKey="date"
+                    stroke="var(--text-muted)"
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(val) => formatWifiDateDisplay(val)}
+                  />
+                  <YAxis
+                    domain={['dataMin - 50', 'dataMax + 50']}
+                    stroke="var(--text-muted)"
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v}
+                  />
+                  <RechartsTooltip
+                    contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-focus)', borderRadius: '8px', fontSize: '11px' }}
+                    formatter={(value: any) => [`${Number(value).toLocaleString()} Perangkat`, 'Total Client']}
+                    labelFormatter={(label) => formatWifiDateDisplay(label)}
+                  />
+                  <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={60}>
+                    {wifiData.map((entry: any, index: number) => {
+                      const counts = wifiData.map((d: any) => d.count);
+                      const min = Math.min(...counts);
+                      const max = Math.max(...counts);
+                      const prev = index > 0 ? wifiData[index - 1].count : entry.count;
+                      let color = '#3b82f6';
+                      if (entry.count === min) color = '#10b981';
+                      else if (entry.count === max) color = '#f43f5e';
+                      else color = entry.count < prev ? '#22c55e' : '#f87171';
+                      return <Cell key={`cell-${index}`} fill={color} fillOpacity={0.85} />;
+                    })}
+                    <LabelList dataKey="count" position="top" style={{ fontSize: '10px', fontWeight: 700, fill: 'var(--text-secondary)' }} formatter={(v: any) => Number(v).toLocaleString()} />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+        </div>
       </div>
 
       <div className="glass-panel delay-155" style={{ marginBottom: '2rem', background: 'linear-gradient(135deg, rgba(59,130,246,0.03), transparent)', borderLeft: '4px solid var(--accent-cyan)' }}>
@@ -1797,40 +1797,40 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
 
       {/* DASHBOARD CAPEX PROJECTS SECTION */}
       <div className="glass-panel delay-200" style={{ marginBottom: '2rem', background: 'linear-gradient(135deg, rgba(245,158,11,0.03), transparent)', borderLeft: '4px solid var(--accent-amber)' }}>
-          <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <h3 style={{ fontSize: '1.05rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                 <Briefcase size={18} color="var(--accent-amber)" /> Progres Pekerjaan & Pengadaan CAPEX
-              </h3>
-              <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Pemantauan target penyelesaian peremajaan dan pembangunan 2026</p>
+        <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h3 style={{ fontSize: '1.05rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Briefcase size={18} color="var(--accent-amber)" /> Progres Pekerjaan & Pengadaan CAPEX
+            </h3>
+            <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Pemantauan target penyelesaian peremajaan dan pembangunan 2026</p>
+          </div>
+          <a href="#/capex" className="btn btn-outline" style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}>Monitor CAPEX &rarr;</a>
+        </div>
+
+        <div style={{ padding: '1.25rem' }}>
+          {capexLoading ? (
+            <div style={{ padding: '3rem', display: 'flex', justifyContent: 'center' }}><Loader2 className="animate-spin" color="var(--accent-amber)" /></div>
+          ) : capexProjects.length > 0 ? (
+            <div style={{ width: '100%', height: '280px' }}>
+              <ResponsiveContainer>
+                <BarChart data={sortedCapexProjects} layout="vertical" margin={{ left: 10, right: 50 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" horizontal={false} />
+                  <XAxis type="number" domain={[0, 100]} stroke="var(--text-muted)" fontSize={11} tickFormatter={v => `${v}%`} />
+                  <YAxis dataKey="nama" type="category" width={180} stroke="var(--text-muted)" fontSize={10} tickFormatter={(val) => val.length > 25 ? val.substring(0, 25) + '...' : val} />
+                  <RechartsTooltip formatter={(v: any) => [`${v}%`, 'Progres']} contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-focus)', borderRadius: '8px' }} />
+                  <Bar dataKey="progress" radius={[0, 4, 4, 0]} barSize={20}>
+                    {sortedCapexProjects.map((ent, idx) => (
+                      <Cell key={`cell-${idx}`} fill={ent.progress >= 100 ? '#10b981' : ent.progress >= 50 ? '#3b82f6' : '#f59e0b'} />
+                    ))}
+                    <LabelList dataKey="progress" position="right" formatter={(v: any) => `${Math.round(Number(v) || 0)}%`} style={{ fill: 'var(--text-primary)', fontSize: 11, fontWeight: 700 }} />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
             </div>
-            <a href="#/capex" className="btn btn-outline" style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}>Monitor CAPEX &rarr;</a>
-          </div>
-          
-          <div style={{ padding: '1.25rem' }}>
-            {capexLoading ? (
-              <div style={{ padding: '3rem', display: 'flex', justifyContent: 'center' }}><Loader2 className="animate-spin" color="var(--accent-amber)" /></div>
-            ) : capexProjects.length > 0 ? (
-              <div style={{ width: '100%', height: '280px' }}>
-                <ResponsiveContainer>
-                  <BarChart data={sortedCapexProjects} layout="vertical" margin={{ left: 10, right: 50 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" horizontal={false} />
-                    <XAxis type="number" domain={[0, 100]} stroke="var(--text-muted)" fontSize={11} tickFormatter={v => `${v}%`} />
-                    <YAxis dataKey="nama" type="category" width={180} stroke="var(--text-muted)" fontSize={10} tickFormatter={(val) => val.length > 25 ? val.substring(0, 25) + '...' : val} />
-                    <RechartsTooltip formatter={(v: any) => [`${v}%`, 'Progres']} contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-focus)', borderRadius: '8px' }} />
-                    <Bar dataKey="progress" radius={[0, 4, 4, 0]} barSize={20}>
-                      {sortedCapexProjects.map((ent, idx) => (
-                        <Cell key={`cell-${idx}`} fill={ent.progress >= 100 ? '#10b981' : ent.progress >= 50 ? '#3b82f6' : '#f59e0b'} />
-                      ))}
-                      <LabelList dataKey="progress" position="right" formatter={(v: any) => `${Math.round(Number(v) || 0)}%`} style={{ fill: 'var(--text-primary)', fontSize: 11, fontWeight: 700 }} />
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            ) : (
-              <div style={{ padding: '1rem', color: 'var(--text-secondary)' }}>Data proyek belum tersedia.</div>
-            )}
-          </div>
+          ) : (
+            <div style={{ padding: '1rem', color: 'var(--text-secondary)' }}>Data proyek belum tersedia.</div>
+          )}
+        </div>
       </div>
 
       {/* Jadwal Piket Sarpras Section - Moved to Top */}
@@ -1846,7 +1846,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
             UPDATE TERBARU
           </div>
         </div>
-        
+
         <div className="flex-row-responsive" style={{ padding: '1.25rem', gap: '2rem', alignItems: 'flex-start' }}>
           {/* Day Cards */}
           <div style={{ flex: 1.5, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
@@ -1859,12 +1859,12 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
             ].map((item, idx) => {
               const today = new Intl.DateTimeFormat('id-ID', { weekday: 'long' }).format(new Date());
               const isToday = today.toLowerCase() === item.day.toLowerCase();
-              
+
               return (
-                <div key={idx} style={{ 
-                  padding: '1rem', 
-                  borderRadius: '12px', 
-                  background: isToday ? `${item.color}15` : 'rgba(255,255,255,0.02)', 
+                <div key={idx} style={{
+                  padding: '1rem',
+                  borderRadius: '12px',
+                  background: isToday ? `${item.color}15` : 'rgba(255,255,255,0.02)',
                   border: `1px solid ${isToday ? item.color : 'var(--border-subtle)'}`,
                   position: 'relative',
                   transition: 'all 0.3s ease',
@@ -1873,15 +1873,15 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                   zIndex: isToday ? 2 : 1
                 }}>
                   {isToday && (
-                    <div style={{ 
-                      position: 'absolute', 
-                      top: '-10px', 
-                      right: '10px', 
-                      background: item.color, 
-                      color: 'white', 
-                      fontSize: '0.6rem', 
-                      fontWeight: 800, 
-                      padding: '2px 8px', 
+                    <div style={{
+                      position: 'absolute',
+                      top: '-10px',
+                      right: '10px',
+                      background: item.color,
+                      color: 'white',
+                      fontSize: '0.6rem',
+                      fontWeight: 800,
+                      padding: '2px 8px',
                       borderRadius: '10px',
                       textTransform: 'uppercase',
                       boxShadow: `0 2px 8px ${item.color}60`
@@ -1964,10 +1964,10 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                   Belum ada catatan temuan baru di database.
                 </div>
               ) : piketNotes.map((note, idx) => (
-                <div key={idx} className="note-card-dashboard" style={{ 
-                  padding: '1rem', 
-                  borderRadius: '12px', 
-                  background: 'rgba(255,255,255,0.02)', 
+                <div key={idx} className="note-card-dashboard" style={{
+                  padding: '1rem',
+                  borderRadius: '12px',
+                  background: 'rgba(255,255,255,0.02)',
                   border: `1px solid ${note.type === 'Urgent' ? 'rgba(244, 63, 94, 0.2)' : 'var(--border-subtle)'}`,
                   position: 'relative'
                 }}>
@@ -1996,19 +1996,19 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                       })()}
                       {note.keterangan.split(' ')[0]}
                     </div>
-                    
+
                     <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
                       {isAuthorizedToManagePiket(note.keterangan) && (
                         <>
-                          <button 
-                            onClick={(e) => { e.preventDefault(); window.location.hash = '/duty-notes'; }} 
+                          <button
+                            onClick={(e) => { e.preventDefault(); window.location.hash = '/duty-notes'; }}
                             style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px' }}
                             title="Edit"
                           >
                             <Edit3 size={13} />
                           </button>
-                          <button 
-                            onClick={(e) => { e.preventDefault(); handleDeletePiket(note.id, note.keterangan); }} 
+                          <button
+                            onClick={(e) => { e.preventDefault(); handleDeletePiket(note.id, note.keterangan); }}
                             style={{ background: 'transparent', border: 'none', color: 'var(--accent-rose)', cursor: 'pointer', padding: '2px' }}
                             title="Hapus"
                           >
@@ -2031,123 +2031,123 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         <div className="stats-grid" style={{ marginBottom: '1.5rem', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
           {/* Internal Sarpra Cash Monitor */}
           <div className="glass-panel stat-card" style={{ padding: '1.25rem', background: 'linear-gradient(135deg, var(--accent-blue-ghost), transparent)', borderLeft: '4px solid var(--accent-blue)' }}>
-             <div className="flex-row-responsive" style={{ gap: '1rem', alignItems: 'flex-start' }}>
-               <div style={{ flex: 1 }}>
-                 <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: '0 0 0.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                   <Wallet size={18} color="var(--accent-blue)" /> Kas Internal Sarpra {financeLoading && <Loader2 size={14} className="animate-spin" />}
-                 </h3>
-                 <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Monitoring dana operasional internal</p>
-               </div>
-               <div style={{ textAlign: 'right' }}>
-                 <div style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                   {financeLoading ? '---' : formatIDR(internalFinance.balance)}
-                 </div>
-                 <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Saldo Sarpra</div>
-               </div>
-             </div>
-             {internalFinance.categories.length > 0 && (
-               <div style={{ marginTop: '1rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem' }}>
-                 <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Analisa Pengeluaran Internal:</p>
-                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                   {internalFinance.categories.slice(0, 3).map((c, idx) => (
-                     <div key={idx}>
-                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', marginBottom: '0.25rem' }}>
-                         <span style={{ color: 'var(--text-muted)' }}>{c.name}</span>
-                         <span style={{ fontWeight: 600 }}>{formatIDR(c.value)}</span>
-                       </div>
-                       <div className="progress-bar-bg" style={{ height: '4px' }}>
-                         <div className="progress-bar-fill" style={{ width: `${(c.value / internalFinance.expense) * 100}%`, background: 'var(--accent-blue)' }}></div>
-                       </div>
-                     </div>
-                   ))}
-                 </div>
-               </div>
-             )}
-             <div style={{ marginTop: '0.85rem', paddingTop: '0.65rem', borderTop: '1px dashed var(--border-subtle)' }}>
-               <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Transaksi terakhir</div>
-               {internalLastTx ? (
-                 <div style={{ marginTop: '0.2rem', fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: '1.45' }}>
-                   <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{internalLastTx.date}</span> · {internalLastTx.note}
-                   <span style={{ marginLeft: '0.45rem', fontWeight: 700, color: internalLastTx.type === 'in' ? 'var(--accent-emerald)' : internalLastTx.type === 'out' ? 'var(--accent-rose)' : 'var(--text-primary)' }}>
-                     {txAmountText(internalLastTx.amount, internalLastTx.type)}
-                   </span>
-                 </div>
-               ) : (
-                 <div style={{ marginTop: '0.2rem', fontSize: '0.72rem', color: 'var(--text-muted)' }}>Belum ada transaksi.</div>
-               )}
-             </div>
+            <div className="flex-row-responsive" style={{ gap: '1rem', alignItems: 'flex-start' }}>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: '0 0 0.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Wallet size={18} color="var(--accent-blue)" /> Kas Internal Sarpra {financeLoading && <Loader2 size={14} className="animate-spin" />}
+                </h3>
+                <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Monitoring dana operasional internal</p>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  {financeLoading ? '---' : formatIDR(internalFinance.balance)}
+                </div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Saldo Sarpra</div>
+              </div>
+            </div>
+            {internalFinance.categories.length > 0 && (
+              <div style={{ marginTop: '1rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem' }}>
+                <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Analisa Pengeluaran Internal:</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {internalFinance.categories.slice(0, 3).map((c, idx) => (
+                    <div key={idx}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', marginBottom: '0.25rem' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>{c.name}</span>
+                        <span style={{ fontWeight: 600 }}>{formatIDR(c.value)}</span>
+                      </div>
+                      <div className="progress-bar-bg" style={{ height: '4px' }}>
+                        <div className="progress-bar-fill" style={{ width: `${(c.value / internalFinance.expense) * 100}%`, background: 'var(--accent-blue)' }}></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div style={{ marginTop: '0.85rem', paddingTop: '0.65rem', borderTop: '1px dashed var(--border-subtle)' }}>
+              <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Transaksi terakhir</div>
+              {internalLastTx ? (
+                <div style={{ marginTop: '0.2rem', fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: '1.45' }}>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{internalLastTx.date}</span> · {internalLastTx.note}
+                  <span style={{ marginLeft: '0.45rem', fontWeight: 700, color: internalLastTx.type === 'in' ? 'var(--accent-emerald)' : internalLastTx.type === 'out' ? 'var(--accent-rose)' : 'var(--text-primary)' }}>
+                    {txAmountText(internalLastTx.amount, internalLastTx.type)}
+                  </span>
+                </div>
+              ) : (
+                <div style={{ marginTop: '0.2rem', fontSize: '0.72rem', color: 'var(--text-muted)' }}>Belum ada transaksi.</div>
+              )}
+            </div>
           </div>
 
           {/* TU Cash Monitor */}
           <div className="glass-panel stat-card" style={{ padding: '1.25rem', background: 'linear-gradient(135deg, var(--accent-rose-ghost), transparent)', borderLeft: '4px solid var(--accent-rose)' }}>
-             <div className="flex-row-responsive" style={{ gap: '1rem', alignItems: 'flex-start' }}>
-               <div style={{ flex: 1 }}>
-                 <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: '0 0 0.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                   <Coins size={18} color="var(--accent-rose)" /> Kas Operasional TU {financeLoading && <Loader2 size={14} className="animate-spin" />}
-                 </h3>
-                 <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Dana operasional dari Bendahara TU</p>
-               </div>
-               <div style={{ textAlign: 'right' }}>
-                 <div style={{ fontSize: '1.15rem', fontWeight: 700, color: tuFinance.balance >= 0 ? 'var(--accent-emerald)' : 'var(--accent-rose)' }}>
-                   {financeLoading ? '---' : formatIDR(tuFinance.balance)}
-                 </div>
-                 <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Saldo TU</div>
-               </div>
-             </div>
-             <div style={{ marginTop: '1.25rem', padding: '0.75rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-               <div>
-                  <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Akumulasi Kredit (Keluar)</div>
-                  <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--accent-rose)' }}>{financeLoading ? '---' : formatIDR(tuFinance.expense)}</div>
-               </div>
-               <a href="#/operational-cash" style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--accent-rose)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.3rem 0.6rem', background: 'rgba(244,63,94,0.1)', borderRadius: '8px', border: '1px solid rgba(244,63,94,0.2)' }}>Lihat Detail →</a>
-             </div>
-             <div style={{ marginTop: '0.7rem', fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: '1.45' }}>
-               <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.15rem' }}>Transaksi terakhir</div>
-               {tuLastTx ? (
-                 <span>
-                   <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{tuLastTx.date}</span> · {tuLastTx.note}
-                   <span style={{ marginLeft: '0.45rem', fontWeight: 700, color: tuLastTx.type === 'in' ? 'var(--accent-emerald)' : 'var(--accent-rose)' }}>
-                     {txAmountText(tuLastTx.amount, tuLastTx.type)}
-                   </span>
-                 </span>
-               ) : 'Belum ada transaksi.'}
-             </div>
+            <div className="flex-row-responsive" style={{ gap: '1rem', alignItems: 'flex-start' }}>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: '0 0 0.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Coins size={18} color="var(--accent-rose)" /> Kas Operasional TU {financeLoading && <Loader2 size={14} className="animate-spin" />}
+                </h3>
+                <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Dana operasional dari Bendahara TU</p>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '1.15rem', fontWeight: 700, color: tuFinance.balance >= 0 ? 'var(--accent-emerald)' : 'var(--accent-rose)' }}>
+                  {financeLoading ? '---' : formatIDR(tuFinance.balance)}
+                </div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Saldo TU</div>
+              </div>
+            </div>
+            <div style={{ marginTop: '1.25rem', padding: '0.75rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Akumulasi Kredit (Keluar)</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--accent-rose)' }}>{financeLoading ? '---' : formatIDR(tuFinance.expense)}</div>
+              </div>
+              <a href="#/operational-cash" style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--accent-rose)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.3rem 0.6rem', background: 'rgba(244,63,94,0.1)', borderRadius: '8px', border: '1px solid rgba(244,63,94,0.2)' }}>Lihat Detail →</a>
+            </div>
+            <div style={{ marginTop: '0.7rem', fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: '1.45' }}>
+              <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.15rem' }}>Transaksi terakhir</div>
+              {tuLastTx ? (
+                <span>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{tuLastTx.date}</span> · {tuLastTx.note}
+                  <span style={{ marginLeft: '0.45rem', fontWeight: 700, color: tuLastTx.type === 'in' ? 'var(--accent-emerald)' : 'var(--accent-rose)' }}>
+                    {txAmountText(tuLastTx.amount, tuLastTx.type)}
+                  </span>
+                </span>
+              ) : 'Belum ada transaksi.'}
+            </div>
           </div>
 
           {/* AC Cash Monitor */}
           <div className="glass-panel stat-card" style={{ padding: '1.25rem', background: 'linear-gradient(135deg, var(--accent-emerald-ghost), transparent)', borderLeft: '4px solid var(--accent-emerald)' }}>
-             <div className="flex-row-responsive" style={{ gap: '1rem', alignItems: 'flex-start' }}>
-               <div style={{ flex: 1 }}>
-                 <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: '0 0 0.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                   <Wind size={18} color="var(--accent-emerald)" /> Kas Pemeliharaan AC {financeLoading && <Loader2 size={14} className="animate-spin" />}
-                 </h3>
-                 <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Monitoring dana perawatan AC</p>
-               </div>
-               <div style={{ textAlign: 'right' }}>
-                 <div style={{ fontSize: '1.15rem', fontWeight: 700, color: acFinance.balance >= 0 ? 'var(--accent-emerald)' : 'var(--accent-rose)' }}>
-                   {financeLoading ? '---' : formatIDR(acFinance.balance)}
-                 </div>
-                 <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Saldo AC</div>
-               </div>
-             </div>
-             <div style={{ marginTop: '1.25rem', padding: '0.75rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-               <div>
-                  <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Akumulasi Kredit (Keluar)</div>
-                  <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--accent-emerald)' }}>{financeLoading ? '---' : formatIDR(acFinance.expense)}</div>
-               </div>
-               <a href="#/ac-cash" style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--accent-emerald)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.3rem 0.6rem', background: 'rgba(16,185,129,0.1)', borderRadius: '8px', border: '1px solid rgba(16,185,129,0.2)' }}>Lihat Detail →</a>
-             </div>
-             <div style={{ marginTop: '0.7rem', fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: '1.45' }}>
-               <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.15rem' }}>Transaksi terakhir</div>
-               {acLastTx ? (
-                 <span>
-                   <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{acLastTx.date}</span> · {acLastTx.note}
-                   <span style={{ marginLeft: '0.45rem', fontWeight: 700, color: acLastTx.type === 'in' ? 'var(--accent-emerald)' : 'var(--accent-rose)' }}>
-                     {txAmountText(acLastTx.amount, acLastTx.type)}
-                   </span>
-                 </span>
-               ) : 'Belum ada transaksi.'}
-             </div>
+            <div className="flex-row-responsive" style={{ gap: '1rem', alignItems: 'flex-start' }}>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: '0 0 0.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Wind size={18} color="var(--accent-emerald)" /> Kas Pemeliharaan AC {financeLoading && <Loader2 size={14} className="animate-spin" />}
+                </h3>
+                <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Monitoring dana perawatan AC</p>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '1.15rem', fontWeight: 700, color: acFinance.balance >= 0 ? 'var(--accent-emerald)' : 'var(--accent-rose)' }}>
+                  {financeLoading ? '---' : formatIDR(acFinance.balance)}
+                </div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Saldo AC</div>
+              </div>
+            </div>
+            <div style={{ marginTop: '1.25rem', padding: '0.75rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Akumulasi Kredit (Keluar)</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--accent-emerald)' }}>{financeLoading ? '---' : formatIDR(acFinance.expense)}</div>
+              </div>
+              <a href="#/ac-cash" style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--accent-emerald)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.3rem 0.6rem', background: 'rgba(16,185,129,0.1)', borderRadius: '8px', border: '1px solid rgba(16,185,129,0.2)' }}>Lihat Detail →</a>
+            </div>
+            <div style={{ marginTop: '0.7rem', fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: '1.45' }}>
+              <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.15rem' }}>Transaksi terakhir</div>
+              {acLastTx ? (
+                <span>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{acLastTx.date}</span> · {acLastTx.note}
+                  <span style={{ marginLeft: '0.45rem', fontWeight: 700, color: acLastTx.type === 'in' ? 'var(--accent-emerald)' : 'var(--accent-rose)' }}>
+                    {txAmountText(acLastTx.amount, acLastTx.type)}
+                  </span>
+                </span>
+              ) : 'Belum ada transaksi.'}
+            </div>
           </div>
         </div>
       )}
@@ -2193,17 +2193,17 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
               <BarChart data={utilityChartData} margin={{ top: 25, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
                 <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
-                <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `Rp${v/1000000}jt`} />
-                <RechartsTooltip 
+                <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `Rp${v / 1000000}jt`} />
+                <RechartsTooltip
                   formatter={(v: any) => formatIDR(v as number)}
                   contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-focus)', borderRadius: '8px', fontSize: '10px' }}
                 />
                 <Bar dataKey="PLN" fill="var(--accent-amber)" radius={[4, 4, 0, 0]} barSize={24}>
-                  <LabelList 
-                    dataKey="PLN" 
-                    position="top" 
-                    formatter={(v: any) => `${(Number(v)/1000000).toFixed(1)}jt`} 
-                    style={{ fill: 'var(--accent-amber)', fontSize: '10px', fontWeight: 600 }} 
+                  <LabelList
+                    dataKey="PLN"
+                    position="top"
+                    formatter={(v: any) => `${(Number(v) / 1000000).toFixed(1)}jt`}
+                    style={{ fill: 'var(--accent-amber)', fontSize: '10px', fontWeight: 600 }}
                   />
                 </Bar>
               </BarChart>
@@ -2225,17 +2225,17 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
               <BarChart data={utilityChartData} margin={{ top: 25, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
                 <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
-                <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `Rp${(v/1000000).toFixed(1)}jt`} />
-                <RechartsTooltip 
+                <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `Rp${(v / 1000000).toFixed(1)}jt`} />
+                <RechartsTooltip
                   formatter={(v: any) => formatIDR(v as number)}
                   contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-focus)', borderRadius: '8px', fontSize: '10px' }}
                 />
                 <Bar dataKey="PDAM" fill="var(--accent-cyan)" radius={[4, 4, 0, 0]} barSize={24}>
-                  <LabelList 
-                    dataKey="PDAM" 
-                    position="top" 
-                    formatter={(v: any) => Number(v) < 1000000 ? `${(Number(v)/1000).toFixed(0)}rb` : `${(Number(v)/1000000).toFixed(1)}jt`} 
-                    style={{ fill: 'var(--accent-cyan)', fontSize: '10px', fontWeight: 600 }} 
+                  <LabelList
+                    dataKey="PDAM"
+                    position="top"
+                    formatter={(v: any) => Number(v) < 1000000 ? `${(Number(v) / 1000).toFixed(0)}rb` : `${(Number(v) / 1000000).toFixed(1)}jt`}
+                    style={{ fill: 'var(--accent-cyan)', fontSize: '10px', fontWeight: 600 }}
                   />
                 </Bar>
               </BarChart>
