@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, LabelList, LineChart, Line, Legend } from 'recharts';
-import { UserCircle2, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, MessageSquare, AlertCircle, Edit3, Trash2, Wind, Briefcase, Smartphone, Activity, Coins, Camera, X } from 'lucide-react';
+import { UserCircle2, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, MessageSquare, AlertCircle, Edit3, Trash2, Wind, Briefcase, Smartphone, Activity, Coins, Camera, X, RefreshCw } from 'lucide-react';
 import { getCurrentUser, ROLES, USERS } from '../data/organization';
 import { mergeCapexProjects } from '../data/capexProjects';
 import { getUtilityChartData } from '../data/utilities';
@@ -324,6 +324,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
     lastUpdated: null,
     error: false,
   });
+  const [mokletRefresh, setMokletRefresh] = useState(0);
 
   const [wifiData, setWifiData] = useState<any[]>([]);
   const [wifiLoading, setWifiLoading] = useState(false);
@@ -854,7 +855,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       return () => clearInterval(mokletInterval);
     }
 
-  }, [isAuthorizedFinance, isLoggedIn]);
+  }, [isAuthorizedFinance, isLoggedIn, mokletRefresh]);
 
   const handleDeletePiket = async (id: string, keterangan: string) => {
     if (!confirm(`Hapus catatan dari "${keterangan}"?`)) return;
@@ -1541,22 +1542,20 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
               style={{ fontSize: '0.7rem', color: 'var(--accent-blue)', textDecoration: 'none', opacity: 0.8 }}>↗ Buka</a>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            {mokletService.error && isPimpinan && (
-              <a
-                href={`https://app.smktelkom-mlg.sch.id/login`}
-                target="_blank"
-                rel="noopener noreferrer"
+            {isPimpinan && (
+              <button
+                onClick={() => setMokletRefresh(prev => prev + 1)}
+                disabled={mokletService.loading}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
-                  fontSize: '0.72rem', fontWeight: 700, padding: '0.3rem 0.7rem',
-                  background: 'linear-gradient(135deg, #4285f4, #34a853)',
-                  color: 'white', borderRadius: '6px', textDecoration: 'none',
-                  boxShadow: '0 2px 8px rgba(66,133,244,0.4)'
+                  fontSize: '0.72rem', fontWeight: 600, padding: '0.35rem 0.75rem',
+                  background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-subtle)',
+                  borderRadius: '6px', cursor: mokletService.loading ? 'not-allowed' : 'pointer', opacity: mokletService.loading ? 0.7 : 1
                 }}
               >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-                Login via SSO
-              </a>
+                <RefreshCw size={12} className={mokletService.loading ? "animate-spin" : ""} />
+                Refresh Data
+              </button>
             )}
             {mokletService.lastUpdated && (
               <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
@@ -1577,41 +1576,18 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
               </div>
               <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#f97316' }}>Pengaduan</span>
             </div>
-            {mokletService.loading ? (
+            {mokletService.loading && !mokletService.complaints ? (
               <div style={{ display: 'flex', justifyContent: 'center', padding: '1rem' }}><Loader2 size={20} className="animate-spin" color="#f97316" /></div>
-            ) : mokletService.error || !mokletService.complaints ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0' }}>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Sesi belum tersambung</span>
-                {isPimpinan ? (
-                  <a
-                    href="https://app.smktelkom-mlg.sch.id/login"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
-                      fontSize: '0.72rem', fontWeight: 700, padding: '0.35rem 0.8rem',
-                      background: 'linear-gradient(135deg, #4285f4, #34a853)',
-                      color: 'white', borderRadius: '6px', textDecoration: 'none',
-                      boxShadow: '0 2px 8px rgba(66,133,244,0.35)'
-                    }}
-                  >
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="white"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-                    Login SSO
-                  </a>
-                ) : (
-                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Hubungi admin</span>
-                )}
-              </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', opacity: mokletService.loading ? 0.5 : 1, transition: 'opacity 0.2s' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Menunggu Konfirmasi</span>
-                  <span style={{ fontWeight: 800, fontSize: '1.3rem', color: '#f97316', lineHeight: 1 }}>{mokletService.complaints.waitingConfirmation}</span>
+                  <span style={{ fontWeight: 800, fontSize: '1.3rem', color: '#f97316', lineHeight: 1 }}>{mokletService.complaints?.waitingConfirmation ?? '-'}</span>
                 </div>
                 <div style={{ height: '1px', background: 'var(--border-subtle)' }} />
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Sedang Diproses</span>
-                  <span style={{ fontWeight: 800, fontSize: '1.3rem', color: '#fb923c', lineHeight: 1 }}>{mokletService.complaints.onProcess}</span>
+                  <span style={{ fontWeight: 800, fontSize: '1.3rem', color: '#fb923c', lineHeight: 1 }}>{mokletService.complaints?.onProcess ?? '-'}</span>
                 </div>
               </div>
             )}
@@ -1626,41 +1602,18 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
               </div>
               <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#10b981' }}>Peminjaman Ruang</span>
             </div>
-            {mokletService.loading ? (
+            {mokletService.loading && !mokletService.roomReservation ? (
               <div style={{ display: 'flex', justifyContent: 'center', padding: '1rem' }}><Loader2 size={20} className="animate-spin" color="#10b981" /></div>
-            ) : mokletService.error || !mokletService.roomReservation ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0' }}>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Sesi belum tersambung</span>
-                {isPimpinan ? (
-                  <a
-                    href="https://app.smktelkom-mlg.sch.id/login"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
-                      fontSize: '0.72rem', fontWeight: 700, padding: '0.35rem 0.8rem',
-                      background: 'linear-gradient(135deg, #4285f4, #34a853)',
-                      color: 'white', borderRadius: '6px', textDecoration: 'none',
-                      boxShadow: '0 2px 8px rgba(66,133,244,0.35)'
-                    }}
-                  >
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="white"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-                    Login SSO
-                  </a>
-                ) : (
-                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Hubungi admin</span>
-                )}
-              </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', opacity: mokletService.loading ? 0.5 : 1, transition: 'opacity 0.2s' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Menunggu Konfirmasi</span>
-                  <span style={{ fontWeight: 800, fontSize: '1.3rem', color: '#6b7280', lineHeight: 1 }}>{mokletService.roomReservation.waitingConfirmation}</span>
+                  <span style={{ fontWeight: 800, fontSize: '1.3rem', color: '#6b7280', lineHeight: 1 }}>{mokletService.roomReservation?.waitingConfirmation ?? '-'}</span>
                 </div>
                 <div style={{ height: '1px', background: 'var(--border-subtle)' }} />
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Reservasi Aktif</span>
-                  <span style={{ fontWeight: 800, fontSize: '1.3rem', color: '#10b981', lineHeight: 1 }}>{mokletService.roomReservation.activeReservation}</span>
+                  <span style={{ fontWeight: 800, fontSize: '1.3rem', color: '#10b981', lineHeight: 1 }}>{mokletService.roomReservation?.activeReservation ?? '-'}</span>
                 </div>
               </div>
             )}
@@ -1675,41 +1628,18 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
               </div>
               <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#3b82f6' }}>Peminjaman Alat</span>
             </div>
-            {mokletService.loading ? (
+            {mokletService.loading && !mokletService.toolsLoan ? (
               <div style={{ display: 'flex', justifyContent: 'center', padding: '1rem' }}><Loader2 size={20} className="animate-spin" color="#3b82f6" /></div>
-            ) : mokletService.error || !mokletService.toolsLoan ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0' }}>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Sesi belum tersambung</span>
-                {isPimpinan ? (
-                  <a
-                    href="https://app.smktelkom-mlg.sch.id/login"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
-                      fontSize: '0.72rem', fontWeight: 700, padding: '0.35rem 0.8rem',
-                      background: 'linear-gradient(135deg, #4285f4, #34a853)',
-                      color: 'white', borderRadius: '6px', textDecoration: 'none',
-                      boxShadow: '0 2px 8px rgba(66,133,244,0.35)'
-                    }}
-                  >
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="white"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-                    Login SSO
-                  </a>
-                ) : (
-                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Hubungi admin</span>
-                )}
-              </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', opacity: mokletService.loading ? 0.5 : 1, transition: 'opacity 0.2s' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Menunggu Konfirmasi</span>
-                  <span style={{ fontWeight: 800, fontSize: '1.3rem', color: '#6b7280', lineHeight: 1 }}>{mokletService.toolsLoan.waitingConfirmation}</span>
+                  <span style={{ fontWeight: 800, fontSize: '1.3rem', color: '#6b7280', lineHeight: 1 }}>{mokletService.toolsLoan?.waitingConfirmation ?? '-'}</span>
                 </div>
                 <div style={{ height: '1px', background: 'var(--border-subtle)' }} />
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Belum Dikembalikan</span>
-                  <span style={{ fontWeight: 800, fontSize: '1.3rem', color: '#3b82f6', lineHeight: 1 }}>{mokletService.toolsLoan.haveNotReturn}</span>
+                  <span style={{ fontWeight: 800, fontSize: '1.3rem', color: '#3b82f6', lineHeight: 1 }}>{mokletService.toolsLoan?.haveNotReturn ?? '-'}</span>
                 </div>
               </div>
             )}
