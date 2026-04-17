@@ -800,51 +800,45 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
     fetchNetSnapshot();
     fetchUtilityChart();
 
-    // Fetch Moklet Service Dashboard data langsung (membutuhkan session cookie & CORS)
+    // Fetch Moklet Service Dashboard data langsung (menggunakan perantara Google Apps Script)
     const fetchMokletService = async () => {
+      // Hanya berjalan jika user sudah login sbg pimpinan
       if (!isLoggedIn || currentUser?.email !== 'hadi@smktelkom-mlg.sch.id') return;
       
       setMokletService(prev => ({ ...prev, loading: true, error: false }));
       try {
-        const TARGET = 'https://service.smktelkom-mlg.sch.id/administrator/dashboard';
-        const resp = await fetch(TARGET, { 
-          signal: AbortSignal.timeout(12000),
-          credentials: 'include' // Kirim cookie session jika ada
-        });
-        if (!resp.ok) throw new Error('fetch failed');
-        const html = await resp.text();
+        // Jalur fetch via perantara Google Apps Script untuk melewati CORS
+        const GAS_URL = 'https://script.google.com/a/macros/smktelkom-mlg.sch.id/s/AKfycbzmWZmR_WffSeUvw02HWtnKIyCbxMJqCW6LITyj-X9OzHB1Pm0Lgt9VxODfOfK_dEQQ8A/exec'; 
         
-        // Parse Inertia.js page data
-        const match = html.match(/data-page="([^"]+)"/);
-        if (match) {
-          const raw = match[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&#039;/g, "'");
-          const pageData = JSON.parse(raw);
-          const props = pageData?.props || {};
-          setMokletService({
-            complaints: props.complaintWaitingForConfirmation !== undefined ? {
-              waitingConfirmation: Number(props.complaintWaitingForConfirmation ?? 0),
-              onProcess: Number(props.complaintOnProcess ?? 0),
-            } : null,
-            roomReservation: props.roomReservationWaitingForConfirmation !== undefined ? {
-              waitingConfirmation: Number(props.roomReservationWaitingForConfirmation ?? 0),
-              activeReservation: Number(props.activeRoomReservation ?? 0),
-            } : null,
-            toolsLoan: props.toolsLoanWaitingForConfirmation !== undefined ? {
-              waitingConfirmation: Number(props.toolsLoanWaitingForConfirmation ?? 0),
-              haveNotReturn: Number(props.toolsLoanHaveNotReturn ?? 0),
-            } : null,
-            loading: false,
-            lastUpdated: new Date(),
-            error: false,
-          });
-        } else {
-          // Fallback: parse from visible text/badges
-          const nums = [...html.matchAll(/<span[^>]*class="[^"]*badge[^"]*"[^>]*>(\d+)<\/span>/g)].map(m => parseInt(m[1]));
-          if (nums.length === 0) throw new Error('No data found');
-          setMokletService(prev => ({ ...prev, loading: false, error: false }));
+        if (!GAS_URL) {
+          throw new Error('URL GAS belum di-set');
         }
+
+        const resp = await fetch(GAS_URL, { signal: AbortSignal.timeout(15000) });
+        if (!resp.ok) throw new Error('fetch GAS failed');
+        
+        const data = await resp.json();
+        if (data.error) throw new Error(data.message);
+        
+        setMokletService({
+          complaints: {
+            waitingConfirmation: data.complaints.waiting,
+            onProcess: data.complaints.processing,
+          },
+          roomReservation: {
+            waitingConfirmation: data.rooms.waiting,
+            activeReservation: data.rooms.active,
+          },
+          toolsLoan: {
+            waitingConfirmation: data.tools.waiting,
+            haveNotReturn: data.tools.notReturn,
+          },
+          loading: false,
+          lastUpdated: new Date(),
+          error: false,
+        });
       } catch (e) {
-        console.warn('Moklet Service fetch failed:', e);
+        console.warn('Moklet Service fetch via GAS failed:', e);
         setMokletService(prev => ({ ...prev, loading: false, error: true }));
       }
     };
