@@ -8,6 +8,9 @@ export interface CapexProjectRecord {
   owner: string;
 }
 
+const META_DESC_PREFIX = '[DESKRIPSI] ';
+const META_OWNER_PREFIX = '[OWNER] ';
+
 export const DEFAULT_CAPEX_PROJECTS: CapexProjectRecord[] = [
   {
     id: 'PRJ-1',
@@ -82,26 +85,75 @@ const normalizeRow = (row: Record<string, unknown>) => {
   return normalized;
 };
 
+const normalizeSingleLine = (value: string) =>
+  value
+    .split(/\r?\n/g)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .join(' ');
+
 const toSafeNumber = (value: unknown) => {
   const parsed = Number(value ?? 0);
   return Number.isFinite(parsed) ? Math.max(0, Math.min(100, parsed)) : 0;
 };
 
+const parseNamaWithMeta = (value: unknown) => {
+  const raw = String(value || '').trim();
+  if (!raw) return { nama: '', deskripsi: '', owner: '' };
+
+  const lines = raw
+    .split(/\r?\n/g)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const title = lines[0] || '';
+  let deskripsi = '';
+  let owner = '';
+
+  for (const line of lines.slice(1)) {
+    if (line.startsWith(META_DESC_PREFIX)) {
+      deskripsi = line.slice(META_DESC_PREFIX.length).trim();
+      continue;
+    }
+    if (line.startsWith(META_OWNER_PREFIX)) {
+      owner = line.slice(META_OWNER_PREFIX.length).trim();
+    }
+  }
+
+  return {
+    nama: title,
+    deskripsi,
+    owner,
+  };
+};
+
+export const encodeCapexProjectNama = (project: Pick<CapexProjectRecord, 'nama' | 'deskripsi' | 'owner'>) => {
+  const lines = [normalizeSingleLine(project.nama)];
+  const deskripsi = normalizeSingleLine(project.deskripsi);
+  const owner = normalizeSingleLine(project.owner);
+
+  if (deskripsi) lines.push(`${META_DESC_PREFIX}${deskripsi}`);
+  if (owner) lines.push(`${META_OWNER_PREFIX}${owner}`);
+
+  return lines.join('\n');
+};
+
 const normalizeProject = (row: Record<string, unknown>): CapexProjectRecord | null => {
   const normalized = normalizeRow(row);
   const id = String(normalized.id || '').trim();
-  const nama = String(normalized.nama || '').trim();
+  const parsedNama = parseNamaWithMeta(normalized.nama);
+  const nama = parsedNama.nama;
 
   if (!id || !nama) return null;
 
   return {
     id,
     nama,
-    deskripsi: String(normalized.deskripsi || normalized.description || '').trim(),
+    deskripsi: normalizeSingleLine(String(normalized.deskripsi || normalized.description || parsedNama.deskripsi || '').trim()),
     progress: toSafeNumber(normalized.progress),
     lastUpdated: String(normalized.lastupdated || ''),
     updatedBy: String(normalized.updatedby || ''),
-    owner: String(normalized.owner || normalized.unit || ''),
+    owner: normalizeSingleLine(String(normalized.owner || normalized.unit || parsedNama.owner || '').trim()),
   };
 };
 

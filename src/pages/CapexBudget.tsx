@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from 'recharts';
 import { getCurrentUser, ROLES } from '../data/organization';
-import { DEFAULT_CAPEX_PROJECTS, getNextCapexProjectId, mergeCapexProjects, type CapexProjectRecord } from '../data/capexProjects';
+import { DEFAULT_CAPEX_PROJECTS, encodeCapexProjectNama, getNextCapexProjectId, mergeCapexProjects, type CapexProjectRecord } from '../data/capexProjects';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 const SHEET_REALISASI = 'Capex_Realisasi';
@@ -287,8 +287,8 @@ const CapexBudget = () => {
       sheet: SHEET_PROYEK,
       id: savedProject.id,
       ID: savedProject.id,
-      nama: savedProject.nama,
-      Nama: savedProject.nama,
+      nama: encodeCapexProjectNama(savedProject),
+      Nama: encodeCapexProjectNama(savedProject),
       deskripsi: savedProject.deskripsi,
       Deskripsi: savedProject.deskripsi,
       owner: savedProject.owner,
@@ -306,7 +306,7 @@ const CapexBudget = () => {
         method: 'POST',
         mode: 'no-cors',
         headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify(payload),
+        body: JSON.stringify(payload),
       });
       if (baseProject) {
         setProjects((prev) => prev.map((project) => (
@@ -336,8 +336,8 @@ const CapexBudget = () => {
       sheet: SHEET_PROYEK,
       id: editingProject.id,
       ID: editingProject.id,
-      nama: editingProject.nama,
-      Nama: editingProject.nama,
+      nama: encodeCapexProjectNama(editingProject),
+      Nama: encodeCapexProjectNama(editingProject),
       deskripsi: editingProject.deskripsi,
       Deskripsi: editingProject.deskripsi,
       owner: editingProject.owner,
