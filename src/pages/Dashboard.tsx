@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, LabelList, LineChart, Line, Legend } from 'recharts';
 import { UserCircle2, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, MessageSquare, AlertCircle, Edit3, Trash2, Wind, Briefcase, Smartphone, Activity, Coins, Camera, X } from 'lucide-react';
 import { getCurrentUser, ROLES, USERS } from '../data/organization';
+import { mergeCapexProjects } from '../data/capexProjects';
 import { getUtilityChartData } from '../data/utilities';
 import { useProfileThumbByEmail } from '../hooks/useProfileThumbByEmail';
 import UserAvatar from '../components/UserAvatar';
@@ -611,23 +612,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         const resp = await fetch(`${FINANCE_API_URL}?sheetName=Progres_CAPEX`);
         const data = await resp.json();
         if (data && Array.isArray(data)) {
-          const defaults = [
-            { id: 'PRJ-1', nama: 'Peremajaan keramik pada 3 ruang kelas (R.1 – R.3)', progress: 0 },
-            { id: 'PRJ-2', nama: 'Peremajaan talang air pada dak beton lantai 3', progress: 0 },
-            { id: 'PRJ-3', nama: 'Peremajaan dak beton masjid', progress: 0 },
-            { id: 'PRJ-4', nama: 'Peremajaan cat dinding pada 10 ruang kelas (R.7 – R.16)', progress: 0 },
-            { id: 'PRJ-5', nama: 'Peremajaan beton lapangan olahraga (basket)', progress: 0 },
-            { id: 'PRJ-6', nama: 'Pengadaan interior Laboratorium TEFA (Lab. 3)', progress: 0 },
-            { id: 'PRJ-7', nama: 'Pembangunan Malang Techno Park (Lanjutan)', progress: 0 }
-          ];
-          const mapped = defaults.map(def => {
-            const found = data.find((d:any) => d.id === def.id || d.ID === def.id);
-            return {
-              ...def,
-              progress: found ? Number(found.progress || found.Progress || 0) : 0
-            };
-          });
-          setCapexProjects(mapped);
+          setCapexProjects(mergeCapexProjects(data));
         }
       } catch (e) {
         console.error("Capex fetch error:", e);

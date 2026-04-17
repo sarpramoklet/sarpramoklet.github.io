@@ -27,6 +27,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { mergeCapexProjects } from '../data/capexProjects';
 import { getUtilityChartData } from '../data/utilities';
 
 const FINANCE_API_URL = 'https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec';
@@ -48,16 +49,6 @@ const monthMap: Record<string, number> = {
 };
 
 const monthLabel = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
-
-const capexDefaults = [
-  { id: 'PRJ-1', nama: 'Peremajaan keramik ruang kelas R.1-R.3', owner: 'Sarpras' },
-  { id: 'PRJ-2', nama: 'Peremajaan talang air dak beton lantai 3', owner: 'Sarpras' },
-  { id: 'PRJ-3', nama: 'Peremajaan dak beton masjid', owner: 'Sarpras' },
-  { id: 'PRJ-4', nama: 'Peremajaan cat dinding ruang kelas R.7-R.16', owner: 'Sarpras' },
-  { id: 'PRJ-5', nama: 'Peremajaan beton lapangan olahraga', owner: 'Sarpras' },
-  { id: 'PRJ-6', nama: 'Pengadaan interior Laboratorium TEFA', owner: 'Lab' },
-  { id: 'PRJ-7', nama: 'Pembangunan Malang Techno Park (Lanjutan)', owner: 'IT & Sarpras' },
-];
 
 const toNumber = (value: any) => {
   const n = Number(value ?? 0);
@@ -411,14 +402,10 @@ const MeetingDashboard = () => {
   }, [acRows]);
 
   const capexInsights = useMemo(() => {
-    const normalized = capexDefaults.map((project) => {
-      const row = capexRows.find((item) => String(item.id || item.ID).trim() === project.id);
-      const progress = toNumber(row?.progress || row?.Progress);
-      return {
-        ...project,
-        progress,
-      };
-    });
+    const normalized = mergeCapexProjects(capexRows).map((project) => ({
+      ...project,
+      progress: toNumber(project.progress),
+    }));
 
     const avg = normalized.length > 0 ? normalized.reduce((sum, item) => sum + item.progress, 0) / normalized.length : 0;
     const delayed = normalized.filter((item) => item.progress < 60);

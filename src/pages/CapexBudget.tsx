@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from 'recharts';
 import { getCurrentUser, ROLES } from '../data/organization';
+import { DEFAULT_CAPEX_PROJECTS, getNextCapexProjectId, mergeCapexProjects, type CapexProjectRecord } from '../data/capexProjects';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 const SHEET_REALISASI = 'Capex_Realisasi';
@@ -58,25 +59,6 @@ const ACCOUNT_COLORS: Record<string, string> = {
   '1236101': '#a78bfa',
 };
 
-/* ─── Projects ─── */
-interface CapexProject {
-  id: string;
-  nama: string;
-  progress: number;
-  lastUpdated: string;
-  updatedBy: string;
-}
-
-const DEFAULT_PROJECTS: CapexProject[] = [
-  { id: 'PRJ-1', nama: 'Peremajaan keramik pada 3 ruang kelas (R.1 – R.3)', progress: 0, lastUpdated: '', updatedBy: '-' },
-  { id: 'PRJ-2', nama: 'Peremajaan talang air pada dak beton lantai 3', progress: 0, lastUpdated: '', updatedBy: '-' },
-  { id: 'PRJ-3', nama: 'Peremajaan dak beton masjid', progress: 0, lastUpdated: '', updatedBy: '-' },
-  { id: 'PRJ-4', nama: 'Peremajaan cat dinding pada 10 ruang kelas (R.7 – R.16)', progress: 0, lastUpdated: '', updatedBy: '-' },
-  { id: 'PRJ-5', nama: 'Peremajaan beton lapangan olahraga (basket)', progress: 0, lastUpdated: '', updatedBy: '-' },
-  { id: 'PRJ-6', nama: 'Pengadaan interior Laboratorium TEFA (Lab. 3)', progress: 0, lastUpdated: '', updatedBy: '-' },
-  { id: 'PRJ-7', nama: 'Pembangunan Malang Techno Park (Lanjutan)', progress: 0, lastUpdated: '', updatedBy: '-' },
-];
-
 /* ──────────────────── Component ──────────────────── */
 const CapexBudget = () => {
   const [entries, setEntries]           = useState<RealisasiEntry[]>([]);
@@ -89,10 +71,16 @@ const CapexBudget = () => {
   const [editingEntry, setEditingEntry] = useState<RealisasiEntry | null>(null);
 
   /* Tab Proyek state */
-  const [projects, setProjects] = useState<CapexProject[]>(DEFAULT_PROJECTS);
-  const [editingProject, setEditingProject] = useState<CapexProject | null>(null);
+  const [projects, setProjects] = useState<CapexProjectRecord[]>(DEFAULT_CAPEX_PROJECTS);
+  const [editingProject, setEditingProject] = useState<CapexProjectRecord | null>(null);
+  const [showProjectModal, setShowProjectModal] = useState(false);
   const [projectProgress, setProjectProgress] = useState(0);
   const [isSavingProject, setIsSavingProject] = useState(false);
+  const [projectForm, setProjectForm] = useState({
+    nama: '',
+    owner: 'Sarpras',
+    progress: 0,
+  });
 
   const [formData, setFormData] = useState({
     akun: '1232101',
@@ -192,22 +180,10 @@ const CapexBudget = () => {
     try {
       const resp = await fetch(`${API_URL}?sheetName=${SHEET_PROYEK}`);
       const data = await resp.json();
-      if (Array.isArray(data) && data.length > 0) {
-        setProjects(DEFAULT_PROJECTS.map(def => {
-          const found = data.find((d: any) => d.id === def.id || d.ID === def.id);
-          if (found) {
-            return {
-              ...def,
-              progress: Number(found.progress || found.Progress || 0),
-              lastUpdated: found.lastUpdated || found.LastUpdated || '',
-              updatedBy: found.updatedBy || found.UpdatedBy || '-'
-            };
-          }
-          return def;
-        }));
-      }
+      setProjects(mergeCapexProjects(data));
     } catch (err) {
       console.error('Error fetching projects:', err);
+      setProjects(DEFAULT_CAPEX_PROJECTS);
     }
   };
 
@@ -240,6 +216,129 @@ const CapexBudget = () => {
       keterangan:        entry.keterangan,
     });
     setShowModal(true);
+  };
+
+  const handleAddProject = () => {
+    setEditingProject(null);
+    setProjectForm({
+      nama: '',
+      owner: 'Sarpras',
+      progress: 0,
+    });
+    setShowProjectModal(true);
+  };
+
+  const handleEditProjectProgress = (project: CapexProjectRecord) => {
+    setEditingProject(project);
+    setProjectProgress(project.progress);
+    setShowProjectModal(true);
+  };
+
+  const handleCloseProjectModal = () => {
+    if (isSavingProject) return;
+    setEditingProject(null);
+    setProjectProgress(0);
+    setProjectForm({
+      nama: '',
+      owner: 'Sarpras',
+      progress: 0,
+    });
+    setShowProjectModal(false);
+  };
+
+  const handleSaveProject = async () => {
+    if (editingProject) {
+      setIsSavingProject(true);
+      const updatedBy = currentUser.nama;
+      const lastUpdated = new Date().toISOString();
+      const payload = {
+        action: 'FINANCE_RECORD',
+        sheetName: SHEET_PROYEK,
+        sheet: SHEET_PROYEK,
+        id: editingProject.id,
+        ID: editingProject.id,
+        nama: editingProject.nama,
+        Nama: editingProject.nama,
+        owner: editingProject.owner,
+        Owner: editingProject.owner,
+        progress: projectProgress,
+        Progress: projectProgress,
+        lastUpdated,
+        LastUpdated: lastUpdated,
+        updatedBy,
+        UpdatedBy: updatedBy,
+      };
+
+      try {
+        await fetch(API_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify(payload),
+        });
+        setProjects((prev) =>
+          prev.map((project) =>
+            project.id === editingProject.id
+              ? { ...project, progress: projectProgress, updatedBy, lastUpdated }
+              : project
+          )
+        );
+        handleCloseProjectModal();
+        setTimeout(fetchProjects, 3000);
+      } catch {
+        alert('Gagal menyimpan progres. Periksa koneksi.');
+      } finally {
+        setIsSavingProject(false);
+      }
+      return;
+    }
+
+    if (!projectForm.nama.trim()) return;
+
+    setIsSavingProject(true);
+    const now = new Date().toISOString();
+    const newProject: CapexProjectRecord = {
+      id: getNextCapexProjectId(projects),
+      nama: projectForm.nama.trim(),
+      owner: projectForm.owner.trim() || 'Sarpras',
+      progress: projectForm.progress,
+      lastUpdated: now,
+      updatedBy: currentUser.nama,
+    };
+
+    const payload = {
+      action: 'FINANCE_RECORD',
+      sheetName: SHEET_PROYEK,
+      sheet: SHEET_PROYEK,
+      id: newProject.id,
+      ID: newProject.id,
+      nama: newProject.nama,
+      Nama: newProject.nama,
+      owner: newProject.owner,
+      Owner: newProject.owner,
+      progress: newProject.progress,
+      Progress: newProject.progress,
+      lastUpdated: newProject.lastUpdated,
+      LastUpdated: newProject.lastUpdated,
+      updatedBy: newProject.updatedBy,
+      UpdatedBy: newProject.updatedBy,
+    };
+
+    try {
+      await fetch(API_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(payload),
+      });
+      setProjects((prev) => [...prev, newProject]);
+      handleCloseProjectModal();
+      setTimeout(fetchProjects, 3000);
+    } catch {
+      alert('Gagal menambahkan pekerjaan baru. Periksa koneksi.');
+    } finally {
+      setIsSavingProject(false);
+    }
   };
 
   const handleSave = async () => {
@@ -299,7 +398,7 @@ const CapexBudget = () => {
       setShowModal(false);
       setEditingEntry(null);
       setTimeout(fetchData, 3000);
-    } catch (err) {
+    } catch {
       alert('Gagal menyimpan. Periksa koneksi.');
     } finally {
       setIsSubmitting(false);
@@ -334,7 +433,8 @@ const CapexBudget = () => {
   const toggleRow = (id: string) =>
     setExpandedRows(prev => {
       const n = new Set(prev);
-      n.has(id) ? n.delete(id) : n.add(id);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
       return n;
     });
 
@@ -451,6 +551,25 @@ const CapexBudget = () => {
       {/* ══════════════ TAB: PROJEK ══════════════ */}
       {activeTab === 'projek' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '2rem' }}>
+          <div className="glass-panel" style={{ padding: '1rem 1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>Pekerjaan CAPEX</div>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                Koordinator Sarpras dan pimpinan bisa menambahkan pekerjaan baru, lalu progresnya tetap diupdate mingguan.
+              </div>
+            </div>
+            {canUpdate && (
+              <button
+                className="btn btn-primary"
+                style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.85rem' }}
+                onClick={handleAddProject}
+              >
+                <Plus size={16} />
+                Tambah Pekerjaan
+              </button>
+            )}
+          </div>
+
           {/* Grafik Proyek */}
           <div className="glass-panel" style={{ padding: '1.25rem' }}>
              <h3 style={{ margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.05rem', color: 'var(--text-primary)' }}>
@@ -501,8 +620,8 @@ const CapexBudget = () => {
                     </td>
                     <td style={{ padding: '1rem', textAlign: 'right' }}>
                       {canUpdateProject && (
-                        <button className="btn btn-outline" style={{ fontSize: '0.75rem', padding: '0.3rem 0.6rem' }} onClick={() => { setEditingProject(prj); setProjectProgress(prj.progress); }}>
-                          Update Target
+                        <button className="btn btn-outline" style={{ fontSize: '0.75rem', padding: '0.3rem 0.6rem' }} onClick={() => handleEditProjectProgress(prj)}>
+                          Update Progres
                         </button>
                       )}
                     </td>
@@ -977,12 +1096,96 @@ const CapexBudget = () => {
         </div>
       )}
       {/* ══════════════ MODAL: UPDATE PROJECT ══════════════ */}
-      {editingProject && (
+      {showProjectModal && !editingProject && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(5px)', zIndex: 1000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '1rem', paddingTop: '5rem', overflowY: 'auto' }}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: '520px', padding: '1.5rem', border: '1px solid var(--accent-blue-ghost)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <div>
+                <h2 style={{ fontSize: '1.1rem', margin: 0, color: 'var(--text-primary)' }}>Tambah Pekerjaan CAPEX Baru</h2>
+                <p style={{ margin: '0.35rem 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  Data baru akan langsung masuk ke daftar pekerjaan CAPEX dan bisa diupdate progresnya setelah tersimpan.
+                </p>
+              </div>
+              <button onClick={handleCloseProjectModal} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.45rem', fontWeight: 600 }}>
+                  Nama Pekerjaan / Pengadaan <span style={{ color: 'var(--accent-rose)' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  value={projectForm.nama}
+                  onChange={(e) => setProjectForm((prev) => ({ ...prev, nama: e.target.value }))}
+                  placeholder="Contoh: Perbaikan saluran air halaman timur"
+                  style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '0.8rem', color: 'white', outline: 'none', fontSize: '0.9rem' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.45rem', fontWeight: 600 }}>
+                  Unit Penanggung Jawab
+                </label>
+                <input
+                  type="text"
+                  value={projectForm.owner}
+                  onChange={(e) => setProjectForm((prev) => ({ ...prev, owner: e.target.value }))}
+                  placeholder="Contoh: Sarpras"
+                  style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '0.8rem', color: 'white', outline: 'none', fontSize: '0.9rem' }}
+                />
+              </div>
+
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.45rem' }}>
+                  <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Progres Awal (%)</label>
+                  <span style={{ fontWeight: 800, color: 'var(--accent-blue)', fontSize: '1rem' }}>{projectForm.progress}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="5"
+                  value={projectForm.progress}
+                  onChange={(e) => setProjectForm((prev) => ({ ...prev, progress: Number(e.target.value) }))}
+                  style={{ width: '100%', cursor: 'pointer' }}
+                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.4rem', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                  <span>0% (Baru dibuat)</span>
+                  <span>100% (Selesai)</span>
+                </div>
+              </div>
+
+              <div style={{ padding: '0.75rem 0.9rem', background: 'rgba(59,130,246,0.08)', border: '1px solid var(--accent-blue-ghost)', borderRadius: '10px', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                ID proyek akan dibuat otomatis saat disimpan. Dicatat oleh <strong style={{ color: 'var(--text-primary)' }}>{currentUser.nama}</strong>.
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem' }}>
+                <button className="btn btn-outline" style={{ flex: 1 }} onClick={handleCloseProjectModal}>
+                  Batal
+                </button>
+                <button
+                  className="btn btn-primary"
+                  style={{ flex: 1.4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}
+                  onClick={handleSaveProject}
+                  disabled={isSavingProject || !projectForm.nama.trim()}
+                >
+                  {isSavingProject ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                  {isSavingProject ? 'Menyimpan...' : 'Simpan Pekerjaan'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {showProjectModal && editingProject && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(5px)', zIndex: 1000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '1rem', paddingTop: '5rem', overflowY: 'auto' }}>
           <div className="glass-panel" style={{ width: '100%', maxWidth: '400px', padding: '1.5rem', border: '1px solid var(--accent-blue-ghost)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h2 style={{ fontSize: '1.1rem', margin: 0, color: 'var(--text-primary)' }}>Update Progres Mingguan</h2>
-              <button onClick={() => setEditingProject(null)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={20}/></button>
+              <button onClick={handleCloseProjectModal} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={20}/></button>
             </div>
             
             <div style={{ marginBottom: '1.5rem' }}>
@@ -1011,44 +1214,15 @@ const CapexBudget = () => {
             </div>
 
             <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button className="btn btn-outline" style={{ flex: 1 }} onClick={() => setEditingProject(null)}>Batal</button>
+              <button className="btn btn-outline" style={{ flex: 1 }} onClick={handleCloseProjectModal}>Batal</button>
               <button 
                 className="btn btn-primary" 
                 style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
-                onClick={async () => {
-                  setIsSavingProject(true);
-                  const updatedBy = currentUser.nama;
-                  const lastUpdated = new Date().toISOString();
-              
-                  const payload = {
-                    action: 'FINANCE_RECORD',
-                    sheetName: 'Progres_CAPEX',
-                    sheet: 'Progres_CAPEX',
-                    id: editingProject.id, ID: editingProject.id,
-                    nama: editingProject.nama, Nama: editingProject.nama,
-                    progress: projectProgress, Progress: projectProgress,
-                    lastUpdated: lastUpdated, LastUpdated: lastUpdated,
-                    updatedBy: updatedBy, UpdatedBy: updatedBy
-                  };
-              
-                  try {
-                    await fetch(API_URL, {
-                      method: 'POST', mode: 'no-cors',
-                      headers: { 'Content-Type': 'text/plain' },
-                      body: JSON.stringify(payload)
-                    });
-                    setProjects(prev => prev.map(p => p.id === editingProject.id ? { ...p, progress: projectProgress, updatedBy, lastUpdated } : p));
-                    setEditingProject(null);
-                  } catch(err) {
-                    alert("Gagal menyimpan progres. Periksa koneksi.");
-                  } finally {
-                    setIsSavingProject(false);
-                  }
-                }}
+                onClick={handleSaveProject}
                 disabled={isSavingProject}
               >
                 {isSavingProject ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                Simpan Target
+                Simpan Progres
               </button>
             </div>
           </div>
