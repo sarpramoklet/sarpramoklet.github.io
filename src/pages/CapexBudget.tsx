@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Building2, FlaskConical, BookOpen, Monitor, TrendingUp, Edit3, X,
   Save, Loader2, RefreshCw, AlertTriangle, CheckCircle, Clock, BarChart3,
@@ -936,29 +936,83 @@ const CapexBudget = () => {
                       const r  = realisasiByAkun(b.akun);
                       const si = b.anggaran - r;
                       const p  = pct(r, b.anggaran);
-                      const tx = entriesByAkun(b.akun).length;
+                      const txList = entriesByAkun(b.akun);
+                      const tx = txList.length;
                       const ac = ACCOUNT_COLORS[b.akun];
+                      const isExpanded = expandedRows.has(b.id);
                       return (
-                        <tr className="ticket-row" key={b.id}>
-                          <td style={{ fontFamily: 'monospace', fontWeight: 600, color: ac, fontSize: '0.85rem' }}>{b.akun}</td>
-                          <td style={{ color: 'var(--text-secondary)' }}>{b.deskripsi}</td>
-                          <td style={{ textAlign: 'right', fontWeight: 600 }}>{fmtIDR(b.anggaran)}</td>
-                          <td style={{ textAlign: 'right', color: 'var(--accent-emerald)', fontWeight: 600 }}>
-                            {r > 0 ? fmtIDR(r) : <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>—</span>}
-                          </td>
-                          <td style={{ textAlign: 'right', color: 'var(--accent-rose)', fontWeight: 600 }}>{fmtIDR(si)}</td>
-                          <td style={{ textAlign: 'center' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
-                              <span style={{ fontWeight: 700, fontSize: '0.85rem', color: clr(p) }}>{p.toFixed(1)}%</span>
-                              <div style={{ height: '4px', width: '60px', background: 'rgba(255,255,255,0.08)', borderRadius: '4px', overflow: 'hidden' }}>
-                                <div style={{ height: '100%', width: `${p}%`, background: clr(p), borderRadius: '4px' }} />
+                        <React.Fragment key={b.id}>
+                          <tr className="ticket-row" onClick={() => toggleRow(b.id)} style={{ cursor: 'pointer', background: isExpanded ? `${ac}15` : undefined }}>
+                            <td style={{ fontFamily: 'monospace', fontWeight: 600, color: ac, fontSize: '0.85rem' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                {isExpanded ? <ChevronDown size={14}/> : <ChevronRight size={14}/>}
+                                {b.akun}
                               </div>
-                            </div>
-                          </td>
-                          <td style={{ textAlign: 'center' }}>
-                            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: tx > 0 ? ac : 'var(--text-muted)' }}>{tx}</span>
-                          </td>
-                        </tr>
+                            </td>
+                            <td style={{ color: 'var(--text-secondary)' }}>{b.deskripsi}</td>
+                            <td style={{ textAlign: 'right', fontWeight: 600 }}>{fmtIDR(b.anggaran)}</td>
+                            <td style={{ textAlign: 'right', color: 'var(--accent-emerald)', fontWeight: 600 }}>
+                              {r > 0 ? fmtIDR(r) : <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>—</span>}
+                            </td>
+                            <td style={{ textAlign: 'right', color: 'var(--accent-rose)', fontWeight: 600 }}>{fmtIDR(si)}</td>
+                            <td style={{ textAlign: 'center' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
+                                <span style={{ fontWeight: 700, fontSize: '0.85rem', color: clr(p) }}>{p.toFixed(1)}%</span>
+                                <div style={{ height: '4px', width: '60px', background: 'rgba(255,255,255,0.08)', borderRadius: '4px', overflow: 'hidden' }}>
+                                  <div style={{ height: '100%', width: `${p}%`, background: clr(p), borderRadius: '4px' }} />
+                                </div>
+                              </div>
+                            </td>
+                            <td style={{ textAlign: 'center' }}>
+                              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: tx > 0 ? ac : 'var(--text-muted)' }}>{tx}</span>
+                            </td>
+                          </tr>
+                          {isExpanded && (
+                            <tr style={{ background: `${ac}08` }}>
+                              <td colSpan={7} style={{ padding: 0 }}>
+                                <div style={{ padding: '1rem', borderBottom: '1px solid var(--border-subtle)', borderTop: `1px solid ${ac}25` }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                                    <span style={{ fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem', color: ac }}>
+                                      <Receipt size={15} color={ac}/> Riwayat Realisasi ({tx})
+                                    </span>
+                                  </div>
+                                  {tx === 0 ? (
+                                    <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px dashed var(--border-subtle)' }}>
+                                      Belum ada realisasi dicatat untuk akun ini.
+                                    </div>
+                                  ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '300px', overflowY: 'auto' }}>
+                                      {txList.map((txItem, ti) => (
+                                        <div key={txItem.id} style={{ padding: '0.65rem 1rem', background: 'rgba(255,255,255,0.04)', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '0.75rem', border: `1px solid ${ac}18` }}>
+                                          <div style={{ padding: '6px', background: `${ac}15`, borderRadius: '6px', flexShrink: 0, color: ac }}>
+                                            <FileText size={14}/>
+                                          </div>
+                                          <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-primary)' }}>
+                                              {txItem.deskripsiKegiatan}
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                                              <span style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                                                <CalendarDays size={11}/> {fmtDate(txItem.tanggal)}
+                                              </span>
+                                              {txItem.keterangan && <span>• {txItem.keterangan}</span>}
+                                            </div>
+                                          </div>
+                                          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                            <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--accent-emerald)' }}>
+                                              {fmtIDR(txItem.jumlah)}
+                                            </div>
+                                            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>#{ti + 1} • {txItem.createdBy.split(',')[0]}</div>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
                       );
                     })}
                     <tr style={{ background: 'rgba(30,144,255,0.08)', borderTop: '2px solid var(--accent-blue-ghost)' }}>
