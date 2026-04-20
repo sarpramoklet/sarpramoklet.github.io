@@ -18,23 +18,8 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
 
   const onlineUsers = useMemo(() => {
     if (!currentUser) return [];
-    const online = [currentUser];
-    const d = new Date();
-    // Deterministic random seed based on day, hour, and 30-min window
-    const seed = d.getDate() * 24 * 2 + d.getHours() * 2 + Math.floor(d.getMinutes() / 30);
-    const shuffled = [...USERS].sort((a, b) => {
-       const hashA = (a.nama.length * seed) % 100;
-       const hashB = (b.nama.length * seed) % 100;
-       return hashB - hashA;
-    });
-    
-    // Pick 1-4 random online staff + me
-    const count = (seed % 4) + 1;
-    for (const u of shuffled) {
-        if (online.length >= count + 1) break;
-        if (!online.find(x => x.id === u.id)) online.push(u);
-    }
-    return online;
+    // Menampilkan hanya diri sendiri dulu untuk cek fungsi sesuai request
+    return [currentUser];
   }, [currentUser]);
 
   useEffect(() => {
