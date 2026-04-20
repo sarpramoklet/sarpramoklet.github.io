@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Loader2, X, RefreshCw, Edit3, Trash2 } from 'lucide-react';
+import { Plus, Search, Loader2, X, RefreshCw, Edit3, Trash2, Heart } from 'lucide-react';
 import { USERS, getCurrentUser } from '../data/organization';
 import { useProfileThumbByEmail } from '../hooks/useProfileThumbByEmail';
 import UserAvatar from '../components/UserAvatar';
@@ -80,7 +80,8 @@ const DutyNotes = () => {
             amount: item.amount || item.Amount,
             type: item.type || item.Type || "Info",
             debit: item.debit === true || item.debit === "TRUE" || item.Debit === "TRUE",
-            kredit: item.kredit || item.Kredit || ""
+            kredit: item.kredit || item.Kredit || "",
+            likes: item.likes || item.Likes || "[]"
           }));
         setNotes(normalized.reverse());
       } else {
@@ -168,7 +169,10 @@ const DutyNotes = () => {
       Read: editingNote ? (editingNote.debit ? "TRUE" : "FALSE") : "FALSE",
       
       kredit: formData.kredit || "-",
-      Followup: formData.kredit || "-"
+      Followup: formData.kredit || "-",
+
+      likes: editingNote ? (editingNote.likes || "[]") : "[]",
+      Likes: editingNote ? (editingNote.likes || "[]") : "[]"
     };
 
     try {
@@ -189,6 +193,71 @@ const DutyNotes = () => {
       alert("Gagal mengirim ke database. Coba cek koneksi Anda.");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleLike = async (note: any) => {
+    if (!currentUser) {
+      alert("Silakan login untuk memberikan interaksi.");
+      return;
+    }
+
+    const userIdentifier = currentUser.email || currentUser.nama || 'unknown';
+    let currentLikes: string[] = [];
+    try {
+      if (typeof note.likes === 'string') currentLikes = JSON.parse(note.likes);
+      else if (Array.isArray(note.likes)) currentLikes = [...note.likes];
+    } catch (e) {
+      if (typeof note.likes === 'string' && note.likes.trim() !== '') {
+        currentLikes = note.likes.split(',').map((s: string) => s.trim());
+      }
+    }
+
+    if (currentLikes.includes(userIdentifier)) {
+      currentLikes = currentLikes.filter((e: string) => e !== userIdentifier);
+    } else {
+      currentLikes.push(userIdentifier);
+    }
+
+    const newLikesStr = JSON.stringify(currentLikes);
+
+    // Optimistic UI update
+    setNotes(prev => prev.map(n => n.id === note.id ? { ...n, likes: newLikesStr } : n));
+
+    const payload = {
+      action: 'FINANCE_RECORD',
+      sheetName: 'Piket',
+      sheet: 'Piket',
+      id: note.id,
+      ID: note.id,
+      tanggal: note.tanggal,
+      Tanggal: note.tanggal,
+      keterangan: note.keterangan || '-',
+      Sender: note.keterangan || '-',
+      kategori: note.kategori || '-',
+      Category: note.kategori || '-',
+      amount: note.amount || '-',
+      Amount: note.amount || '-',
+      type: note.type || '-',
+      Priority: note.type || '-',
+      debit: note.debit ? "TRUE" : "FALSE",
+      Read: note.debit ? "TRUE" : "FALSE",
+      kredit: note.kredit || "-",
+      Followup: note.kredit || "-",
+      likes: newLikesStr,
+      Likes: newLikesStr
+    };
+
+    try {
+      await fetch(API_URL, {
+        method: "POST",
+        mode: "no-cors",
+        redirect: "follow",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify(payload)
+      });
+    } catch (error) {
+      console.error("Like failed:", error);
     }
   };
 
@@ -292,7 +361,39 @@ const DutyNotes = () => {
                 <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{note.keterangan}</span>
               </div>
               
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                <button
+                  onClick={(e) => { e.preventDefault(); handleLike(note); }}
+                  style={{ 
+                    background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px',
+                    display: 'flex', alignItems: 'center', gap: '0.4rem',
+                    color: (() => {
+                      let cl: string[] = [];
+                      try { cl = JSON.parse(note.likes || '[]'); } catch(e){}
+                      return cl.includes(currentUser?.email || currentUser?.nama || 'unknown') ? 'var(--accent-rose)' : 'var(--text-muted)';
+                    })(),
+                    transition: 'all 0.2s ease'
+                  }}
+                  title={(() => {
+                    let cl: string[] = [];
+                    try { cl = JSON.parse(note.likes || '[]'); } catch(e){}
+                    return cl.includes(currentUser?.email || currentUser?.nama || 'unknown') ? 'Batal Suka' : 'Suka';
+                  })()}
+                >
+                  <Heart size={16} fill={(() => {
+                      let cl: string[] = [];
+                      try { cl = JSON.parse(note.likes || '[]'); } catch(e){}
+                      return cl.includes(currentUser?.email || currentUser?.nama || 'unknown') ? 'var(--accent-rose)' : 'none';
+                  })()} />
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>
+                    {(() => {
+                      let cl: string[] = [];
+                      try { cl = JSON.parse(note.likes || '[]'); } catch(e){}
+                      return cl.length > 0 ? cl.length : '';
+                    })()}
+                  </span>
+                </button>
+
                 {!note.debit && <div style={{ fontSize: '0.65rem', color: 'var(--accent-blue)', fontWeight: 700, marginRight: '0.5rem' }}>BARU</div>}
                 
                 {isAuthorizedToManage(note.keterangan) && (

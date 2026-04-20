@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, LabelList, LineChart, Line, Legend } from 'recharts';
-import { UserCircle2, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, MessageSquare, AlertCircle, Edit3, Trash2, Wind, Briefcase, Smartphone, Activity, Coins, Camera, X, RefreshCw } from 'lucide-react';
+import { UserCircle2, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, MessageSquare, AlertCircle, Edit3, Trash2, Wind, Briefcase, Smartphone, Activity, Coins, Camera, X, RefreshCw, Heart } from 'lucide-react';
 import { getCurrentUser, ROLES, USERS } from '../data/organization';
 import { mergeCapexProjects } from '../data/capexProjects';
 import { getUtilityChartData } from '../data/utilities';
@@ -556,6 +556,10 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           // Ambil 3 catatan terbaru yang isinya tidak kosong
           const valid = data
             .filter((item: any) => item.id && item.amount)
+            .map((item: any) => ({
+              ...item,
+              likes: item.likes || item.Likes || "[]"
+            }))
             .reverse()
             .slice(0, 3);
           setPiketNotes(valid);
@@ -930,6 +934,68 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       console.error("Delete dashboard piket failed:", error);
       alert("Gagal menghapus.");
       setPiketLoading(false);
+    }
+  };
+
+  const handleLikePiket = async (note: any) => {
+    if (!isLoggedIn || !currentUser) {
+      alert("Silakan login untuk memberikan interaksi.");
+      return;
+    }
+
+    const userIdentifier = currentUser.email || currentUser.nama || 'unknown';
+    let currentLikes: string[] = [];
+    try {
+      if (typeof note.likes === 'string') currentLikes = JSON.parse(note.likes);
+      else if (Array.isArray(note.likes)) currentLikes = [...note.likes];
+    } catch (e) {
+      if (typeof note.likes === 'string' && note.likes.trim() !== '') {
+        currentLikes = note.likes.split(',').map((s: string) => s.trim());
+      }
+    }
+
+    if (currentLikes.includes(userIdentifier)) {
+      currentLikes = currentLikes.filter(e => e !== userIdentifier);
+    } else {
+      currentLikes.push(userIdentifier);
+    }
+
+    const newLikesStr = JSON.stringify(currentLikes);
+
+    // Optimistic UI update
+    setPiketNotes(prev => prev.map(n => n.id === note.id ? { ...n, likes: newLikesStr } : n));
+
+    try {
+      await fetch(FINANCE_API_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({
+          action: 'FINANCE_RECORD',
+          sheetName: 'Piket',
+          sheet: 'Piket',
+          id: note.id,
+          ID: note.id,
+          tanggal: note.tanggal,
+          Tanggal: note.tanggal,
+          keterangan: note.keterangan || '-',
+          Sender: note.keterangan || '-',
+          kategori: note.kategori || '-',
+          Category: note.kategori || '-',
+          amount: note.amount || '-',
+          Amount: note.amount || '-',
+          type: note.type || '-',
+          Priority: note.type || '-',
+          debit: note.debit ? "TRUE" : "FALSE",
+          Read: note.debit ? "TRUE" : "FALSE",
+          kredit: note.kredit || "-",
+          Followup: note.kredit || "-",
+          likes: newLikesStr,
+          Likes: newLikesStr
+        })
+      });
+    } catch (error) {
+      console.error("Like dashboard piket failed:", error);
     }
   };
 
@@ -2048,6 +2114,37 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                     </div>
 
                     <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                      <button
+                        onClick={(e) => { e.preventDefault(); handleLikePiket(note); }}
+                        style={{ 
+                          background: 'transparent', border: 'none', cursor: 'pointer', padding: '2px',
+                          display: 'flex', alignItems: 'center', gap: '0.25rem',
+                          color: (() => {
+                            let cl: string[] = [];
+                            try { cl = JSON.parse(note.likes || '[]'); } catch(e){}
+                            return cl.includes(currentUser?.email || currentUser?.nama || 'unknown') ? 'var(--accent-rose)' : 'var(--text-muted)';
+                          })(),
+                          transition: 'all 0.2s ease'
+                        }}
+                        title={(() => {
+                          let cl: string[] = [];
+                          try { cl = JSON.parse(note.likes || '[]'); } catch(e){}
+                          return cl.includes(currentUser?.email || currentUser?.nama || 'unknown') ? 'Batal Suka' : 'Suka';
+                        })()}
+                      >
+                        <Heart size={14} fill={(() => {
+                            let cl: string[] = [];
+                            try { cl = JSON.parse(note.likes || '[]'); } catch(e){}
+                            return cl.includes(currentUser?.email || currentUser?.nama || 'unknown') ? 'var(--accent-rose)' : 'none';
+                        })()} />
+                        <span style={{ fontSize: '0.65rem', fontWeight: 600 }}>
+                          {(() => {
+                            let cl: string[] = [];
+                            try { cl = JSON.parse(note.likes || '[]'); } catch(e){}
+                            return cl.length > 0 ? cl.length : '';
+                          })()}
+                        </span>
+                      </button>
                       {isAuthorizedToManagePiket(note.keterangan) && (
                         <>
                           <button
