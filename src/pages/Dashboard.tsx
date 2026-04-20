@@ -824,14 +824,6 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           if (resp.ok) {
             const text = await resp.text();
             
-            // Parsing lebih spesifik untuk RSC Payload / HTML
-            const findCountAfterText = (label: string) => {
-              // Mencari label lalu angka pertama setelahnya (mengabaikan karakter non-digit di antaranya)
-              const regex = new RegExp(`${label}.*?(\d+)`, 'is');
-              const match = text.match(regex);
-              return match ? parseInt(match[1], 10) : 0;
-            };
-
             // Karena label sering sama, kita cari di section masing-masing jika mungkin
             const pengaduanSection = text.match(/Pengaduan Layanan(.*?)Peminjaman Ruang/s) || [text];
             const ruangSection = text.match(/Peminjaman Ruang(.*?)Peminjaman Alat/s) || [text];
