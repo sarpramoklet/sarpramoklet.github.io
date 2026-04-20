@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import { getDefaultAvatarUrl, resolveAvatarUrl } from '../hooks/useProfileThumbByEmail';
+import { getCurrentUser } from '../data/organization';
 
 interface UserAvatarProps {
   name: string;
@@ -24,10 +25,16 @@ const UserAvatar = ({
   border = '1px solid var(--border-subtle)',
   background = 'var(--bg-primary)'
 }: UserAvatarProps) => {
+  const currentUser = getCurrentUser();
+  const loggedInPic = localStorage.getItem('userPicture');
+  
+  const isSelf = currentUser && ((email && email === currentUser.email) || (name && name === currentUser.nama));
+  const finalPhotoUrl = (isSelf && loggedInPic) ? loggedInPic : photoUrl;
+
   const src = resolveAvatarUrl({
     name,
     email,
-    directPhoto: photoUrl,
+    directPhoto: finalPhotoUrl,
     profileThumbByEmail
   });
 

@@ -853,7 +853,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
               },
               tools: { 
                 waiting: (alatSection[0].match(/Waiting for Confirmation.*?(\d+)/is) || [])[1] || 0,
-                notReturn: (alatSection[0].match(/Have not returned.*?(\d+)/is) || [])[1] || 0
+                notReturn: (alatSection[0].match(/Have not return(?:ed)?.*?(\d+)/is) || [])[1] || 0
               }
             };
 
