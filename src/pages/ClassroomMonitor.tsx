@@ -559,6 +559,7 @@ const ClassroomMonitor = () => {
       setSelectedDate(payloadEntry.tanggal);
       closeModal();
       setTimeout(fetchRows, 2500);
+      alert("Terima kasih! Data monitor pantauan kelas berhasil disimpan.");
     } catch (error) {
       console.error('Submit classroom monitor failed:', error);
       alert('Gagal menyimpan monitor pantauan kelas ke database.');
@@ -643,7 +644,7 @@ const ClassroomMonitor = () => {
       upsertRowsLocally(importDraft.rows);
       setSelectedDate(importDraft.tanggal);
       closeImportModal();
-      alert(`Hasil baca form tanggal ${formatMonitorDate(importDraft.tanggal)} berhasil disimpan ke database.`);
+      alert(`Terima kasih! Hasil baca form tanggal ${formatMonitorDate(importDraft.tanggal)} berhasil disimpan ke database.`);
       setTimeout(fetchRows, 2500);
     } catch (error) {
       console.error('Save import draft failed:', error);

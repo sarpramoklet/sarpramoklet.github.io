@@ -255,6 +255,7 @@ const ACMonitor = () => {
       }));
       setEditingId(null);
       setTimeout(fetchData, 3000);
+      alert("Terima kasih! Data AC berhasil diperbarui.");
     } catch (error) {
       console.error("Save failed:", error);
       alert("Gagal menyimpan. Periksa koneksi internet.");
@@ -304,6 +305,7 @@ const ACMonitor = () => {
       setIsAddingHistory(false);
       setFormHistory({});
       setTimeout(fetchData, 3000);
+      alert("Terima kasih! Riwayat AC berhasil disimpan.");
     } catch (err) {
       alert("Gagal menyimpan riwayat.");
     } finally {
@@ -361,7 +363,7 @@ const ACMonitor = () => {
     }
 
     setIsSyncingAll(false);
-    alert(`Berhasil sinkronisasi ${successCount} data ruangan ke database!`);
+    alert(`Terima kasih! Berhasil sinkronisasi ${successCount} data ruangan ke database!`);
     fetchData();
   };
 

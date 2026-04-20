@@ -416,7 +416,7 @@ const NetMonitorPage = () => {
           sang_cpu: '80', sang_mem: '48', sang_virt: '48', sang_disk: '45'
         })
       });
-      alert('Data sample berhasil diisi!');
+      alert('Terima kasih! Data sample berhasil diisi!');
       setTimeout(fetchData, 1500);
     } catch { alert('Gagal'); }
     finally { setSubmitting(false); }
@@ -441,7 +441,7 @@ const NetMonitorPage = () => {
         return next.slice(0, 7);
       });
 
-      alert('Update status network berhasil disimpan ke DB!');
+      alert('Terima kasih! Update status network berhasil disimpan ke DB!');
       setIsFormOpen(false);
       resetNetForm();
       setTimeout(fetchData, 1200);
@@ -505,7 +505,7 @@ const NetMonitorPage = () => {
             : r
         ));
 
-        alert(`✅ Foto berhasil disimpan ke Google Drive!\n🔗 ${driveUrl}`);
+        alert(`Terima kasih! ✅ Foto berhasil disimpan ke Google Drive!\n🔗 ${driveUrl}`);
 
       } catch (err: any) {
         console.error('Upload error:', err);

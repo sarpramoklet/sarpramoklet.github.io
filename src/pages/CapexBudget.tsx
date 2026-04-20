@@ -317,6 +317,7 @@ const CapexBudget = () => {
       }
       handleCloseProjectFormModal();
       setTimeout(fetchProjects, 3000);
+      alert("Terima kasih! Data pekerjaan CAPEX berhasil diperbarui.");
     } catch {
       alert(baseProject ? 'Gagal memperbarui data pekerjaan. Periksa koneksi.' : 'Gagal menambahkan pekerjaan baru. Periksa koneksi.');
     } finally {
@@ -366,6 +367,7 @@ const CapexBudget = () => {
       );
       handleCloseProjectProgressModal();
       setTimeout(fetchProjects, 3000);
+      alert("Terima kasih! Data progres CAPEX berhasil diperbarui.");
     } catch {
       alert('Gagal menyimpan progres. Periksa koneksi.');
     } finally {
@@ -430,6 +432,7 @@ const CapexBudget = () => {
       setShowModal(false);
       setEditingEntry(null);
       setTimeout(fetchData, 3000);
+      alert("Terima kasih! Data realisasi CAPEX berhasil disimpan.");
     } catch {
       alert('Gagal menyimpan. Periksa koneksi.');
     } finally {

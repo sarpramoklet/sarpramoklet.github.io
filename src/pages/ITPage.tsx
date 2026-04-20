@@ -633,7 +633,7 @@ const ITPage = () => {
         });
       }
 
-      alert('Berhasil seed 2 data awal jaringan!');
+      alert('Terima kasih! Berhasil seed 2 data awal jaringan!');
       fetchNetData();
     } catch (e) {
       alert('Gagal seed');
@@ -684,7 +684,7 @@ const ITPage = () => {
           })
         });
       }
-      alert('Sinkronisasi Berhasil!');
+      alert('Terima kasih! Sinkronisasi Berhasil!');
       setTimeout(fetchData, 1000);
     } catch (e) {
       alert('Gagal sinkronisasi');
@@ -1539,7 +1539,7 @@ const ITPage = () => {
                             setNetHistory(prev => [...prev, newRecord]);
                             setNetData(newRecord);
                             closeNetModal();
-                            alert('✅ Data traffic berhasil disimpan!');
+                            alert('Terima kasih! ✅ Data traffic berhasil disimpan!');
                           } catch (err: any) {
                             alert('Gagal menyimpan: ' + (err.message || ''));
                           } finally { setNetLoading(false); }
@@ -1602,7 +1602,7 @@ const ITPage = () => {
                         ...netFormData
                       })
                     });
-                    alert('Berhasil Update!');
+                    alert('Terima kasih! Berhasil Update!');
                     closeNetModal();
                     fetchNetData();
                   } catch { alert('Gagal'); }

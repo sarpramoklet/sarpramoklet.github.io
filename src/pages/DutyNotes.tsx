@@ -188,6 +188,7 @@ const DutyNotes = () => {
       setEditingNote(null);
       setFormData({ ...formData, amount: '', kredit: '' });
       setTimeout(fetchNotes, 3000); // Sinkronisasi ulang dengan jeda lebih lama agar DB sempat update
+      alert("Terima kasih! Catatan piket berhasil disimpan.");
     } catch (error) {
       console.error("Submit failed:", error);
       alert("Gagal mengirim ke database. Coba cek koneksi Anda.");

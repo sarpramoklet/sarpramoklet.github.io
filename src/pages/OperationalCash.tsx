@@ -235,6 +235,7 @@ const OperationalCash = () => {
       });
       
       setTimeout(fetchData, 1500);
+      alert("Terima kasih! Data kas operasional berhasil diperbarui.");
     } catch (error) {
       console.error("Error submitting cash entry:", error);
       alert("Gagal menyimpan data.");

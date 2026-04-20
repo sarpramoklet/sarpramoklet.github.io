@@ -163,6 +163,7 @@ const ACCash = () => {
       
       // Refresh to ensure spreadsheet consistency
       setTimeout(fetchData, 2000);
+      alert("Terima kasih! Data kas perawatan AC berhasil diperbarui.");
     } catch (error) {
       console.error("Error saving AC cash entry:", error);
       alert("Gagal menghubungi server database.");
