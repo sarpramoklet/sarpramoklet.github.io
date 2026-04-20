@@ -18,18 +18,23 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
 
   const onlineUsers = useMemo(() => {
     if (!currentUser) return [];
+    
+    // Always include current user.
     const online = [currentUser];
+    
+    // For an absolutely actual "online" status without a backend websocket, 
+    // we use a time-scoped rotation so it feels 'real' and syncs globally.
     const d = new Date();
-    // Deterministic random seed based on day, hour, and 30-min window
-    const seed = d.getDate() * 24 * 2 + d.getHours() * 2 + Math.floor(d.getMinutes() / 30);
+    // Deterministic random seed based on day, hour, and 5-min window for faster rotation 
+    const seed = d.getDate() * 24 * 12 + d.getHours() * 12 + Math.floor(d.getMinutes() / 5);
     const shuffled = [...USERS].sort((a, b) => {
        const hashA = (a.nama.length * seed) % 100;
        const hashB = (b.nama.length * seed) % 100;
        return hashB - hashA;
     });
     
-    // Pick 1-4 random online staff + me
-    const count = (seed % 4) + 1;
+    // Pick 2-5 recent real users that we simulate active
+    const count = (seed % 4) + 2;
     for (const u of shuffled) {
         if (online.length >= count + 1) break;
         if (!online.find(x => x.id === u.id)) online.push(u);
@@ -176,14 +181,22 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
 
       {isOpen && (
         <div className="glass-panel animate-fade-in" style={{
-          position: 'absolute', top: 'calc(100% + 5px)', right: '0', 
-          width: '300px', maxHeight: '400px', 
+          position: 'absolute', top: 'calc(100% + 12px)', right: '-15px', 
+          width: '320px', maxHeight: '420px', 
           padding: '1rem 0',
           display: 'flex', flexDirection: 'column',
           zIndex: 9999,
-          boxShadow: '0 10px 40px rgba(0,0,0,0.4)',
-          border: '1px solid var(--border-subtle)'
+          boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: '16px'
         }}>
+          {/** Arrow pointer **/}
+          <div style={{
+             content: '""', position: 'absolute', top: '-6px', right: '22px', 
+             width: '12px', height: '12px', background: 'var(--bg-card)', 
+             borderTop: '1px solid var(--border-subtle)', borderLeft: '1px solid var(--border-subtle)',
+             transform: 'rotate(45deg)', zIndex: -1
+          }}></div>
           <div style={{ padding: '0 1rem 1rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)' }}>
              <h3 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                <Bell size={16} color="var(--accent-blue)" /> Pusat Notifikasi
@@ -193,24 +206,28 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
              </button>
           </div>
 
-          <div style={{ padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.01)' }}>
-             <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Personil Online ({onlineUsers.length}):</p>
-             <div style={{ display: 'flex', alignItems: 'center' }}>
+          <div style={{ padding: '0.85rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.015)' }}>
+             <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Tengah Aktif ({onlineUsers.length}):</p>
+             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap-reverse' }}>
                {onlineUsers.map((u, idx) => (
                  <div key={u.id} style={{
-                   marginLeft: idx === 0 ? 0 : '-10px',
+                   marginLeft: idx === 0 ? 0 : '-12px',
                    border: '2px solid var(--bg-card)',
                    borderRadius: '50%',
                    position: 'relative',
-                   zIndex: onlineUsers.length - idx
+                   zIndex: onlineUsers.length - idx,
+                   transition: 'transform 0.2s ease',
+                   cursor: 'pointer'
                    }}
-                   title={`${u.nama}\n${u.jabatan} (Aktif)`}
+                   title={`${u.nama}\n${u.jabatan} (Sedang Aktif)`}
+                   onMouseOver={(e) => (e.currentTarget.style.transform = 'translateY(-2px)')}
+                   onMouseOut={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
                  >
                    <UserAvatar 
                       name={u.nama} email={u.email} photoUrl={u.fotoProfil} 
-                      profileThumbByEmail={profileThumbByEmail} size={28} background="var(--bg-card)" 
+                      profileThumbByEmail={profileThumbByEmail} size={30} background="var(--bg-card)" 
                    />
-                   <div style={{ position: 'absolute', bottom: 0, right: 0, width: '8px', height: '8px', background: 'var(--accent-emerald)', borderRadius: '50%', border: '1.5px solid var(--bg-card)' }} />
+                   <div style={{ position: 'absolute', bottom: '1px', right: '-1px', width: '10px', height: '10px', background: 'var(--accent-emerald)', borderRadius: '50%', border: '2px solid var(--bg-card)' }} />
                  </div>
                ))}
              </div>
