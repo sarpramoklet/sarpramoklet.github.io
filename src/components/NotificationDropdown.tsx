@@ -181,7 +181,7 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
 
       {isOpen && (
         <div className="glass-panel animate-fade-in" style={{
-          position: 'absolute', top: 'calc(100% + 12px)', right: '-15px', 
+          position: 'absolute', top: 'calc(100% + 12px)', left: '-10px', 
           width: '320px', maxHeight: '420px', 
           padding: '1rem 0',
           display: 'flex', flexDirection: 'column',
@@ -192,7 +192,7 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
         }}>
           {/** Arrow pointer **/}
           <div style={{
-             content: '""', position: 'absolute', top: '-6px', right: '22px', 
+             content: '""', position: 'absolute', top: '-6px', left: '15px', 
              width: '12px', height: '12px', background: 'var(--bg-card)', 
              borderTop: '1px solid var(--border-subtle)', borderLeft: '1px solid var(--border-subtle)',
              transform: 'rotate(45deg)', zIndex: -1
