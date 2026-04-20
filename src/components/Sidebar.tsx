@@ -5,6 +5,7 @@ import { getCurrentUser, ROLES } from '../data/organization';
 import { useProfileThumbByEmail } from '../hooks/useProfileThumbByEmail';
 import UserAvatar from './UserAvatar';
 import { logButtonClick, logLogoutEvent, logMenuClick } from '../utils/logger';
+import NotificationDropdown from './NotificationDropdown';
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -81,21 +82,26 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
                 </p>
               </div>
             </div>
-            {setIsLightMode && (
-              <button 
-                className="theme-toggle-btn"
-                onClick={() => {
-                  if (isLoggedIn) {
-                    logButtonClick(currentUser, isLightMode ? 'Ganti ke tema gelap' : 'Ganti ke tema terang', 'Sidebar', 'Toggle tema aplikasi');
-                  }
-                  setIsLightMode(!isLightMode);
-                }}
-                style={{ padding: '6px', border: 'none', background: 'transparent' }}
-                title={isLightMode ? "Ganti ke Tema Gelap" : "Ganti ke Tema Terang"}
-              >
-                {isLightMode ? <Moon size={16} /> : <Sun size={16} />}
-              </button>
-            )}
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+              {isLoggedIn && <NotificationDropdown currentUser={currentUser} />}
+              
+              {setIsLightMode && (
+                <button 
+                  className="theme-toggle-btn"
+                  onClick={() => {
+                    if (isLoggedIn) {
+                      logButtonClick(currentUser, isLightMode ? 'Ganti ke tema gelap' : 'Ganti ke tema terang', 'Sidebar', 'Toggle tema aplikasi');
+                    }
+                    setIsLightMode(!isLightMode);
+                  }}
+                  style={{ padding: '6px', border: 'none', background: 'transparent' }}
+                  title={isLightMode ? "Ganti ke Tema Gelap" : "Ganti ke Tema Terang"}
+                >
+                  {isLightMode ? <Moon size={16} /> : <Sun size={16} />}
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Auth Buttons */}
