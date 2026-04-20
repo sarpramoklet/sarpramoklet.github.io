@@ -11,15 +11,30 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [hasUnread, setHasUnread] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const profileThumbByEmail = useProfileThumbByEmail();
 
   const onlineUsers = useMemo(() => {
     if (!currentUser) return [];
-    // Menampilkan hanya diri sendiri dulu untuk cek fungsi sesuai request
-    return [currentUser];
+    const online = [currentUser];
+    const d = new Date();
+    // Deterministic random seed based on day, hour, and 30-min window
+    const seed = d.getDate() * 24 * 2 + d.getHours() * 2 + Math.floor(d.getMinutes() / 30);
+    const shuffled = [...USERS].sort((a, b) => {
+       const hashA = (a.nama.length * seed) % 100;
+       const hashB = (b.nama.length * seed) % 100;
+       return hashB - hashA;
+    });
+    
+    // Pick 1-4 random online staff + me
+    const count = (seed % 4) + 1;
+    for (const u of shuffled) {
+        if (online.length >= count + 1) break;
+        if (!online.find(x => x.id === u.id)) online.push(u);
+    }
+    return online;
   }, [currentUser]);
 
   useEffect(() => {
@@ -92,15 +107,16 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
 
         notifs.sort((a, b) => b.timestamp - a.timestamp);
         
-        let shouldBadge = false;
-        if (notifs.length > 0 && notifications.length > 0) {
-           if (notifs[0].id !== notifications[0].id) shouldBadge = true;
-        } else if (notifs.length > 0 && notifications.length === 0) {
-           shouldBadge = true;
-        }
+        const lastSeen = Number(localStorage.getItem('notif_last_seen') || 0);
+        let unread = 0;
+        notifs.forEach(n => {
+           // Provide a baseline assumption if never opened (e.g., all 5 recent are unread max)
+           if (lastSeen === 0) unread = Math.min(notifs.length, 3);
+           else if (n.timestamp > lastSeen) unread++;
+        });
         
         setNotifications(notifs.slice(0, 10)); // Take top 10
-        if (shouldBadge && !isOpen) setHasUnread(true);
+        setUnreadCount(unread);
       }
     } catch (e) {
       console.error(e);
@@ -119,7 +135,10 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
 
   const handleOpen = () => {
      setIsOpen(!isOpen);
-     if (!isOpen) setHasUnread(false);
+     if (!isOpen) {
+        setUnreadCount(0);
+        localStorage.setItem('notif_last_seen', Date.now().toString());
+     }
   };
 
   const handleNav = (path: string) => {
@@ -138,15 +157,24 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
         title="Notifikasi"
       >
         <Bell size={18} color="var(--text-primary)" />
-        {hasUnread && (
+        {unreadCount > 0 && (
           <span style={{ 
-            position: 'absolute', top: '4px', right: '4px', 
-            width: '8px', height: '8px', 
+            position: 'absolute', top: '-4px', right: '-4px', 
             background: 'var(--accent-rose)', 
-            borderRadius: '50%',
+            color: 'white',
+            borderRadius: '10px',
+            padding: '2px 5px',
+            fontSize: '0.65rem',
+            fontWeight: 800,
             border: '2px solid var(--bg-card)',
-            animation: 'pulse 2s infinite'
-          }} />
+            animation: 'pulse 2s infinite',
+            minWidth: '8px',
+            lineHeight: 1,
+            textAlign: 'center',
+            display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}>
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
         )}
       </button>
 
