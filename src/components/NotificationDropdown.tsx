@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Bell, MessageSquare, Heart, Info, Clock, AlertCircle } from 'lucide-react';
+import { Bell, MessageSquare, Heart, Clock, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { USERS } from '../data/organization';
 import { useProfileThumbByEmail } from '../hooks/useProfileThumbByEmail';
