@@ -59,10 +59,20 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
       const data = await resp.json();
       if (data && Array.isArray(data)) {
         let notifs: any[] = [];
+        let hasFilledToday = false;
+        const now = new Date();
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
         data.forEach((item: any) => {
           if (!item.id || !item.amount) return;
           const date = new Date(item.tanggal || item.Tanggal);
           if (isNaN(date.getTime())) return;
+          
+          if ((item.keterangan || '').trim().toLowerCase() === (currentUser?.nama || '').trim().toLowerCase()) {
+            if (date.getTime() >= startOfToday.getTime()) {
+              hasFilledToday = true;
+            }
+          }
 
           const isUrgent = item.type === 'Urgent' || item.Priority === 'Urgent';
           
@@ -90,6 +100,10 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
           if (likes.length > 0) {
              const isOwnNote = (item.keterangan || '').trim().toLowerCase() === (currentUser?.nama || '').trim().toLowerCase();
              
+             if (isOwnNote && date.getTime() > startOfToday.getTime()) {
+               hasFilledToday = true;
+             }
+             
              // Analyze who liked
              const likedByPimpinan = likes.some(l => l.toLowerCase().includes('pimpinan') || l.toLowerCase().includes('waka') || l.toLowerCase().includes('hadi') || l.toLowerCase().includes('zainul'));
              
@@ -110,10 +124,35 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
           }
         });
 
+        // Cek pengingat piket jam 15:00
+        const PiketSchedule = [
+          { day: 'Senin', personnel: ['Chusni', 'Whyna', 'Rudi'] },
+          { day: 'Selasa', personnel: ['Bidin', 'Bagus', 'Rudi'] },
+          { day: 'Rabu', personnel: ['Zakaria', 'Yoko', 'Rudi'] },
+          { day: 'Kamis', personnel: ['Chandra', 'Nico', 'Rudi'] },
+          { day: 'Jumat', personnel: ['Ayat', 'Amalia', 'Rudi'] },
+        ];
+        const todayDayName = new Intl.DateTimeFormat('id-ID', { weekday: 'long' }).format(now);
+        const todaySchedule = PiketSchedule.find(s => s.day.toLowerCase() === todayDayName.toLowerCase());
+        const isCurrentUserOnDuty = todaySchedule?.personnel.some(p => currentUser.nama.toLowerCase().includes(p.toLowerCase()));
+        
+        if (isCurrentUserOnDuty && !hasFilledToday && now.getHours() >= 15) {
+          notifs.push({
+            id: 'reminder-piket-15',
+            type: 'reminder',
+            title: '❗ Reminder Piket',
+            message: 'Saat ini sudah lebih dari jam 15.00. Anda bertugas piket hari ini, dimohon segera mengisi catatan piket ya!',
+            date: now,
+            timestamp: now.getTime() + 100000, // force to top
+            path: '/duty-notes',
+            icon: AlertCircle,
+            color: 'var(--accent-amber)',
+            bg: 'rgba(245, 158, 11, 0.1)'
+          });
+        }
+
         notifs.sort((a, b) => b.timestamp - a.timestamp);
         
-        const startOfToday = new Date();
-        startOfToday.setHours(0, 0, 0, 0);
         let unread = 0;
         
         notifs.forEach(n => {
