@@ -343,9 +343,18 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   });
   const sortedCapexProjects = capexProjects.slice().sort((a, b) => b.progress - a.progress);
   const profileThumbByEmail = useProfileThumbByEmail();
+
+  const [motivationIndex, setMotivationIndex] = useState(0);
+  useEffect(() => {
+    const intv = setInterval(() => {
+      setMotivationIndex(prev => prev + 1);
+    }, 10000); // Berganti setiap 10 detik
+    return () => clearInterval(intv);
+  }, []);
+
   const loginSessionSeed = localStorage.getItem('loginSessionSeed') || '';
-  const motivationText = getMotivationForLogin(currentUser, loginSessionSeed);
-  const publicMotivationText = getPublicEducationalMotivation(publicVisitorSeed);
+  const motivationText = getMotivationForLogin(currentUser, `seed-${loginSessionSeed}-${motivationIndex}`);
+  const publicMotivationText = getPublicEducationalMotivation(`public-${publicVisitorSeed}-${motivationIndex}`);
 
 
   const personnelForDashboard = USERS;
@@ -1611,7 +1620,21 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           </div>
           <div>
             <h2 style={{ fontSize: '1rem', margin: 0, fontWeight: 700 }}>Hai, {currentUser.nama.split(' ')[0]}!</h2>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0 0', fontStyle: 'italic', opacity: 0.9 }}>"{motivationText}"</p>
+            <p 
+              key={`auth-${motivationIndex}`}
+              className="animate-fade-in"
+              style={{ 
+                fontSize: '0.75rem', 
+                color: 'var(--text-primary)', 
+                margin: '0.2rem 0 0 0', 
+                fontStyle: 'italic', 
+                opacity: 0.9,
+                textShadow: '0 0 10px rgba(59, 130, 246, 0.7), 0 0 20px rgba(59, 130, 246, 0.4)',
+                transition: 'opacity 1s ease-in-out'
+              }}
+            >
+              "{motivationText}"
+            </p>
           </div>
         </div>
       )}

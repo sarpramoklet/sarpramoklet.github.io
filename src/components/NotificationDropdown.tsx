@@ -107,12 +107,12 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
 
         notifs.sort((a, b) => b.timestamp - a.timestamp);
         
-        const lastSeen = Number(localStorage.getItem('notif_last_seen') || 0);
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
         let unread = 0;
+        
         notifs.forEach(n => {
-           // Provide a baseline assumption if never opened (e.g., all 5 recent are unread max)
-           if (lastSeen === 0) unread = Math.min(notifs.length, 3);
-           else if (n.timestamp > lastSeen) unread++;
+           if (n.timestamp > startOfToday.getTime()) unread++;
         });
         
         setNotifications(notifs.slice(0, 10)); // Take top 10
@@ -135,10 +135,6 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
 
   const handleOpen = () => {
      setIsOpen(!isOpen);
-     if (!isOpen) {
-        setUnreadCount(0);
-        localStorage.setItem('notif_last_seen', Date.now().toString());
-     }
   };
 
   const handleNav = (path: string) => {
