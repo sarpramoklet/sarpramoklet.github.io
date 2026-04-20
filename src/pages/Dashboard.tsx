@@ -813,47 +813,65 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         let data: any = null;
 
         try {
-          // Attempt direct fetch from browser (requires CORS setup on target or valid session)
+          // Attempt direct fetch from browser (requires CORS bypass extension or same-domain auth)
+          // Menggunakan 'credentials: include' agar cookie login di browser ikut terkirim
           const resp = await fetch(targetUrl, { 
             headers: { 'Rsc': '1' },
+            credentials: 'include',
             signal: AbortSignal.timeout(8000) 
           });
           
           if (resp.ok) {
             const text = await resp.text();
-            // Simple parsing for Next.js RSC payload / HTML content
-            const extract = (pattern: RegExp) => {
-              const m = text.match(pattern);
-              return m ? parseInt(m[1], 10) : 0;
+            
+            // Parsing lebih spesifik untuk RSC Payload / HTML
+            const findCountAfterText = (label: string) => {
+              // Mencari label lalu angka pertama setelahnya (mengabaikan karakter non-digit di antaranya)
+              const regex = new RegExp(`${label}.*?(\d+)`, 'is');
+              const match = text.match(regex);
+              return match ? parseInt(match[1], 10) : 0;
             };
 
-            // Differentiate between categories based on typical ordering or context
-            // Note: Direct parsing of RSC is complex, this is a heuristic approach
+            // Karena label sering sama, kita cari di section masing-masing jika mungkin
+            // Dashboard Moklet Service biasanya memiliki section Card Pengaduan, Ruang, dan Alat
+            const pengaduanSection = text.match(/Pengaduan Layanan(.*?)Peminjaman Ruang/s) || [text];
+            const ruangSection = text.match(/Peminjaman Ruang(.*?)Peminjaman Alat/s) || [text];
+            const alatSection = text.match(/Peminjaman Alat(.*?)$/s) || [text];
+
             data = {
               complaints: { 
-                waiting: extract(/Waiting for Confirmation[^0-9]*([0-9]+)/i) || 0,
-                processing: extract(/On Process[^0-9]*([0-9]+)/i) || 0
+                waiting: findCountAfterText('Waiting for Confirmation') || 0,
+                processing: findCountAfterText('On Process') || 0
               },
               rooms: { 
-                waiting: extract(/Room Reservation.*?Waiting for Confirmation[^0-9]*([0-9]+)/s) || 8,
-                active: extract(/Active Reservation[^0-9]*([0-9]+)/i) || 0
+                waiting: (ruangSection[0].match(/Waiting for Confirmation.*?(\d+)/is) || [])[1] || 0,
+                active: (ruangSection[0].match(/Active Reservation.*?(\d+)/is) || [])[1] || 0
               },
               tools: { 
-                waiting: extract(/Tools Loan.*?Waiting for Confirmation[^0-9]*([0-9]+)/s) || 3,
-                notReturn: extract(/Have not returned[^0-9]*([0-9]+)/i) || extract(/Not returned[^0-9]*([0-9]+)/i) || 0
+                waiting: (alatSection[0].match(/Waiting for Confirmation.*?(\d+)/is) || [])[1] || 0,
+                notReturn: (alatSection[0].match(/Have not returned.*?(\d+)/is) || [])[1] || 0
               }
             };
+
+            // Jika semua 0, mungkin masih halaman login atau regex tidak match
+            if (data.complaints.waiting === 0 && data.rooms.waiting === 0 && data.tools.waiting === 0) {
+              console.warn('Direct fetch returned zero values, checking for login or page mismatch.');
+              data = null; 
+            }
           }
         } catch (directError) {
-          console.warn('Direct fetch failed, falling back to GAS:', directError);
+          console.warn('Direct fetch failed (likely CORS blocking):', directError);
         }
 
-        // If direct fetch didn't yield data, use GAS Proxy
+        // Fallback to GAS Proxy if direct fetch didn't yield data
         if (!data) {
           const resp = await fetch(GAS_URL, { signal: AbortSignal.timeout(15000) });
           if (!resp.ok) throw new Error('fetch GAS failed');
           const gasData = await resp.json();
-          if (gasData.error) throw new Error(gasData.message);
+          
+          if (gasData.error) {
+             throw new Error(gasData.message || 'GAS error');
+          }
           
           data = {
             complaints: { waiting: gasData.complaints.waiting, processing: gasData.complaints.processing },
@@ -864,16 +882,16 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
 
         setMokletService({
           complaints: {
-            waitingConfirmation: data.complaints.waiting || data.complaints.waitingConfirmation || 0,
-            onProcess: data.complaints.processing || data.complaints.onProcess || 0,
+            waitingConfirmation: Number(data.complaints.waiting || 0),
+            onProcess: Number(data.complaints.processing || 0),
           },
           roomReservation: {
-            waitingConfirmation: data.rooms.waiting || data.rooms.waitingConfirmation || 0,
-            activeReservation: data.rooms.active || data.rooms.activeReservation || 0,
+            waitingConfirmation: Number(data.rooms.waiting || 0),
+            activeReservation: Number(data.rooms.active || 0),
           },
           toolsLoan: {
-            waitingConfirmation: data.tools.waiting || data.tools.waitingConfirmation || 0,
-            haveNotReturn: data.tools.notReturn || data.tools.haveNotReturn || 0,
+            waitingConfirmation: Number(data.tools.waiting || 0),
+            haveNotReturn: Number(data.tools.notReturn || 0),
           },
           loading: false,
           lastUpdated: new Date(),
