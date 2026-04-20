@@ -833,15 +833,14 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
             };
 
             // Karena label sering sama, kita cari di section masing-masing jika mungkin
-            // Dashboard Moklet Service biasanya memiliki section Card Pengaduan, Ruang, dan Alat
             const pengaduanSection = text.match(/Pengaduan Layanan(.*?)Peminjaman Ruang/s) || [text];
             const ruangSection = text.match(/Peminjaman Ruang(.*?)Peminjaman Alat/s) || [text];
             const alatSection = text.match(/Peminjaman Alat(.*?)$/s) || [text];
 
             data = {
               complaints: { 
-                waiting: findCountAfterText('Waiting for Confirmation') || 0,
-                processing: findCountAfterText('On Process') || 0
+                waiting: (pengaduanSection[0].match(/Waiting for Confirmation.*?(\d+)/is) || [])[1] || 0,
+                processing: (pengaduanSection[0].match(/On Process.*?(\d+)/is) || [])[1] || 0
               },
               rooms: { 
                 waiting: (ruangSection[0].match(/Waiting for Confirmation.*?(\d+)/is) || [])[1] || 0,
