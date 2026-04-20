@@ -2122,13 +2122,12 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: 'var(--accent-blue)', fontWeight: 600 }}>
                       {(() => {
-                        const sender = USERS.find((u) => u.nama === note.keterangan);
+                        const sender = USERS.find((u) => u.nama.toLowerCase().includes(note.keterangan.toLowerCase()));
                         return (
                           <UserAvatar
-                            name={note.keterangan}
+                            name={sender?.nama || note.keterangan}
                             email={sender?.email}
                             photoUrl={sender?.fotoProfil}
-                            profileThumbByEmail={profileThumbByEmail}
                             size={18}
                           />
                         );

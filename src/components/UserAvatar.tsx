@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { getDefaultAvatarUrl, resolveAvatarUrl } from '../hooks/useProfileThumbByEmail';
+import { getDefaultAvatarUrl, resolveAvatarUrl, useProfileThumbByEmail } from '../hooks/useProfileThumbByEmail';
 import { getCurrentUser } from '../data/organization';
 
 interface UserAvatarProps {
@@ -18,7 +18,7 @@ const UserAvatar = ({
   name,
   email,
   photoUrl,
-  profileThumbByEmail,
+  profileThumbByEmail: providedMap,
   size = 32,
   style,
   imgStyle,
@@ -27,15 +27,19 @@ const UserAvatar = ({
 }: UserAvatarProps) => {
   const currentUser = getCurrentUser();
   const loggedInPic = localStorage.getItem('userPicture');
+  const globalThumbMap = useProfileThumbByEmail();
   
-  const isSelf = currentUser && ((email && email === currentUser.email) || (name && name === currentUser.nama));
+  // Combine provided map with global map if available
+  const activeThumbMap = providedMap || globalThumbMap;
+  
+  const isSelf = currentUser && ((email && email.toLowerCase() === currentUser.email.toLowerCase()) || (name && currentUser.nama.includes(name)));
   const finalPhotoUrl = (isSelf && loggedInPic) ? loggedInPic : photoUrl;
 
   const src = resolveAvatarUrl({
     name,
     email,
     directPhoto: finalPhotoUrl,
-    profileThumbByEmail
+    profileThumbByEmail: activeThumbMap
   });
 
   return (

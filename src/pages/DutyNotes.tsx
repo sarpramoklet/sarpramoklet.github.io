@@ -101,7 +101,7 @@ const DutyNotes = () => {
       type: note.type,
       amount: note.amount,
       kredit: note.kredit === "-" ? "" : note.kredit,
-      senderId: USERS.find(u => u.nama === note.keterangan)?.id || currentUser.id
+      senderId: USERS.find(u => u.nama.toLowerCase().includes(note.keterangan.toLowerCase()))?.id || currentUser.id
     });
     setIsModalOpen(true);
   };
@@ -347,13 +347,12 @@ const DutyNotes = () => {
             <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 {(() => {
-                  const sender = USERS.find(u => u.nama === note.keterangan);
+                  const sender = USERS.find(u => u.nama.toLowerCase().includes(note.keterangan.toLowerCase()));
                   return (
                     <UserAvatar
-                      name={note.keterangan}
+                      name={sender?.nama || note.keterangan}
                       email={sender?.email}
                       photoUrl={sender?.fotoProfil}
-                      profileThumbByEmail={profileThumbByEmail}
                       size={28}
                       background="var(--accent-blue-ghost)"
                     />
