@@ -2294,7 +2294,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                       {person.jabatan}
                     </div>
                     <div style={{ marginTop: '0.45rem', fontSize: '0.68rem', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between', gap: '0.5rem' }}>
-                      <span>NIP: {person.nip}</span>
+                      {isLoggedIn && <span>NIP: {person.nip}</span>}
                       <span>{person.unit}</span>
                     </div>
                   </div>
