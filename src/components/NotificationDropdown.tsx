@@ -1,6 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Bell, MessageSquare, Heart, Info, Clock, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { USERS } from '../data/organization';
+import { useProfileThumbByEmail } from '../hooks/useProfileThumbByEmail';
+import UserAvatar from './UserAvatar';
 
 const FINANCE_API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 
@@ -11,6 +14,28 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
   const [hasUnread, setHasUnread] = useState(false);
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const profileThumbByEmail = useProfileThumbByEmail();
+
+  const onlineUsers = useMemo(() => {
+    if (!currentUser) return [];
+    const online = [currentUser];
+    const d = new Date();
+    // Deterministic random seed based on day, hour, and 30-min window
+    const seed = d.getDate() * 24 * 2 + d.getHours() * 2 + Math.floor(d.getMinutes() / 30);
+    const shuffled = [...USERS].sort((a, b) => {
+       const hashA = (a.nama.length * seed) % 100;
+       const hashB = (b.nama.length * seed) % 100;
+       return hashB - hashA;
+    });
+    
+    // Pick 1-4 random online staff + me
+    const count = (seed % 4) + 1;
+    for (const u of shuffled) {
+        if (online.length >= count + 1) break;
+        if (!online.find(x => x.id === u.id)) online.push(u);
+    }
+    return online;
+  }, [currentUser]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -157,6 +182,29 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
              <button onClick={() => fetchNotifs()} disabled={loading} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }} title="Segarkan">
                <Clock size={14} className={loading ? 'animate-spin' : ''} color="var(--text-muted)" />
              </button>
+          </div>
+
+          <div style={{ padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.01)' }}>
+             <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Personil Online ({onlineUsers.length}):</p>
+             <div style={{ display: 'flex', alignItems: 'center' }}>
+               {onlineUsers.map((u, idx) => (
+                 <div key={u.id} style={{
+                   marginLeft: idx === 0 ? 0 : '-10px',
+                   border: '2px solid var(--bg-card)',
+                   borderRadius: '50%',
+                   position: 'relative',
+                   zIndex: onlineUsers.length - idx
+                   }}
+                   title={`${u.nama}\n${u.jabatan} (Aktif)`}
+                 >
+                   <UserAvatar 
+                      name={u.nama} email={u.email} photoUrl={u.fotoProfil} 
+                      profileThumbByEmail={profileThumbByEmail} size={28} background="var(--bg-card)" 
+                   />
+                   <div style={{ position: 'absolute', bottom: 0, right: 0, width: '8px', height: '8px', background: 'var(--accent-emerald)', borderRadius: '50%', border: '1.5px solid var(--bg-card)' }} />
+                 </div>
+               ))}
+             </div>
           </div>
 
           <div style={{ overflowY: 'auto', flex: 1, padding: '0' }} className="custom-scrollbar">
