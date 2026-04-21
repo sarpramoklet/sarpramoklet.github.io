@@ -27,13 +27,24 @@ const UserAvatar = ({
 }: UserAvatarProps) => {
   const currentUser = getCurrentUser();
   const loggedInPic = localStorage.getItem('userPicture');
+  const loggedInEmail = localStorage.getItem('userEmail')?.toLowerCase() || '';
   const globalThumbMap = useProfileThumbByEmail();
-  
-  // Combine provided map with global map if available
-  const activeThumbMap = providedMap || globalThumbMap;
-  
-  const isSelf = currentUser && ((email && email.toLowerCase() === currentUser.email.toLowerCase()) || (name && currentUser.nama.includes(name)));
-  const finalPhotoUrl = (isSelf && loggedInPic) ? loggedInPic : photoUrl;
+
+  const activeThumbMap = {
+    ...globalThumbMap,
+    ...(providedMap || {})
+  };
+
+  const normalizedEmail = email?.toLowerCase() || '';
+  const normalizedCurrentEmail = currentUser?.email?.toLowerCase() || '';
+  const normalizedName = name?.trim().toLowerCase() || '';
+  const normalizedCurrentName = currentUser?.nama?.trim().toLowerCase() || '';
+  const isSelf = Boolean(
+    currentUser &&
+      ((normalizedEmail && (normalizedEmail === normalizedCurrentEmail || normalizedEmail === loggedInEmail)) ||
+        (normalizedName && normalizedCurrentName && normalizedCurrentName.includes(normalizedName)))
+  );
+  const finalPhotoUrl = isSelf && loggedInPic ? loggedInPic : photoUrl;
 
   const src = resolveAvatarUrl({
     name,
@@ -69,4 +80,3 @@ const UserAvatar = ({
 };
 
 export default UserAvatar;
-

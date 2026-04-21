@@ -285,6 +285,31 @@ const buildUtilityChartFromRows = (rows: any[]): UtilityChartPoint[] => {
   });
 };
 
+const resolveDutyNoteUser = (note: any) => {
+  const senderEmail = String(
+    note.senderEmail ||
+      note.SenderEmail ||
+      note.email ||
+      note.Email ||
+      ''
+  )
+    .trim()
+    .toLowerCase();
+
+  if (senderEmail) {
+    const matchedByEmail = USERS.find((user) => user.email.toLowerCase() === senderEmail);
+    if (matchedByEmail) return matchedByEmail;
+  }
+
+  const senderName = String(note.keterangan || note.Sender || '').trim().toLowerCase();
+  if (!senderName) return undefined;
+
+  return USERS.find((user) => {
+    const fullName = user.nama.trim().toLowerCase();
+    return fullName === senderName || fullName.includes(senderName) || senderName.includes(fullName);
+  });
+};
+
 const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => {
   const currentUser = getCurrentUser();
   const isPimpinan = currentUser.roleAplikasi === ROLES.PIMPINAN;
@@ -567,6 +592,15 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
             .filter((item: any) => item.id && item.amount)
             .map((item: any) => ({
               ...item,
+              senderEmail: String(
+                item.senderEmail ||
+                  item.SenderEmail ||
+                  item.email ||
+                  item.Email ||
+                  ''
+              )
+                .trim()
+                .toLowerCase(),
               likes: item.likes || item.Likes || "[]"
             }))
             .reverse()
@@ -989,6 +1023,10 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           Tanggal: note.tanggal,
           keterangan: note.keterangan || '-',
           Sender: note.keterangan || '-',
+          senderEmail: note.senderEmail || '-',
+          SenderEmail: note.senderEmail || '-',
+          email: note.senderEmail || '-',
+          Email: note.senderEmail || '-',
           kategori: note.kategori || '-',
           Category: note.kategori || '-',
           amount: note.amount || '-',
@@ -2122,12 +2160,13 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: 'var(--accent-blue)', fontWeight: 600 }}>
                       {(() => {
-                        const sender = USERS.find((u) => u.nama.toLowerCase().includes(note.keterangan.toLowerCase()));
+                        const sender = resolveDutyNoteUser(note);
                         return (
                           <UserAvatar
                             name={sender?.nama || note.keterangan}
-                            email={sender?.email}
+                            email={note.senderEmail || sender?.email}
                             photoUrl={sender?.fotoProfil}
+                            profileThumbByEmail={profileThumbByEmail}
                             size={18}
                           />
                         );

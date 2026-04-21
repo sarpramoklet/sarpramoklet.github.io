@@ -7,6 +7,31 @@ import UserAvatar from '../components/UserAvatar';
 // URL Apps Script DB_Sarpramoklet (URL Terbaru)
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 
+const resolveUserFromDutyNote = (note: any) => {
+  const senderEmail = String(
+    note.senderEmail ||
+      note.SenderEmail ||
+      note.email ||
+      note.Email ||
+      ''
+  )
+    .trim()
+    .toLowerCase();
+
+  if (senderEmail) {
+    const matchedByEmail = USERS.find((user) => user.email.toLowerCase() === senderEmail);
+    if (matchedByEmail) return matchedByEmail;
+  }
+
+  const senderName = String(note.keterangan || note.Sender || '').trim().toLowerCase();
+  if (!senderName) return undefined;
+
+  return USERS.find((user) => {
+    const fullName = user.nama.trim().toLowerCase();
+    return fullName === senderName || fullName.includes(senderName) || senderName.includes(fullName);
+  });
+};
+
 const DutyNotes = () => {
   const [notes, setNotes] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -76,6 +101,15 @@ const DutyNotes = () => {
             id: item.id || item.ID,
             tanggal: formatDate(item.tanggal || item.Tanggal), // Pastikan format tanggal seragam
             keterangan: item.keterangan || item.Keterangan || "Petugas",
+            senderEmail: String(
+              item.senderEmail ||
+                item.SenderEmail ||
+                item.email ||
+                item.Email ||
+                ''
+            )
+              .trim()
+              .toLowerCase(),
             kategori: item.kategori || item.Kategori || "Pesan",
             amount: item.amount || item.Amount,
             type: item.type || item.Type || "Info",
@@ -95,13 +129,15 @@ const DutyNotes = () => {
   };
 
   const handleEdit = (note: any) => {
+    const sender = resolveUserFromDutyNote(note);
+
     setEditingNote(note);
     setFormData({
       kategori: note.kategori,
       type: note.type,
       amount: note.amount,
       kredit: note.kredit === "-" ? "" : note.kredit,
-      senderId: USERS.find(u => u.nama.toLowerCase().includes(note.keterangan.toLowerCase()))?.id || currentUser.id
+      senderId: sender?.id || currentUser.id
     });
     setIsModalOpen(true);
   };
@@ -139,7 +175,9 @@ const DutyNotes = () => {
     if (!formData.amount.trim()) return;
     
     setIsSubmitting(true);
-    const senderName = USERS.find(u => u.id === formData.senderId)?.nama || currentUser.nama;
+    const sender = USERS.find(u => u.id === formData.senderId) || currentUser;
+    const senderName = sender?.nama || currentUser.nama;
+    const senderEmail = sender?.email || currentUser.email || '';
     
     const payload = {
       action: 'FINANCE_RECORD',
@@ -155,6 +193,10 @@ const DutyNotes = () => {
       
       keterangan: senderName,
       Sender: senderName,
+      senderEmail: senderEmail,
+      SenderEmail: senderEmail,
+      email: senderEmail,
+      Email: senderEmail,
       
       kategori: formData.kategori,
       Category: formData.kategori,
@@ -235,6 +277,10 @@ const DutyNotes = () => {
       Tanggal: note.tanggal,
       keterangan: note.keterangan || '-',
       Sender: note.keterangan || '-',
+      senderEmail: note.senderEmail || '-',
+      SenderEmail: note.senderEmail || '-',
+      email: note.senderEmail || '-',
+      Email: note.senderEmail || '-',
       kategori: note.kategori || '-',
       Category: note.kategori || '-',
       amount: note.amount || '-',
@@ -347,12 +393,13 @@ const DutyNotes = () => {
             <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 {(() => {
-                  const sender = USERS.find(u => u.nama.toLowerCase().includes(note.keterangan.toLowerCase()));
+                  const sender = resolveUserFromDutyNote(note);
                   return (
                     <UserAvatar
                       name={sender?.nama || note.keterangan}
-                      email={sender?.email}
+                      email={note.senderEmail || sender?.email}
                       photoUrl={sender?.fotoProfil}
+                      profileThumbByEmail={profileThumbByEmail}
                       size={28}
                       background="var(--accent-blue-ghost)"
                     />
