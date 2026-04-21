@@ -1,46 +1,54 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
-import { Bell, MessageSquare, Heart, Clock, AlertCircle } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Bell, MessageSquare, Heart, Clock, AlertCircle, Upload } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { USERS } from '../data/organization';
 import { useProfileThumbByEmail } from '../hooks/useProfileThumbByEmail';
+import { normalizeClassroomMonitorRows, normalizeClassroomDate } from '../utils/classroomMonitor';
 import UserAvatar from './UserAvatar';
 
 const FINANCE_API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
+const CLASSROOM_MONITOR_SHEET = 'Pantauan_Kelas';
+
+const resolveUserFromClassroomUploader = (identifier: string, currentUser: any) => {
+  const normalizedIdentifier = String(identifier || '').trim().toLowerCase();
+  if (!normalizedIdentifier) return null;
+
+  if (
+    currentUser &&
+    [currentUser.nama, currentUser.email]
+      .filter(Boolean)
+      .some((value: string) => value.trim().toLowerCase() === normalizedIdentifier)
+  ) {
+    return currentUser;
+  }
+
+  return (
+    USERS.find((user) => {
+      const fullName = user.nama.trim().toLowerCase();
+      const email = user.email.trim().toLowerCase();
+      return (
+        fullName === normalizedIdentifier ||
+        email === normalizedIdentifier ||
+        fullName.includes(normalizedIdentifier) ||
+        normalizedIdentifier.includes(fullName)
+      );
+    }) || null
+  );
+};
 
 export default function NotificationDropdown({ currentUser }: { currentUser: any }) {
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [classroomUploaders, setClassroomUploaders] = useState<any[]>([]);
+  const [classroomUploadMeta, setClassroomUploadMeta] = useState<{ date: string; totalRooms: number }>({
+    date: '',
+    totalRooms: 0,
+  });
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const profileThumbByEmail = useProfileThumbByEmail();
-
-  const onlineUsers = useMemo(() => {
-    if (!currentUser) return [];
-    
-    // Always include current user.
-    const online = [currentUser];
-    
-    // For an absolutely actual "online" status without a backend websocket, 
-    // we use a time-scoped rotation so it feels 'real' and syncs globally.
-    const d = new Date();
-    // Deterministic random seed based on day, hour, and 5-min window for faster rotation 
-    const seed = d.getDate() * 24 * 12 + d.getHours() * 12 + Math.floor(d.getMinutes() / 5);
-    const shuffled = [...USERS].sort((a, b) => {
-       const hashA = (a.nama.length * seed) % 100;
-       const hashB = (b.nama.length * seed) % 100;
-       return hashB - hashA;
-    });
-    
-    // Pick 2-5 recent real users that we simulate active
-    const count = (seed % 4) + 2;
-    for (const u of shuffled) {
-        if (online.length >= count + 1) break;
-        if (!online.find(x => x.id === u.id)) online.push(u);
-    }
-    return online;
-  }, [currentUser]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -55,8 +63,13 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
   const fetchNotifs = async () => {
     setLoading(true);
     try {
-      const resp = await fetch(`${FINANCE_API_URL}?sheetName=Piket`);
-      const data = await resp.json();
+      const [notesResp, classroomResp] = await Promise.all([
+        fetch(`${FINANCE_API_URL}?sheetName=Piket`),
+        fetch(`${FINANCE_API_URL}?sheetName=${CLASSROOM_MONITOR_SHEET}`),
+      ]);
+      const data = await notesResp.json();
+      const classroomData = await classroomResp.json();
+
       if (data && Array.isArray(data)) {
         let notifs: any[] = [];
         let hasFilledToday = false;
@@ -124,6 +137,77 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
           }
         });
 
+        const normalizedClassroomRows = Array.isArray(classroomData)
+          ? normalizeClassroomMonitorRows(classroomData)
+          : [];
+        const latestClassroomDate = normalizedClassroomRows.length > 0
+          ? normalizedClassroomRows
+              .map((item) => item.tanggal)
+              .filter(Boolean)
+              .sort((left, right) => new Date(right).getTime() - new Date(left).getTime())[0]
+          : '';
+
+        if (latestClassroomDate) {
+          const latestClassroomRows = normalizedClassroomRows.filter((row) => row.tanggal === latestClassroomDate);
+          const uploaderMap = new Map<string, any>();
+
+          latestClassroomRows.forEach((row) => {
+            const label = String(row.updatedBy || '').trim();
+            if (!label) return;
+
+            const user = resolveUserFromClassroomUploader(label, currentUser);
+            const key = (user?.email || label).toLowerCase();
+            const nextUpdatedAt = new Date(row.updatedAt || row.tanggal).getTime();
+            const existing = uploaderMap.get(key);
+            const existingUpdatedAt = existing ? new Date(existing.updatedAt || existing.tanggal).getTime() : 0;
+
+            if (!existing || nextUpdatedAt >= existingUpdatedAt) {
+              uploaderMap.set(key, {
+                id: user?.id || key,
+                nama: user?.nama || label,
+                email: user?.email || '',
+                jabatan: user?.jabatan || 'Pengunggah monitor kelas',
+                fotoProfil: user?.fotoProfil,
+                updatedAt: row.updatedAt || row.tanggal,
+              });
+            }
+          });
+
+          const uploaders = Array.from(uploaderMap.values()).sort(
+            (left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime()
+          );
+          setClassroomUploaders(uploaders);
+          setClassroomUploadMeta({ date: latestClassroomDate, totalRooms: latestClassroomRows.length });
+
+          if (uploaders.length > 0) {
+            const leadUploader = uploaders[0];
+            const extraUploaderCount = uploaders.length - 1;
+            const formattedMonitorDate = new Intl.DateTimeFormat('id-ID', {
+              day: 'numeric',
+              month: 'short',
+            }).format(new Date(normalizeClassroomDate(latestClassroomDate)));
+
+            notifs.push({
+              id: `classroom-upload-${latestClassroomDate}`,
+              type: 'classroom_upload',
+              title: 'Monitor Kelas Sudah Diupload',
+              message:
+                extraUploaderCount > 0
+                  ? `${leadUploader.nama.split(',')[0]} dan ${extraUploaderCount} personil lain sudah upload monitor kelas ${formattedMonitorDate} untuk ${latestClassroomRows.length} ruang.`
+                  : `${leadUploader.nama.split(',')[0]} sudah upload monitor kelas ${formattedMonitorDate} untuk ${latestClassroomRows.length} ruang.`,
+              date: new Date(leadUploader.updatedAt || latestClassroomDate),
+              timestamp: new Date(leadUploader.updatedAt || latestClassroomDate).getTime() + 30000,
+              path: '/classroom-monitor',
+              icon: Upload,
+              color: 'var(--accent-emerald)',
+              bg: 'rgba(16, 185, 129, 0.14)',
+            });
+          }
+        } else {
+          setClassroomUploaders([]);
+          setClassroomUploadMeta({ date: '', totalRooms: 0 });
+        }
+
         // Cek pengingat piket jam 15:00
         const PiketSchedule = [
           { day: 'Senin', personnel: ['Chusni', 'Whyna', 'Rudi'] },
@@ -164,6 +248,8 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
       }
     } catch (e) {
       console.error(e);
+      setClassroomUploaders([]);
+      setClassroomUploadMeta({ date: '', totalRooms: 0 });
     } finally {
       setLoading(false);
     }
@@ -187,6 +273,10 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
   };
 
   if (!currentUser) return null;
+
+  const classroomUploadDateLabel = classroomUploadMeta.date
+    ? new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(new Date(classroomUploadMeta.date))
+    : '';
 
   return (
     <div style={{ position: 'relative' }} ref={dropdownRef}>
@@ -246,19 +336,32 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
           </div>
 
           <div style={{ padding: '0.85rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.015)' }}>
-             <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Tengah Aktif ({onlineUsers.length}):</p>
+             <div>
+               <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                 Upload Monitor Kelas ({classroomUploaders.length}):
+               </p>
+               <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                 {classroomUploadMeta.date
+                   ? `${classroomUploadMeta.totalRooms} ruang ter-update pada ${classroomUploadDateLabel}`
+                   : 'Belum ada upload monitor kelas terbaru.'}
+               </p>
+             </div>
              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap-reverse' }}>
-               {onlineUsers.map((u, idx) => (
+               {classroomUploaders.length === 0 ? (
+                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                   Menunggu upload
+                 </div>
+               ) : classroomUploaders.map((u, idx) => (
                  <div key={u.id} style={{
                    marginLeft: idx === 0 ? 0 : '-12px',
                    border: '2px solid var(--bg-card)',
                    borderRadius: '50%',
                    position: 'relative',
-                   zIndex: onlineUsers.length - idx,
+                   zIndex: classroomUploaders.length - idx,
                    transition: 'transform 0.2s ease',
                    cursor: 'pointer'
                    }}
-                   title={`${u.nama}\n${u.jabatan} (Sedang Aktif)`}
+                   title={`${u.nama}\n${u.jabatan}\nUpload monitor: ${new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(u.updatedAt))}`}
                    onMouseOver={(e) => (e.currentTarget.style.transform = 'translateY(-2px)')}
                    onMouseOut={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
                  >
