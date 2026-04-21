@@ -40,6 +40,7 @@ import {
   toMonitorFlag,
 } from '../utils/classroomMonitor';
 import type { ClassroomMonitorEntry, ClassroomMonitorSeedPartial } from '../utils/classroomMonitor';
+import { pushActionNotification } from '../utils/actionNotifications';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 
@@ -507,6 +508,17 @@ const ClassroomMonitor = () => {
       });
 
       setRows((prev) => prev.filter((item) => item.id !== row.id));
+      pushActionNotification({
+        id: `clsroom-del:${row.id}:${Date.now()}`,
+        dedupeKey: `clsroom-del:${row.id}`,
+        type: 'classroom_deleted',
+        title: `🗑️ Pantauan ${row.ruang} Dihapus`,
+        message: `${currentUser.nama.split(',')[0]} menghapus data pantauan ${row.ruang} tanggal ${formatMonitorDate(row.tanggal)}.`,
+        path: '/classroom-monitor',
+        iconKey: 'trash',
+        color: 'var(--accent-rose)',
+        bg: 'rgba(244, 63, 94, 0.1)'
+      });
       setTimeout(fetchRows, 2500);
     } catch (error) {
       console.error('Delete classroom monitor failed:', error);
@@ -557,6 +569,18 @@ const ClassroomMonitor = () => {
       await persistEntries([payloadEntry]);
       upsertRowsLocally([payloadEntry]);
       setSelectedDate(payloadEntry.tanggal);
+      const isEditing = Boolean(editingRow);
+      pushActionNotification({
+        id: `clsroom:${payloadEntry.id}:${Date.now()}`,
+        dedupeKey: isEditing ? `clsroom-upd:${payloadEntry.id}` : `clsroom-new:${payloadEntry.id}`,
+        type: isEditing ? 'classroom_updated' : 'classroom_created',
+        title: isEditing ? `✏️ Pantauan ${payloadEntry.ruang} Diperbarui` : `🏫 Pantauan ${payloadEntry.ruang} Baru`,
+        message: `${currentUser.nama.split(',')[0]} ${isEditing ? 'memperbarui' : 'menambahkan'} data pantauan ${payloadEntry.ruang} tanggal ${formatMonitorDate(payloadEntry.tanggal)}. ${payloadEntry.total > 0 ? `Temuan: ${payloadEntry.total} item.` : 'Kondisi aman.'}`,
+        path: '/classroom-monitor',
+        iconKey: isEditing ? 'edit' : 'upload',
+        color: payloadEntry.total > 0 ? 'var(--accent-amber)' : 'var(--accent-emerald)',
+        bg: payloadEntry.total > 0 ? 'rgba(245, 158, 11, 0.1)' : 'rgba(16, 185, 129, 0.1)'
+      });
       closeModal();
       setTimeout(fetchRows, 2500);
       alert("Terima kasih! Data monitor pantauan kelas berhasil disimpan.");
@@ -644,6 +668,17 @@ const ClassroomMonitor = () => {
       upsertRowsLocally(importDraft.rows);
       setSelectedDate(importDraft.tanggal);
       closeImportModal();
+      pushActionNotification({
+        id: `clsroom-import:${importDraft.tanggal}:${Date.now()}`,
+        dedupeKey: `clsroom-import:${importDraft.tanggal}`,
+        type: 'classroom_import',
+        title: '📷 Import Pantauan AI Berhasil',
+        message: `${currentUser.nama.split(',')[0]} berhasil import data pantauan kelas ${formatMonitorDate(importDraft.tanggal)} untuk ${importDraft.rows.length} ruang (${importDraft.issueRows.length} temuan).`,
+        path: '/classroom-monitor',
+        iconKey: 'upload',
+        color: 'var(--accent-emerald)',
+        bg: 'rgba(16, 185, 129, 0.14)'
+      });
       alert(`Terima kasih! Hasil baca form tanggal ${formatMonitorDate(importDraft.tanggal)} berhasil disimpan ke database.`);
       setTimeout(fetchRows, 2500);
     } catch (error) {

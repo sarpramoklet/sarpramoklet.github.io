@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import { getCurrentUser, ROLES } from '../data/organization';
+import { pushActionNotification } from '../utils/actionNotifications';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 
@@ -152,6 +153,20 @@ const ACCash = () => {
         setTransactions(prev => [...prev, newTrx]);
       }
       
+      const isEditing = Boolean(editingTrx);
+      const nominalDisplay = (Number(formData.debit) || Number(formData.kredit)).toLocaleString('id-ID');
+      pushActionNotification({
+        id: `ac:${id}:${Date.now()}`,
+        dedupeKey: isEditing ? `ac-upd:${id}` : `ac-new:${id}`,
+        type: isEditing ? 'ac_cash_updated' : 'ac_cash_created',
+        title: isEditing ? '✏️ Kas AC Diperbarui' : '❄️ Transaksi Kas AC Baru',
+        message: `${currentUser.nama.split(',')[0]} ${isEditing ? 'memperbarui' : 'mencatat'} transaksi AC: "${(formData.keterangan || '').substring(0, 35)}" - Rp ${nominalDisplay}.`,
+        path: '/ac-cash',
+        iconKey: isEditing ? 'edit' : 'message',
+        color: isEditing ? 'var(--accent-blue)' : 'var(--accent-blue)',
+        bg: isEditing ? 'var(--accent-blue-ghost)' : 'rgba(59, 130, 246, 0.1)'
+      });
+
       setShowModal(false);
       setEditingTrx(null);
       setFormData({ 
@@ -196,6 +211,17 @@ const ACCash = () => {
       });
       
       setTransactions(prev => prev.filter(t => t.id !== id));
+      pushActionNotification({
+        id: `ac-del:${id}:${Date.now()}`,
+        dedupeKey: `ac-del:${id}`,
+        type: 'ac_cash_deleted',
+        title: '🗑️ Kas AC Dihapus',
+        message: `${currentUser.nama.split(',')[0]} menghapus transaksi AC "${(trx.keterangan || '').substring(0, 35)}" dari database.`,
+        path: '/ac-cash',
+        iconKey: 'trash',
+        color: 'var(--accent-rose)',
+        bg: 'rgba(244, 63, 94, 0.1)'
+      });
       setTimeout(fetchData, 2000);
     } catch (error) {
       console.error("Error deleting AC cash entry:", error);

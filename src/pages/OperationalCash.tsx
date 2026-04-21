@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import { getCurrentUser, ROLES } from '../data/organization';
+import { pushActionNotification } from '../utils/actionNotifications';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 
@@ -174,6 +175,17 @@ const OperationalCash = () => {
       
       // Update local state immediately
       setTransactions(prev => prev.filter(t => t.id !== id));
+      pushActionNotification({
+        id: `tu-del:${id}:${Date.now()}`,
+        dedupeKey: `tu-del:${id}`,
+        type: 'cash_deleted',
+        title: '🗑️ Kas TU Dihapus',
+        message: `${currentUser.nama.split(',')[0]} menghapus transaksi "${(trx.keterangan || '').substring(0, 35)}" dari Kas Operasional TU.`,
+        path: '/operational-cash',
+        iconKey: 'trash',
+        color: 'var(--accent-rose)',
+        bg: 'rgba(244, 63, 94, 0.1)'
+      });
       // Refresh for consistency
       setTimeout(fetchData, 2000);
     } catch (error) {
@@ -234,6 +246,20 @@ const OperationalCash = () => {
         nominal: '' 
       });
       
+      const isEditing = Boolean(editingTrx);
+      const nominalDisplay = Number(formData.nominal).toLocaleString('id-ID');
+      pushActionNotification({
+        id: `tu:${id}:${Date.now()}`,
+        dedupeKey: isEditing ? `tu-upd:${id}` : `tu-new:${id}`,
+        type: isEditing ? 'cash_updated' : 'cash_created',
+        title: isEditing ? '✏️ Kas TU Diperbarui' : '💰 Kas TU Baru',
+        message: `${currentUser.nama.split(',')[0]} ${isEditing ? 'memperbarui' : 'mencatat'} ${formData.type === 'debit' ? 'pemasukan' : 'pengeluaran'}: "${(formData.keterangan || '').substring(0, 35)}" - Rp ${nominalDisplay}.`,
+        path: '/operational-cash',
+        iconKey: isEditing ? 'edit' : 'message',
+        color: isEditing ? 'var(--accent-blue)' : 'var(--accent-amber)',
+        bg: isEditing ? 'var(--accent-blue-ghost)' : 'rgba(245, 158, 11, 0.1)'
+      });
+
       setTimeout(fetchData, 1500);
       alert("Terima kasih! Data kas operasional berhasil diperbarui.");
     } catch (error) {

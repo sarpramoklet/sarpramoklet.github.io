@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Wallet, TrendingUp, TrendingDown, Plus, LayoutDashboard, History, PiggyBank, Edit3, Trash2, X, Save, Search, Filter, Loader2 } from 'lucide-react';
+import { getCurrentUser } from '../data/organization';
+import { pushActionNotification } from '../utils/actionNotifications';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 
@@ -51,6 +53,7 @@ const calculateAcBalance = (rows: CashRow[]) => {
 };
 
 const Finance = () => {
+  const currentUser = getCurrentUser();
   const [activeTab, setActiveTab] = useState('history'); // Default to history as requested for better view
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -192,6 +195,17 @@ const Finance = () => {
       });
 
       setTransactions(prev => prev.filter(t => t.id !== id));
+      pushActionNotification({
+        id: `fin-del:${id}:${Date.now()}`,
+        dedupeKey: `fin-del:${id}`,
+        type: 'finance_deleted',
+        title: '🗑️ Transaksi Kas Dihapus',
+        message: `${currentUser.nama.split(',')[0]} menghapus transaksi "${(trx.title || trx.keterangan || '').substring(0, 35)}" dari Kas Sarpra.`,
+        path: '/finance',
+        iconKey: 'trash',
+        color: 'var(--accent-rose)',
+        bg: 'rgba(244, 63, 94, 0.1)'
+      });
       setTimeout(fetchTransactions, 2000);
     } catch (error) {
       console.error("Error deleting finance record:", error);
@@ -232,6 +246,19 @@ const Finance = () => {
       } else {
         setTransactions(prev => [...prev, localTrx].sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime()));
       }
+
+      const isEditing = Boolean(editingTrx);
+      pushActionNotification({
+        id: `fin:${id}:${Date.now()}`,
+        dedupeKey: isEditing ? `fin-upd:${id}` : `fin-new:${id}`,
+        type: isEditing ? 'finance_updated' : 'finance_created',
+        title: isEditing ? '✏️ Transaksi Kas Diperbarui' : '💰 Transaksi Kas Baru',
+        message: `${currentUser.nama.split(',')[0]} ${isEditing ? 'memperbarui' : 'menambahkan'} ${formData.type === 'income' ? 'pemasukan' : 'pengeluaran'}: "${(formData.title || '').substring(0, 35)}" - Rp ${Number(formData.amount).toLocaleString('id-ID')}.`,
+        path: '/finance',
+        iconKey: isEditing ? 'edit' : 'message',
+        color: isEditing ? 'var(--accent-blue)' : 'var(--accent-emerald)',
+        bg: isEditing ? 'var(--accent-blue-ghost)' : 'rgba(16, 185, 129, 0.1)'
+      });
 
       setShowModal(false);
     } catch (error) {

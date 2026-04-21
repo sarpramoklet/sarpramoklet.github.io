@@ -108,7 +108,7 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
     const merged = mergeNotifications(remoteNotifications, hydrateActionNotifications());
     const todayStart = startOfToday().getTime();
 
-    setNotifications(merged.slice(0, 10));
+    setNotifications(merged.slice(0, 15));
     setUnreadCount(merged.filter((item) => item.timestamp > todayStart).length);
   };
 

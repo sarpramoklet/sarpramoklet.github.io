@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, LabelList } from 'recharts';
 import { Plus, ReceiptText, FileText, BarChart3, RefreshCw, Loader2, Edit3, Trash2, X, Upload } from 'lucide-react';
+import { getCurrentUser } from '../data/organization';
+import { pushActionNotification } from '../utils/actionNotifications';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 const UTILITIES_SHEET = 'Tagihan_Utilitas';
@@ -273,6 +275,7 @@ const createEmptyForm = (bulan: string): UtilityFormState => ({
 });
 
 const Utilities = () => {
+  const currentUser = getCurrentUser();
   const [activeTab, setActiveTab] = useState<'rekap' | 'grafik'>('rekap');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRow, setEditingRow] = useState<UtilityBillRow | null>(null);
@@ -461,6 +464,18 @@ const Utilities = () => {
     setSaving(true);
     try {
       await persistUtility(payload);
+      const isEditing = Boolean(editingRow);
+      pushActionNotification({
+        id: `utl:${payload.id}:${Date.now()}`,
+        dedupeKey: isEditing ? `utl-upd:${payload.id}` : `utl-new:${payload.id}`,
+        type: isEditing ? 'utility_updated' : 'utility_created',
+        title: isEditing ? `✏️ Tagihan ${form.jenis} Diperbarui` : `⚡ Tagihan ${form.jenis} Baru`,
+        message: `${currentUser.nama.split(',')[0]} ${isEditing ? 'memperbarui' : 'menambahkan'} tagihan ${toCustomerDisplay(form.jenis, form.pelanggan)} bulan ${monthLongLabel(form.bulan)} - ${formatRupiah(nominal)}.`,
+        path: '/utilities',
+        iconKey: isEditing ? 'edit' : 'message',
+        color: form.jenis === 'PLN' ? 'var(--accent-amber)' : 'var(--accent-cyan)',
+        bg: form.jenis === 'PLN' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(6, 182, 212, 0.1)'
+      });
       closeModal();
       setTimeout(fetchRows, 1200);
     } catch (error) {
@@ -487,6 +502,17 @@ const Utilities = () => {
           id: row.id,
           ID: row.id,
         }),
+      });
+      pushActionNotification({
+        id: `utl-del:${row.id}:${Date.now()}`,
+        dedupeKey: `utl-del:${row.id}`,
+        type: 'utility_deleted',
+        title: `🗑️ Tagihan ${row.jenis} Dihapus`,
+        message: `${currentUser.nama.split(',')[0]} menghapus tagihan ${toCustomerDisplay(row.jenis, row.pelanggan)} bulan ${monthLongLabel(row.bulan)}.`,
+        path: '/utilities',
+        iconKey: 'trash',
+        color: 'var(--accent-rose)',
+        bg: 'rgba(244, 63, 94, 0.1)'
       });
       setTimeout(fetchRows, 1200);
     } catch (error) {

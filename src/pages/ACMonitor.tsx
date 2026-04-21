@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Wind, Search, Edit3, Save, Loader2, X, RefreshCw, AlertTriangle, CheckCircle, CloudUpload, History as HistoryIcon, Plus } from 'lucide-react';
 import { getCurrentUser, ROLES } from '../data/organization';
+import { pushActionNotification } from '../utils/actionNotifications';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 const SHEET_NAME = "Monitor_AC";
@@ -254,6 +255,17 @@ const ACMonitor = () => {
         return item;
       }));
       setEditingId(null);
+      pushActionNotification({
+        id: `acmon:${editingId}:${Date.now()}`,
+        dedupeKey: `acmon-upd:${editingId}`,
+        type: 'ac_monitor_updated',
+        title: `❄️ AC Ruang ${formData.ruang} Diperbarui`,
+        message: `${currentUser.nama.split(',')[0]} memperbarui data AC Ruang ${formData.ruang}: ${formData.status} - ${formData.kondisi} (${formData.merk}, ${formData.pk}).`,
+        path: '/ac-monitor',
+        iconKey: 'edit',
+        color: formData.kondisi === 'Baik' ? 'var(--accent-emerald)' : 'var(--accent-rose)',
+        bg: formData.kondisi === 'Baik' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(244, 63, 94, 0.1)'
+      });
       setTimeout(fetchData, 3000);
       alert("Terima kasih! Data AC berhasil diperbarui.");
     } catch (error) {
@@ -304,6 +316,17 @@ const ACMonitor = () => {
       setHistoryList(prev => [savedEntry, ...prev]);
       setIsAddingHistory(false);
       setFormHistory({});
+      pushActionNotification({
+        id: `achist:${savedEntry.id}:${Date.now()}`,
+        dedupeKey: `achist-new:${savedEntry.id}`,
+        type: 'ac_history_created',
+        title: `🛠️ Riwayat AC Ruang ${historyRoom}`,
+        message: `${currentUser.nama.split(',')[0]} menambahkan riwayat ${savedEntry.jenis} AC Ruang ${historyRoom}: "${(savedEntry.keterangan || '').substring(0, 40)}".`,
+        path: '/ac-monitor',
+        iconKey: 'message',
+        color: 'var(--accent-blue)',
+        bg: 'var(--accent-blue-ghost)'
+      });
       setTimeout(fetchData, 3000);
       alert("Terima kasih! Riwayat AC berhasil disimpan.");
     } catch (err) {
@@ -363,6 +386,17 @@ const ACMonitor = () => {
     }
 
     setIsSyncingAll(false);
+    pushActionNotification({
+      id: `acsync:${Date.now()}`,
+      dedupeKey: `acsync:${new Date().toISOString().split('T')[0]}`,
+      type: 'ac_sync_all',
+      title: '☁️ Sinkronisasi AC ke Database',
+      message: `${currentUser.nama.split(',')[0]} berhasil menyinkronkan ${successCount} data ruangan AC ke database.`,
+      path: '/ac-monitor',
+      iconKey: 'upload',
+      color: 'var(--accent-emerald)',
+      bg: 'rgba(16, 185, 129, 0.1)'
+    });
     alert(`Terima kasih! Berhasil sinkronisasi ${successCount} data ruangan ke database!`);
     fetchData();
   };

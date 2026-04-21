@@ -8,6 +8,7 @@ import {
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell, LabelList } from 'recharts';
 import { getCurrentUser, ROLES } from '../data/organization';
 import { DEFAULT_CAPEX_PROJECTS, encodeCapexProjectNama, getNextCapexProjectId, mergeCapexProjects, type CapexProjectRecord } from '../data/capexProjects';
+import { pushActionNotification } from '../utils/actionNotifications';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 const SHEET_REALISASI = 'Capex_Realisasi';
@@ -316,6 +317,18 @@ const CapexBudget = () => {
         setProjects((prev) => [...prev, savedProject]);
       }
       handleCloseProjectFormModal();
+      const isEditingProject = Boolean(baseProject);
+      pushActionNotification({
+        id: `capex-prj:${savedProject.id}:${Date.now()}`,
+        dedupeKey: isEditingProject ? `capex-prj-upd:${savedProject.id}` : `capex-prj-new:${savedProject.id}`,
+        type: isEditingProject ? 'capex_project_updated' : 'capex_project_created',
+        title: isEditingProject ? `✏️ Proyek CAPEX Diperbarui` : `🛠️ Proyek CAPEX Baru`,
+        message: `${currentUser.nama.split(',')[0]} ${isEditingProject ? 'memperbarui' : 'menambahkan'} proyek: "${savedProject.nama.substring(0, 40)}".`,
+        path: '/capex',
+        iconKey: isEditingProject ? 'edit' : 'message',
+        color: 'var(--accent-blue)',
+        bg: 'var(--accent-blue-ghost)'
+      });
       setTimeout(fetchProjects, 3000);
       alert("Terima kasih! Data pekerjaan CAPEX berhasil diperbarui.");
     } catch {
@@ -366,6 +379,17 @@ const CapexBudget = () => {
         )
       );
       handleCloseProjectProgressModal();
+      pushActionNotification({
+        id: `capex-prog:${editingProject.id}:${Date.now()}`,
+        dedupeKey: `capex-prog:${editingProject.id}`,
+        type: 'capex_progress_updated',
+        title: `📊 Progres CAPEX: ${projectProgress}%`,
+        message: `${currentUser.nama.split(',')[0]} memperbarui progres proyek "${editingProject.nama.substring(0, 35)}" menjadi ${projectProgress}%.`,
+        path: '/capex',
+        iconKey: 'edit',
+        color: projectProgress >= 100 ? 'var(--accent-emerald)' : 'var(--accent-blue)',
+        bg: projectProgress >= 100 ? 'rgba(16, 185, 129, 0.1)' : 'var(--accent-blue-ghost)'
+      });
       setTimeout(fetchProjects, 3000);
       alert("Terima kasih! Data progres CAPEX berhasil diperbarui.");
     } catch {
@@ -431,6 +455,18 @@ const CapexBudget = () => {
       }
       setShowModal(false);
       setEditingEntry(null);
+      const budget = BUDGET_MASTER.find(b => b.akun === formData.akun);
+      pushActionNotification({
+        id: `capex-real:${savedEntry.id}:${Date.now()}`,
+        dedupeKey: isEdit ? `capex-real-upd:${savedEntry.id}` : `capex-real-new:${savedEntry.id}`,
+        type: isEdit ? 'capex_realisasi_updated' : 'capex_realisasi_created',
+        title: isEdit ? `✏️ Realisasi CAPEX Diperbarui` : `💸 Realisasi CAPEX Baru`,
+        message: `${currentUser.nama.split(',')[0]} ${isEdit ? 'memperbarui' : 'mencatat'} realisasi ${budget?.deskripsi || formData.akun}: "${formData.deskripsiKegiatan.substring(0, 30)}" - ${fmtIDR(Number(formData.jumlah))}.`,
+        path: '/capex',
+        iconKey: isEdit ? 'edit' : 'message',
+        color: 'var(--accent-emerald)',
+        bg: 'rgba(16, 185, 129, 0.1)'
+      });
       setTimeout(fetchData, 3000);
       alert("Terima kasih! Data realisasi CAPEX berhasil disimpan.");
     } catch {
@@ -457,6 +493,17 @@ const CapexBudget = () => {
         }),
       });
       setEntries(prev => prev.filter(e => e.id !== entry.id));
+      pushActionNotification({
+        id: `capex-del:${entry.id}:${Date.now()}`,
+        dedupeKey: `capex-del:${entry.id}`,
+        type: 'capex_realisasi_deleted',
+        title: '🗑️ Realisasi CAPEX Dihapus',
+        message: `${currentUser.nama.split(',')[0]} menghapus realisasi "${entry.deskripsiKegiatan.substring(0, 35)}" sebesar ${fmtIDR(entry.jumlah)}.`,
+        path: '/capex',
+        iconKey: 'trash',
+        color: 'var(--accent-rose)',
+        bg: 'rgba(244, 63, 94, 0.1)'
+      });
       setTimeout(fetchData, 3000);
     } catch {
       alert('Gagal menghapus. Coba lagi.');

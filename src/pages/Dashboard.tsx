@@ -8,6 +8,7 @@ import { getUtilityChartData } from '../data/utilities';
 import { useProfileThumbByEmail } from '../hooks/useProfileThumbByEmail';
 import UserAvatar from '../components/UserAvatar';
 import { getMotivationForLogin, getPublicEducationalMotivation } from '../utils/motivation';
+import { pushActionNotification } from '../utils/actionNotifications';
 import {
   buildMonitorIssueSummary,
   CLASSROOM_LOCATION_OPTIONS,
@@ -968,6 +969,17 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       });
 
       setPiketNotes(prev => prev.filter(n => n.id !== id));
+      pushActionNotification({
+        id: `piket-del:${id}:${Date.now()}`,
+        dedupeKey: `piket-del:${id}`,
+        type: 'piket_deleted',
+        title: '🗑️ Catatan Piket Dihapus',
+        message: `${currentUser.nama.split(',')[0]} menghapus catatan piket dari "${(keterangan || '').substring(0, 35)}".`,
+        path: '/duty-notes',
+        iconKey: 'trash',
+        color: 'var(--accent-rose)',
+        bg: 'rgba(244, 63, 94, 0.1)'
+      });
       // Refresh after a delay
       setTimeout(() => {
         // Simple manual refresh of state
