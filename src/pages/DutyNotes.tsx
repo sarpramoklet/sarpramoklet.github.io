@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Search, Loader2, X, RefreshCw, Edit3, Trash2, Heart } from 'lucide-react';
 import { USERS, getCurrentUser } from '../data/organization';
 import { useProfileThumbByEmail } from '../hooks/useProfileThumbByEmail';
+import { pushActionNotification } from '../utils/actionNotifications';
 import UserAvatar from '../components/UserAvatar';
 
 // URL Apps Script DB_Sarpramoklet (URL Terbaru)
@@ -30,6 +31,12 @@ const resolveUserFromDutyNote = (note: any) => {
     const fullName = user.nama.trim().toLowerCase();
     return fullName === senderName || fullName.includes(senderName) || senderName.includes(fullName);
   });
+};
+
+const truncateText = (value: string, maxLength = 48) => {
+  const text = String(value || '').trim();
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength).trim()}...`;
 };
 
 const DutyNotes = () => {
@@ -162,6 +169,17 @@ const DutyNotes = () => {
       
       // Update local state immediately
       setNotes(prev => prev.filter(n => n.id !== id));
+      pushActionNotification({
+        id: `delete:${id}:${Date.now()}`,
+        dedupeKey: `delete:${id}`,
+        type: 'note_deleted',
+        title: 'Catatan Dihapus',
+        message: `Catatan dari ${keterangan || 'petugas'} berhasil dihapus dari buku piket.`,
+        path: '/duty-notes',
+        iconKey: 'trash',
+        color: 'var(--accent-rose)',
+        bg: 'rgba(244, 63, 94, 0.1)'
+      });
       setTimeout(fetchNotes, 2000);
     } catch (error) {
       console.error("Delete failed:", error);
@@ -178,14 +196,17 @@ const DutyNotes = () => {
     const sender = USERS.find(u => u.id === formData.senderId) || currentUser;
     const senderName = sender?.nama || currentUser.nama;
     const senderEmail = sender?.email || currentUser.email || '';
+    const recordId = editingNote ? editingNote.id : `NOTE-${Math.floor(1000 + Math.random() * 9000)}`;
+    const isEditing = Boolean(editingNote);
+    const submittedAmount = formData.amount.trim();
     
     const payload = {
       action: 'FINANCE_RECORD',
       sheetName: 'Piket',
       sheet: 'Piket',
       // Send both cases for record ID
-      id: editingNote ? editingNote.id : `NOTE-${Math.floor(1000 + Math.random() * 9000)}`,
-      ID: editingNote ? editingNote.id : `NOTE-${Math.floor(1000 + Math.random() * 9000)}`,
+      id: recordId,
+      ID: recordId,
       
       // Simpan ISO datetime lengkap agar jam ikut tersimpan
       tanggal: editingNote ? editingNote.tanggal : new Date().toISOString(),
@@ -225,6 +246,20 @@ const DutyNotes = () => {
         headers: { "Content-Type": "text/plain" },
         body: JSON.stringify(payload)
       });
+
+      pushActionNotification({
+        id: isEditing ? `update:${recordId}:${Date.now()}` : recordId,
+        dedupeKey: isEditing ? `update:${recordId}` : `new_note:${recordId}`,
+        type: isEditing ? 'note_updated' : 'new_note',
+        title: isEditing ? 'Perubahan Catatan Disimpan' : 'Catatan Baru Tersimpan',
+        message: isEditing
+          ? `${senderName} memperbarui catatan: "${truncateText(submittedAmount, 42)}"`
+          : `${senderName} menambahkan catatan: "${truncateText(submittedAmount, 42)}"`,
+        path: '/duty-notes',
+        iconKey: isEditing ? 'edit' : formData.type === 'Urgent' ? 'alert' : 'message',
+        color: isEditing ? 'var(--accent-blue)' : formData.type === 'Urgent' ? 'var(--accent-rose)' : 'var(--accent-blue)',
+        bg: isEditing ? 'var(--accent-blue-ghost)' : formData.type === 'Urgent' ? 'rgba(244, 63, 94, 0.1)' : 'var(--accent-blue-ghost)'
+      });
       
       setIsModalOpen(false);
       setEditingNote(null);
@@ -256,7 +291,9 @@ const DutyNotes = () => {
       }
     }
 
-    if (currentLikes.includes(userIdentifier)) {
+    const alreadyLiked = currentLikes.includes(userIdentifier);
+
+    if (alreadyLiked) {
       currentLikes = currentLikes.filter((e: string) => e !== userIdentifier);
     } else {
       currentLikes.push(userIdentifier);
@@ -302,6 +339,20 @@ const DutyNotes = () => {
         redirect: "follow",
         headers: { "Content-Type": "text/plain" },
         body: JSON.stringify(payload)
+      });
+
+      pushActionNotification({
+        id: `likes:${note.id}:${Date.now()}`,
+        dedupeKey: `likes:${note.id}`,
+        type: 'likes',
+        title: alreadyLiked ? 'Reaksi Dibatalkan' : 'Reaksi Tercatat',
+        message: alreadyLiked
+          ? `Anda membatalkan suka pada catatan ${note.keterangan || 'petugas'}.`
+          : `Anda menyukai catatan ${note.keterangan || 'petugas'}.`,
+        path: '/duty-notes',
+        iconKey: 'heart',
+        color: 'var(--accent-rose)',
+        bg: 'rgba(244, 63, 94, 0.1)'
       });
     } catch (error) {
       console.error("Like failed:", error);

@@ -1,13 +1,55 @@
 import { useState, useEffect, useRef } from 'react';
-import { Bell, MessageSquare, Heart, Clock, AlertCircle, Upload } from 'lucide-react';
+import { Bell, MessageSquare, Heart, Clock, AlertCircle, Upload, Edit3, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { USERS } from '../data/organization';
 import { useProfileThumbByEmail } from '../hooks/useProfileThumbByEmail';
 import { normalizeClassroomMonitorRows, normalizeClassroomDate } from '../utils/classroomMonitor';
+import {
+  ACTION_NOTIFICATIONS_EVENT,
+  type ActionNotificationIconKey,
+  getActionNotifications,
+} from '../utils/actionNotifications';
 import UserAvatar from './UserAvatar';
 
 const FINANCE_API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 const CLASSROOM_MONITOR_SHEET = 'Pantauan_Kelas';
+
+const startOfToday = () => {
+  const next = new Date();
+  next.setHours(0, 0, 0, 0);
+  return next;
+};
+
+const iconByKey: Record<ActionNotificationIconKey, any> = {
+  message: MessageSquare,
+  alert: AlertCircle,
+  heart: Heart,
+  edit: Edit3,
+  trash: Trash2,
+  upload: Upload,
+};
+
+const hydrateActionNotifications = () =>
+  getActionNotifications().map((item) => ({
+    ...item,
+    date: new Date(item.date || item.timestamp),
+    icon: item.iconKey ? iconByKey[item.iconKey] || Bell : Bell,
+  }));
+
+const mergeNotifications = (remoteNotifications: any[], actionNotifications: any[]) => {
+  const merged = new Map<string, any>();
+
+  [...remoteNotifications, ...actionNotifications].forEach((item) => {
+    const key = item.dedupeKey || item.id;
+    const existing = merged.get(key);
+
+    if (!existing || Number(item.timestamp || 0) >= Number(existing.timestamp || 0)) {
+      merged.set(key, item);
+    }
+  });
+
+  return Array.from(merged.values()).sort((left, right) => right.timestamp - left.timestamp);
+};
 
 const resolveUserFromClassroomUploader = (identifier: string, currentUser: any) => {
   const normalizedIdentifier = String(identifier || '').trim().toLowerCase();
@@ -46,6 +88,7 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
     date: '',
     totalRooms: 0,
   });
+  const remoteNotificationsRef = useRef<any[]>([]);
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const profileThumbByEmail = useProfileThumbByEmail();
@@ -59,6 +102,15 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const applyNotifications = (remoteNotifications: any[]) => {
+    remoteNotificationsRef.current = remoteNotifications;
+    const merged = mergeNotifications(remoteNotifications, hydrateActionNotifications());
+    const todayStart = startOfToday().getTime();
+
+    setNotifications(merged.slice(0, 10));
+    setUnreadCount(merged.filter((item) => item.timestamp > todayStart).length);
+  };
 
   const fetchNotifs = async () => {
     setLoading(true);
@@ -74,15 +126,14 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
         let notifs: any[] = [];
         let hasFilledToday = false;
         const now = new Date();
-        const startOfToday = new Date();
-        startOfToday.setHours(0, 0, 0, 0);
+        const todayStart = startOfToday();
         data.forEach((item: any) => {
           if (!item.id || !item.amount) return;
           const date = new Date(item.tanggal || item.Tanggal);
           if (isNaN(date.getTime())) return;
           
           if ((item.keterangan || '').trim().toLowerCase() === (currentUser?.nama || '').trim().toLowerCase()) {
-            if (date.getTime() >= startOfToday.getTime()) {
+            if (date.getTime() >= todayStart.getTime()) {
               hasFilledToday = true;
             }
           }
@@ -91,6 +142,7 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
           
           notifs.push({
             id: item.id || item.ID,
+            dedupeKey: `new_note:${item.id || item.ID}`,
             type: 'new_note',
             title: isUrgent ? `🚨 Temuan Penting / Urgent!` : `Pesan ${item.kategori || 'Piket'} Baru`,
             message: `${item.keterangan || 'Petugas'} menambahkan catatan: "${String(item.amount).substring(0, 35)}..."`,
@@ -113,7 +165,7 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
           if (likes.length > 0) {
              const isOwnNote = (item.keterangan || '').trim().toLowerCase() === (currentUser?.nama || '').trim().toLowerCase();
              
-             if (isOwnNote && date.getTime() > startOfToday.getTime()) {
+             if (isOwnNote && date.getTime() > todayStart.getTime()) {
                hasFilledToday = true;
              }
              
@@ -122,6 +174,7 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
              
              notifs.push({
                id: `${item.id || item.ID}-likes`,
+               dedupeKey: `likes:${item.id || item.ID}`,
                type: 'likes',
                title: likedByPimpinan ? '✨ Menarik Perhatian Pimpinan' : '❤️ Reaksi Baru',
                message: isOwnNote 
@@ -189,6 +242,7 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
 
             notifs.push({
               id: `classroom-upload-${latestClassroomDate}`,
+              dedupeKey: `classroom-upload:${latestClassroomDate}`,
               type: 'classroom_upload',
               title: 'Monitor Kelas Sudah Diupload',
               message:
@@ -223,6 +277,7 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
         if (isCurrentUserOnDuty && !hasFilledToday && now.getHours() >= 15) {
           notifs.push({
             id: 'reminder-piket-15',
+            dedupeKey: 'reminder:piket-15',
             type: 'reminder',
             title: '❗ Reminder Piket',
             message: 'Saat ini sudah lebih dari jam 15.00. Anda bertugas piket hari ini, dimohon segera mengisi catatan piket ya!',
@@ -235,21 +290,15 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
           });
         }
 
-        notifs.sort((a, b) => b.timestamp - a.timestamp);
-        
-        let unread = 0;
-        
-        notifs.forEach(n => {
-           if (n.timestamp > startOfToday.getTime()) unread++;
-        });
-        
-        setNotifications(notifs.slice(0, 10)); // Take top 10
-        setUnreadCount(unread);
+        applyNotifications(notifs);
+      } else {
+        applyNotifications([]);
       }
     } catch (e) {
       console.error(e);
       setClassroomUploaders([]);
       setClassroomUploadMeta({ date: '', totalRooms: 0 });
+      applyNotifications([]);
     } finally {
       setLoading(false);
     }
@@ -261,6 +310,17 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
       const interval = setInterval(fetchNotifs, 120000); // 2 mins refresh
       return () => clearInterval(interval);
     }
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser || typeof window === 'undefined') return;
+
+    const handleActionNotificationsChanged = () => {
+      applyNotifications(remoteNotificationsRef.current);
+    };
+
+    window.addEventListener(ACTION_NOTIFICATIONS_EVENT, handleActionNotificationsChanged);
+    return () => window.removeEventListener(ACTION_NOTIFICATIONS_EVENT, handleActionNotificationsChanged);
   }, [currentUser]);
 
   const handleOpen = () => {
