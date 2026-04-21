@@ -311,6 +311,40 @@ const resolveDutyNoteUser = (note: any) => {
   });
 };
 
+const wrapChartLabel = (value: string, maxCharsPerLine = 28) => {
+  const words = String(value || '').trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return ['-'];
+
+  const lines: string[] = [];
+  let currentLine = '';
+
+  words.forEach((word) => {
+    if (!currentLine) {
+      currentLine = word;
+      return;
+    }
+
+    const candidate = `${currentLine} ${word}`;
+    if (candidate.length <= maxCharsPerLine) {
+      currentLine = candidate;
+      return;
+    }
+
+    lines.push(currentLine);
+    currentLine = word;
+  });
+
+  if (currentLine) lines.push(currentLine);
+  return lines;
+};
+
+const getCapexProgressColor = (progress: number) => {
+  if (progress >= 100) return '#10b981';
+  if (progress >= 75) return '#22c55e';
+  if (progress >= 50) return '#3b82f6';
+  return '#f59e0b';
+};
+
 const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => {
   const currentUser = getCurrentUser();
   const isPimpinan = currentUser.roleAplikasi === ROLES.PIMPINAN;
@@ -367,8 +401,30 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
     localStorage.setItem('publicVisitorSeed', generated);
     return generated;
   });
-  const sortedCapexProjects = capexProjects.slice().sort((a, b) => b.progress - a.progress);
+  const sortedCapexProjects = capexProjects
+    .slice()
+    .sort((a, b) => b.progress - a.progress)
+    .map((p, i) => {
+      const numberedNama = `${i + 1}. ${p.nama}`;
+      const wrappedNama = wrapChartLabel(numberedNama, 30);
+
+      return {
+        ...p,
+        numberedNama,
+        wrappedNama,
+      };
+    });
   const profileThumbByEmail = useProfileThumbByEmail();
+  const capexLabelLineMap = new Map(sortedCapexProjects.map((project) => [project.numberedNama, project.wrappedNama]));
+  const capexAverageProgress = sortedCapexProjects.length > 0
+    ? sortedCapexProjects.reduce((sum, project) => sum + (Number(project.progress) || 0), 0) / sortedCapexProjects.length
+    : 0;
+  const capexCompletedProjects = sortedCapexProjects.filter((project) => (Number(project.progress) || 0) >= 100).length;
+  const capexPriorityProjects = sortedCapexProjects.filter((project) => (Number(project.progress) || 0) < 50).length;
+  const capexChartHeight = Math.max(
+    360,
+    sortedCapexProjects.reduce((sum, project) => sum + 34 + ((project.wrappedNama?.length || 1) - 1) * 18, 0)
+  );
 
   const [motivationIndex, setMotivationIndex] = useState(0);
   useEffect(() => {
@@ -1986,35 +2042,153 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
 
       {/* DASHBOARD CAPEX PROJECTS SECTION */}
       <div className="glass-panel delay-200" style={{ marginBottom: '2rem', background: 'linear-gradient(135deg, rgba(245,158,11,0.03), transparent)', borderLeft: '4px solid var(--accent-amber)' }}>
-        <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
           <div>
             <h3 style={{ fontSize: '1.05rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Briefcase size={18} color="var(--accent-amber)" /> Progres Pekerjaan & Pengadaan CAPEX
+              <Briefcase size={18} color="var(--accent-amber)" /> 5. Progres Pekerjaan & Pengadaan CAPEX
             </h3>
             <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Pemantauan target penyelesaian peremajaan dan pembangunan 2026</p>
           </div>
-          <a href="#/capex" className="btn btn-outline" style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}>Monitor CAPEX &rarr;</a>
+          {isLoggedIn ? (
+            <a href="#/capex" className="btn btn-outline" style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}>Monitor CAPEX &rarr;</a>
+          ) : (
+            <span className="badge badge-warning" style={{ textTransform: 'none', letterSpacing: 0 }}>
+              Ringkasan publik aktif
+            </span>
+          )}
         </div>
 
         <div style={{ padding: '1.25rem' }}>
           {capexLoading ? (
             <div style={{ padding: '3rem', display: 'flex', justifyContent: 'center' }}><Loader2 className="animate-spin" color="var(--accent-amber)" /></div>
-          ) : capexProjects.length > 0 ? (
-            <div style={{ width: '100%', height: '280px' }}>
-              <ResponsiveContainer>
-                <BarChart data={sortedCapexProjects} layout="vertical" margin={{ left: 10, right: 50 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" horizontal={false} />
-                  <XAxis type="number" domain={[0, 100]} stroke="var(--text-muted)" fontSize={11} tickFormatter={v => `${v}%`} />
-                  <YAxis dataKey="nama" type="category" width={180} stroke="var(--text-muted)" fontSize={10} tickFormatter={(val) => val.length > 25 ? val.substring(0, 25) + '...' : val} />
-                  <RechartsTooltip formatter={(v: any) => [`${v}%`, 'Progres']} contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-focus)', borderRadius: '8px' }} />
-                  <Bar dataKey="progress" radius={[0, 4, 4, 0]} barSize={20}>
-                    {sortedCapexProjects.map((ent, idx) => (
-                      <Cell key={`cell-${idx}`} fill={ent.progress >= 100 ? '#10b981' : ent.progress >= 50 ? '#3b82f6' : '#f59e0b'} />
+          ) : sortedCapexProjects.length > 0 ? (
+            <div className="dashboard-grid" style={{ marginBottom: 0, alignItems: 'stretch' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Rerata progres proyek</div>
+                  <div style={{ marginTop: '0.35rem', fontSize: '1.7rem', fontWeight: 800, color: 'var(--accent-amber)' }}>
+                    {capexAverageProgress.toFixed(1)}%
+                  </div>
+                  <div style={{ marginTop: '0.2rem', fontSize: '0.76rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                    Grafik ini tampil untuk pengguna login maupun publik agar progres pekerjaan strategis tetap terbaca dari dashboard utama.
+                  </div>
+                </div>
+
+                <div className="stats-grid" style={{ marginBottom: 0, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
+                  <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.18)' }}>
+                    <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Selesai</div>
+                    <div style={{ marginTop: '0.3rem', fontSize: '1.45rem', fontWeight: 800, color: 'var(--accent-emerald)' }}>
+                      {capexCompletedProjects}
+                    </div>
+                    <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>Proyek sudah 100%.</div>
+                  </div>
+
+                  <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.18)' }}>
+                    <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Prioritas</div>
+                    <div style={{ marginTop: '0.3rem', fontSize: '1.45rem', fontWeight: 800, color: 'var(--accent-amber)' }}>
+                      {capexPriorityProjects}
+                    </div>
+                    <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>Proyek di bawah 50%.</div>
+                  </div>
+                </div>
+
+                <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.75rem' }}>
+                    Daftar pekerjaan bernomor
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
+                    {sortedCapexProjects.slice(0, 5).map((project) => (
+                      <div
+                        key={project.id || project.numberedNama}
+                        style={{
+                          padding: '0.8rem 0.9rem',
+                          borderRadius: '12px',
+                          background: 'rgba(255,255,255,0.03)',
+                          border: '1px solid var(--border-subtle)',
+                        }}
+                      >
+                        <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                          {project.numberedNama}
+                        </div>
+                        <div style={{ marginTop: '0.35rem', display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                            Unit: {project.unit || project.Unit || 'Sarpras'}
+                          </span>
+                          <span style={{ fontSize: '0.78rem', fontWeight: 800, color: getCapexProgressColor(Number(project.progress) || 0) }}>
+                            {Math.round(Number(project.progress) || 0)}%
+                          </span>
+                        </div>
+                      </div>
                     ))}
-                    <LabelList dataKey="progress" position="right" formatter={(v: any) => `${Math.round(Number(v) || 0)}%`} style={{ fill: 'var(--text-primary)', fontSize: 11, fontWeight: 700 }} />
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+
+              <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+                  <div>
+                    <div style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                      Grafik progres pekerjaan CAPEX
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '0.15rem', lineHeight: 1.5 }}>
+                      Judul proyek dibuat bernomor dan dibungkus ke beberapa baris agar tidak terpotong.
+                    </div>
+                  </div>
+                  <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                    {sortedCapexProjects.length} proyek
+                  </span>
+                </div>
+
+                <div style={{ width: '100%', height: `${capexChartHeight}px` }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={sortedCapexProjects} layout="vertical" margin={{ left: 20, right: 42, top: 12, bottom: 8 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" horizontal={false} />
+                      <XAxis type="number" domain={[0, 100]} stroke="var(--text-muted)" fontSize={11} tickFormatter={(value) => `${value}%`} />
+                      <YAxis
+                        dataKey="numberedNama"
+                        type="category"
+                        width={320}
+                        stroke="var(--text-muted)"
+                        tickLine={false}
+                        axisLine={false}
+                        interval={0}
+                        tick={({ x, y, payload }: any) => {
+                          const lines = capexLabelLineMap.get(payload.value) || [String(payload.value || '-')];
+                          const firstLineOffset = ((lines.length - 1) * 14) / 2;
+
+                          return (
+                            <g transform={`translate(${x},${y})`}>
+                              <text x={-8} y={0} textAnchor="end" fill="var(--text-secondary)" fontSize={11}>
+                                {lines.map((line: string, index: number) => (
+                                  <tspan key={`${payload.value}-${index}`} x={-8} dy={index === 0 ? -firstLineOffset : 14}>
+                                    {line}
+                                  </tspan>
+                                ))}
+                              </text>
+                            </g>
+                          );
+                        }}
+                      />
+                      <RechartsTooltip
+                        formatter={(value: any) => [`${Math.round(Number(value) || 0)}%`, 'Progres']}
+                        labelFormatter={(label) => String(label || '')}
+                        contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-focus)', borderRadius: '8px', fontSize: '0.8rem' }}
+                      />
+                      <Bar dataKey="progress" radius={[0, 6, 6, 0]} barSize={24}>
+                        {sortedCapexProjects.map((project, idx) => (
+                          <Cell key={`cell-${idx}`} fill={getCapexProgressColor(Number(project.progress) || 0)} />
+                        ))}
+                        <LabelList
+                          dataKey="progress"
+                          position="right"
+                          formatter={(value: any) => `${Math.round(Number(value) || 0)}%`}
+                          style={{ fill: 'var(--text-primary)', fontSize: 11, fontWeight: 700 }}
+                        />
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
             </div>
           ) : (
             <div style={{ padding: '1rem', color: 'var(--text-secondary)' }}>Data proyek belum tersedia.</div>
