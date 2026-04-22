@@ -17,6 +17,8 @@ import {
   compareClassroomRooms,
   getShortClassroomLabel,
   normalizeClassroomMonitorRows,
+  getClassroomRoomDetails,
+  getEffectiveRoomDetails,
 } from '../utils/classroomMonitor';
 import type { ClassroomMonitorEntry } from '../utils/classroomMonitor';
 
@@ -1573,12 +1575,28 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                     <div key={item.ruang} style={{ padding: '0.85rem', borderRadius: '12px', background: item.status.bg, border: `1px solid ${item.status.border}` }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
                         <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
-                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>{item.ruang}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                              {item.ruang}
+                              {getEffectiveRoomDetails(item).className && (
+                                <span style={{ opacity: 0.6, fontWeight: 400, marginLeft: '0.25rem' }}>/ {getEffectiveRoomDetails(item).className}</span>
+                              )}
+                            </span>
                             <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '2px 8px', borderRadius: '999px', color: item.status.color, background: item.status.bg, border: `1px solid ${item.status.border}` }}>
                               {item.status.label}
                             </span>
                           </div>
+                          {getEffectiveRoomDetails(item) && (getEffectiveRoomDetails(item).className || getEffectiveRoomDetails(item).waliKelas) && (
+                            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>
+                              {getEffectiveRoomDetails(item).className && (
+                                <span><strong style={{ color: 'var(--text-primary)' }}>Kelas:</strong> {getEffectiveRoomDetails(item).className}</span>
+                              )}
+                              {getEffectiveRoomDetails(item).className && getEffectiveRoomDetails(item).waliKelas && <span> · </span>}
+                              {getEffectiveRoomDetails(item).waliKelas && (
+                                <span><strong style={{ color: 'var(--text-primary)' }}>Wali:</strong> {getEffectiveRoomDetails(item).waliKelas}</span>
+                              )}
+                            </div>
+                          )}
                           <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                             <strong style={{ color: 'var(--text-primary)' }}>Temuan:</strong> {item.latestNote}
                           </div>
@@ -1614,7 +1632,11 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                       {classroomSafeRooms.length} lokasi
                     </div>
                     <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '0.25rem', lineHeight: 1.5 }}>
-                      Contoh lokasi aman: {classroomSafeRooms.slice(0, 6).map((room) => getShortClassroomLabel(room.ruang)).join(', ') || '-'}
+                      Contoh lokasi aman: {classroomSafeRooms.slice(0, 6).map((room) => {
+                        const details = getEffectiveRoomDetails(room);
+                        const label = getShortClassroomLabel(room.ruang);
+                        return details?.waliKelas ? `${label} (${details.waliKelas})` : label;
+                      }).join(', ') || '-'}
                     </div>
                   </div>
 

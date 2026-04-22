@@ -38,6 +38,8 @@ import {
   normalizeClassroomMonitorRows,
   normalizeClassroomRoom,
   toMonitorFlag,
+  getClassroomRoomDetails,
+  getEffectiveRoomDetails,
 } from '../utils/classroomMonitor';
 import type { ClassroomMonitorEntry, ClassroomMonitorSeedPartial } from '../utils/classroomMonitor';
 import { pushActionNotification } from '../utils/actionNotifications';
@@ -949,6 +951,13 @@ const ClassroomMonitor = () => {
                     <div>
                       <div style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-primary)' }}>{getShortClassroomLabel(row.ruang)}</div>
                       <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>{row.ruang}</div>
+                      {getEffectiveRoomDetails(row) && (
+                        <div style={{ fontSize: '0.65rem', color: 'var(--accent-blue)', fontWeight: 600, marginTop: '0.2rem' }}>
+                          {getEffectiveRoomDetails(row).className && <span>{getEffectiveRoomDetails(row).className}</span>}
+                          {getEffectiveRoomDetails(row).className && getEffectiveRoomDetails(row).waliKelas && <span> · </span>}
+                          {getEffectiveRoomDetails(row).waliKelas && <span>Wali: {getEffectiveRoomDetails(row).waliKelas}</span>}
+                        </div>
+                      )}
                     </div>
                     <span className={`badge ${isSafe ? 'badge-success' : 'badge-danger'}`}>{isSafe ? 'Aman' : `${row.total} temuan`}</span>
                   </div>
@@ -1067,6 +1076,13 @@ const ClassroomMonitor = () => {
                     <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Peringkat #{index + 1}</div>
                     <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '0.2rem' }}>{room.label}</div>
                     <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>{room.ruang}</div>
+                    {getEffectiveRoomDetails(room) && (
+                      <div style={{ fontSize: '0.65rem', color: 'var(--accent-blue)', fontWeight: 600, marginTop: '0.2rem' }}>
+                        {getEffectiveRoomDetails(room).className && <span>{getEffectiveRoomDetails(room).className}</span>}
+                        {getEffectiveRoomDetails(room).className && getEffectiveRoomDetails(room).waliKelas && <span> · </span>}
+                        {getEffectiveRoomDetails(room).waliKelas && <span>Wali: {getEffectiveRoomDetails(room).waliKelas}</span>}
+                      </div>
+                    )}
                   </div>
                   <span className={`badge ${room.attentionLabel === 'Perhatian penuh' ? 'badge-danger' : room.attentionLabel === 'Prioritas' ? 'badge-warning' : 'badge-info'}`}>
                     {room.attentionLabel}
@@ -1152,7 +1168,21 @@ const ClassroomMonitor = () => {
                       <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.85rem' }}>{formatMonitorDate(row.tanggal)}</div>
                       <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{row.hari || getClassroomDayLabel(row.tanggal)}</div>
                     </td>
-                    <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{row.ruang}</td>
+                    <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+                      <div>
+                        {row.ruang}
+                        {getEffectiveRoomDetails(row).className && (
+                          <span style={{ opacity: 0.6, fontWeight: 400, marginLeft: '0.35rem' }}>/ {getEffectiveRoomDetails(row).className}</span>
+                        )}
+                      </div>
+                      {getEffectiveRoomDetails(row) && (
+                        <div style={{ fontSize: '0.68rem', color: 'var(--accent-blue)', fontWeight: 500, marginTop: '0.1rem' }}>
+                          {getEffectiveRoomDetails(row).className && <span>{getEffectiveRoomDetails(row).className}</span>}
+                          {getEffectiveRoomDetails(row).className && getEffectiveRoomDetails(row).waliKelas && <span> · </span>}
+                          {getEffectiveRoomDetails(row).waliKelas && <span style={{ opacity: 0.85 }}>Wali: {getEffectiveRoomDetails(row).waliKelas}</span>}
+                        </div>
+                      )}
+                    </td>
                     <td>
                       <span className={`badge ${energyCount > 0 ? 'badge-warning' : 'badge-success'}`}>{energyCount}</span>
                     </td>
@@ -1253,6 +1283,13 @@ const ClassroomMonitor = () => {
                       <option key={room} value={room}>{room}</option>
                     ))}
                   </select>
+                  {getEffectiveRoomDetails({ ruang: form.ruang }) && (
+                    <div style={{ fontSize: '0.68rem', color: 'var(--accent-blue)', fontWeight: 600, marginTop: '0.25rem' }}>
+                      {getEffectiveRoomDetails({ ruang: form.ruang }).className && <span>{getEffectiveRoomDetails({ ruang: form.ruang }).className}</span>}
+                      {getEffectiveRoomDetails({ ruang: form.ruang }).className && getEffectiveRoomDetails({ ruang: form.ruang }).waliKelas && <span> · </span>}
+                      {getEffectiveRoomDetails({ ruang: form.ruang }).waliKelas && <span>Wali: {getEffectiveRoomDetails({ ruang: form.ruang }).waliKelas}</span>}
+                    </div>
+                  )}
                 </label>
               </div>
 

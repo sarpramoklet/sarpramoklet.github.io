@@ -13,6 +13,8 @@ export type ClassroomMonitorEntry = {
   rapih: number;
   total: number;
   keterangan: string;
+  namaKelas?: string;
+  waliKelas?: string;
   updatedBy?: string;
   updatedAt?: string;
 };
@@ -35,6 +37,58 @@ export const CLASSROOM_LOCATION_OPTIONS = [
   'Aula',
   'UKS',
 ];
+
+export const CLASSROOM_ROOM_DETAILS: Record<string, { className?: string; waliKelas?: string }> = {
+  'Ruang 1': { className: 'X-RPL1', waliKelas: 'Rahardiyan Andrizdi' },
+  'Ruang 2': { className: 'X-RPL2', waliKelas: 'Muhammad Fajri Falah, M.Pd.' },
+  'Ruang 3': { className: 'X-RPL3', waliKelas: 'Agung Bagus Wicaksono, S.Sn., M.Pd.' },
+  'Ruang 4': { className: 'X-RPL4', waliKelas: 'Ina Indra Rustika, S.Pd.' },
+  'Ruang 5': { className: 'X-RPL5', waliKelas: 'Aulia Mas\'Adah, S.Kom.' },
+  'Ruang 6': { className: 'X-RPL6', waliKelas: 'Pasthania Fitri Indah L., S.Kom.' },
+  'Ruang 7': { className: 'X-RPL7', waliKelas: 'Diaur Rahman, S.Pd.' },
+  'Ruang 8': { className: 'X-RPL8', waliKelas: 'Nurwidiarsi Firstyana W., S.Psi.' },
+  'Ruang 9': { className: 'X-TKJ1', waliKelas: 'Dimas Agung Prasetiyawan, M.Pd' },
+  'Ruang 10': { className: 'X-TKJ2', waliKelas: 'Achmad Abidin, M.Pd.' },
+  'Ruang 11': { className: 'X-TKJ3', waliKelas: 'Yaniko Dimas Yogo P., S.Kom.' },
+  'Ruang 12': { className: 'X-TKJ4', waliKelas: 'Muhammad Bagus Arifin, S.Pd.' },
+  'Ruang 13': { className: 'X-PG1', waliKelas: 'Ana Wahyuning Sholikhatin S.Pd.' },
+  'Ruang 14': { className: 'X-PG2', waliKelas: 'Andree Rivan Kurniawan, M.Pd' },
+  'Ruang 15': { className: 'XI-RPL1', waliKelas: 'Ermawati Dwi Restuningsih, S.Pd.' },
+  'Ruang 16': { className: 'XI-RPL2', waliKelas: 'Lyra Hertin, S.Pd.' },
+  'Ruang 17': { className: 'XI-RPL3', waliKelas: 'Ardian Suseno, M.Pd.' },
+  'Ruang 18': { className: 'XI-RPL4', waliKelas: 'M. Masyis Dzub Hilmi, M.Pd.' },
+  'Ruang 19': { className: 'XI-RPL5', waliKelas: 'Zainal Abidin, S.Kom., Gr.' },
+  'Ruang 20': { className: 'XI-RPL6', waliKelas: 'Kheren Carollina Pamintarso, S.Pd.' },
+  'Ruang 21': { className: 'XI-RPL7', waliKelas: 'Feniliya Mayrini' },
+  'Ruang 22': { className: 'XI-RPL8', waliKelas: 'Firmansyah Ayatullah, S.Kom' },
+  'Ruang 23': { className: 'XI-TKJ1', waliKelas: 'Nico Rachmacandrana, S.St.' },
+  'Ruang 24': { className: 'XI-TKJ2', waliKelas: 'Siana Norma Heny, S.Pd.' },
+  'Ruang 25': { className: 'XI-TKJ3', waliKelas: 'Firman Hadi Amrullah Zainani, S.Kom.' },
+  'Ruang 26': { className: 'XI-TKJ4', waliKelas: 'Hirga Ertama Putra, S.Kom.' },
+  'Ruang 27': { className: 'XI-PG1', waliKelas: 'Chandra Wijaya Kristanto, S.Pd.' },
+  'Ruang 28': { className: 'XI-PG2', waliKelas: 'Syafirah Aisyah, S.Pd.' },
+  'Ruang 32': { className: 'Ujian', waliKelas: '(Khusus Ujian)' },
+  'Ruang 33': { className: 'X-Inter', waliKelas: 'Larasati Chairun Nisa, S.Pd.' },
+  'Ruang 35': { className: 'XII-MG', waliKelas: 'Tulus Andrianto, S.Pd.' },
+  'Ruang 36': { className: 'XII-MG', waliKelas: 'Tulus Andrianto, S.Pd.' },
+  'Ruang 37': { className: 'Ujian', waliKelas: '(Khusus Ujian)' },
+  'Ruang 38': { className: 'Ujian', waliKelas: '(Khusus Ujian)' },
+  'Ruang 39': { className: 'Ujian', waliKelas: '(Khusus Ujian)' },
+  'Ruang 40': { className: 'Ujian', waliKelas: '(Khusus Ujian)' },
+};
+
+export const getClassroomRoomDetails = (ruang: string) => {
+  const normalized = normalizeClassroomRoom(ruang);
+  return CLASSROOM_ROOM_DETAILS[normalized] || null;
+};
+
+export const getEffectiveRoomDetails = (entry: { ruang: string; namaKelas?: string; waliKelas?: string }) => {
+  const staticDetails = getClassroomRoomDetails(entry.ruang);
+  return {
+    className: entry.namaKelas || staticDetails?.className,
+    waliKelas: entry.waliKelas || staticDetails?.waliKelas,
+  };
+};
 
 export const CLASSROOM_REFERENCE_TOTAL = CLASSROOM_LOCATION_OPTIONS.length;
 
@@ -303,6 +357,8 @@ export const normalizeClassroomMonitorRows = (rows: any[]): ClassroomMonitorEntr
         rapih: toMonitorFlag(row.rapih || row.Rapih),
         total: 0,
         keterangan: String(row.keterangan || row.Keterangan || row.catatan || row.Catatan || '').trim(),
+        namaKelas: String(row.namaKelas || row.NamaKelas || row.kelas || row.Kelas || '').trim(),
+        waliKelas: String(row.waliKelas || row.WaliKelas || row.walas || row.Walas || '').trim(),
         updatedBy: String(
           row.updatedBy ||
           row.UpdatedBy ||

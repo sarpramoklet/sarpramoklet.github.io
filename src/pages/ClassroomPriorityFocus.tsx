@@ -8,6 +8,8 @@ import {
   getShortClassroomLabel,
   normalizeClassroomDate,
   normalizeClassroomMonitorRows,
+  getClassroomRoomDetails,
+  getEffectiveRoomDetails,
 } from '../utils/classroomMonitor';
 import type { ClassroomMonitorEntry } from '../utils/classroomMonitor';
 
@@ -206,6 +208,13 @@ const ClassroomPriorityFocus = () => {
                       {getShortClassroomLabel(row.ruang)}
                     </div>
                     <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>{row.ruang}</div>
+                    {getEffectiveRoomDetails(row) && (
+                      <div style={{ fontSize: '0.65rem', color: 'var(--accent-blue)', fontWeight: 600, marginTop: '0.25rem' }}>
+                        {getEffectiveRoomDetails(row).className && <span>{getEffectiveRoomDetails(row).className}</span>}
+                        {getEffectiveRoomDetails(row).className && getEffectiveRoomDetails(row).waliKelas && <span> · </span>}
+                        {getEffectiveRoomDetails(row).waliKelas && <span>Wali: {getEffectiveRoomDetails(row).waliKelas}</span>}
+                      </div>
+                    )}
                   </div>
                   <span className="badge badge-danger">{row.total} temuan</span>
                 </div>

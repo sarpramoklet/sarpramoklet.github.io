@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Wind, Search, Edit3, Save, Loader2, X, RefreshCw, AlertTriangle, CheckCircle, CloudUpload, History as HistoryIcon, Plus } from 'lucide-react';
 import { getCurrentUser, ROLES } from '../data/organization';
 import { pushActionNotification } from '../utils/actionNotifications';
+import { getClassroomRoomDetails, getEffectiveRoomDetails } from '../utils/classroomMonitor';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 const SHEET_NAME = "Monitor_AC";
@@ -544,7 +545,14 @@ const ACMonitor = () => {
                       </div>
                       <div>
                         <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Ruang Kelas {ac.ruang}</div>
-                        <div style={{ fontSize: '0.7rem', color: isTerpasang ? 'var(--accent-blue)' : 'var(--text-muted)' }}>{ac.status}</div>
+                        {getEffectiveRoomDetails({ ruang: `Ruang ${ac.ruang}` }) && (
+                          <div style={{ fontSize: '0.65rem', color: 'var(--accent-blue)', fontWeight: 600, marginTop: '0.1rem' }}>
+                            {getEffectiveRoomDetails({ ruang: `Ruang ${ac.ruang}` }).className && <span>{getEffectiveRoomDetails({ ruang: `Ruang ${ac.ruang}` }).className}</span>}
+                            {getEffectiveRoomDetails({ ruang: `Ruang ${ac.ruang}` }).className && getEffectiveRoomDetails({ ruang: `Ruang ${ac.ruang}` }).waliKelas && <span> · </span>}
+                            {getEffectiveRoomDetails({ ruang: `Ruang ${ac.ruang}` }).waliKelas && <span style={{ opacity: 0.85 }}>{getEffectiveRoomDetails({ ruang: `Ruang ${ac.ruang}` }).waliKelas}</span>}
+                          </div>
+                        )}
+                        <div style={{ fontSize: '0.7rem', color: isTerpasang ? 'var(--accent-blue)' : 'var(--text-muted)', marginTop: '0.1rem' }}>{ac.status}</div>
                       </div>
                     </div>
                     {canUpdate && (
