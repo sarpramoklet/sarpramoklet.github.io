@@ -304,9 +304,25 @@ export const normalizeClassroomMonitorRows = (rows: any[]): ClassroomMonitorEntr
         total: 0,
         keterangan: String(row.keterangan || row.Keterangan || row.catatan || row.Catatan || '').trim(),
         updatedBy: String(
-          row.updatedBy || row.UpdatedBy || row.petugas || row.Petugas || row.dibuatOleh || row.DibuatOleh || ''
+          row.updatedBy ||
+          row.UpdatedBy ||
+          row['Updated By'] ||
+          row['updated by'] ||
+          row.petugas ||
+          row.Petugas ||
+          row.dibuatOleh ||
+          row.DibuatOleh ||
+          ''
         ).trim(),
-        updatedAt: String(row.updatedAt || row.UpdatedAt || row.waktuBuat || row.WaktuBuat || '').trim(),
+        updatedAt: String(
+          row.updatedAt ||
+          row.UpdatedAt ||
+          row['Updated At'] ||
+          row['updated at'] ||
+          row.waktuBuat ||
+          row.WaktuBuat ||
+          ''
+        ).trim(),
       };
 
       const providedTotal = Number(

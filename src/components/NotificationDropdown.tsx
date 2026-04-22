@@ -205,6 +205,10 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
       if (latestClassroomDate) {
         const latestClassroomRows = normalizedClassroomRows.filter((row) => row.tanggal === latestClassroomDate);
         const uploaderMap = new Map<string, any>();
+        const latestClassroomTimestamp = latestClassroomRows.reduce((maxTimestamp, row) => {
+          const nextTimestamp = new Date(row.updatedAt || row.tanggal).getTime();
+          return Number.isFinite(nextTimestamp) ? Math.max(maxTimestamp, nextTimestamp) : maxTimestamp;
+        }, new Date(normalizeClassroomDate(latestClassroomDate)).getTime());
 
         latestClassroomRows.forEach((row) => {
           const label = String(row.updatedBy || '').trim();
@@ -254,6 +258,25 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
                 : `${leadUploader.nama.split(',')[0]} sudah upload monitor kelas ${formattedMonitorDate} untuk ${latestClassroomRows.length} ruang.`,
             date: new Date(uploadTimestamp),
             timestamp: uploadTimestamp + 30000,
+            path: '/classroom-monitor',
+            icon: Upload,
+            color: 'var(--accent-emerald)',
+            bg: 'rgba(16, 185, 129, 0.14)',
+          });
+        } else if (latestClassroomRows.length > 0) {
+          const formattedMonitorDate = new Intl.DateTimeFormat('id-ID', {
+            day: 'numeric',
+            month: 'short',
+          }).format(new Date(normalizeClassroomDate(latestClassroomDate)));
+
+          notifs.push({
+            id: `classroom-upload-${latestClassroomDate}`,
+            dedupeKey: `classroom-upload:${latestClassroomDate}`,
+            type: 'classroom_upload',
+            title: 'Update Monitor Kelas Terdeteksi',
+            message: `Data monitor kelas terbaru untuk ${latestClassroomRows.length} ruang pada ${formattedMonitorDate} sudah masuk dan siap ditinjau.`,
+            date: new Date(latestClassroomTimestamp),
+            timestamp: latestClassroomTimestamp + 30000,
             path: '/classroom-monitor',
             icon: Upload,
             color: 'var(--accent-emerald)',
@@ -398,7 +421,7 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
           <div style={{ padding: '0.85rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.015)' }}>
              <div>
                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                 Upload Monitor Kelas ({classroomUploaders.length}):
+                 Upload Monitor Kelas:
                </p>
                <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.68rem', color: 'var(--text-muted)' }}>
                  {classroomUploadMeta.date
@@ -409,7 +432,7 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap-reverse' }}>
                {classroomUploaders.length === 0 ? (
                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-                   Menunggu upload
+                   {classroomUploadMeta.date ? 'Update terdeteksi' : 'Menunggu upload'}
                  </div>
                ) : classroomUploaders.map((u, idx) => (
                  <div key={u.id} style={{
