@@ -1342,17 +1342,22 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
     fill: room.status.color,
   }));
   const classroomFollowUpItems = classroomRoomsNeedAttention.slice(0, 5).map((room) => {
-    const recipients = room.energyFindings > 0 ? 'Guru mapel & wali kelas' : 'Wali kelas & petugas piket';
+    const details = getEffectiveRoomDetails(room);
+    const walasName = details.waliKelas ? ` (${details.waliKelas})` : '';
+    const recipients = room.energyFindings > 0 
+      ? `Guru mapel & Wali Kelas${walasName}` 
+      : `Wali Kelas${walasName} & petugas piket`;
+    
     let action = 'Perlu penguatan budaya kelas agar kondisi ruang tetap siap dipakai berikutnya.';
 
     if (room.cleanlinessFindings > 0 && room.energyFindings > 0) {
-      action = 'Arahkan piket kelas membereskan sampah/area lantai, lalu pastikan seluruh perangkat dimatikan sebelum ruang ditinggal.';
+      action = `Arahkan piket kelas membereskan sampah/area lantai, lalu pastikan seluruh perangkat dimatikan sebelum ruang ditinggal (Koordinasi dengan ${details.waliKelas || 'Wali Kelas'}).`;
     } else if (room.cleanlinessFindings > 0) {
-      action = 'Minta piket kelas menutup hari dengan sweep sampah dan cek lantai sebelum jam terakhir selesai.';
+      action = `Minta piket kelas menutup hari dengan sweep sampah dan cek lantai sebelum jam terakhir selesai (Koordinasi dengan ${details.waliKelas || 'Wali Kelas'}).`;
     } else if (room.energyFindings > 0) {
-      action = 'Ingatkan guru terakhir dan ketua kelas untuk cek kipas, lampu, TV, atau AC sebelum meninggalkan ruangan.';
+      action = `Ingatkan guru terakhir dan ketua kelas untuk cek kipas, lampu, TV, atau AC sebelum meninggalkan ruangan (Informasikan ke ${details.waliKelas || 'Wali Kelas'}).`;
     } else if (room.tidinessFindings > 0) {
-      action = 'Rapikan formasi meja kursi dan area depan kelas agar siap untuk pembelajaran berikutnya.';
+      action = `Rapikan formasi meja kursi dan area depan kelas agar siap untuk pembelajaran berikutnya (Koordinasi dengan ${details.waliKelas || 'Wali Kelas'}).`;
     }
 
     return {
