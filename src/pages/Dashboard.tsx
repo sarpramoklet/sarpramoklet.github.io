@@ -964,24 +964,48 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         }
 
         const text = await resp.text();
+        console.log('Moklet Service Raw Response Length:', text.length);
+        if (text.length < 500) {
+          console.warn('Response too short, possibly a login page or error.');
+        }
         
         // Split text into sections more robustly
         const complaintsSection = text.match(/Complaints(.*?)(Room\s*Reservation)/is)?.[1] || text;
         const roomSection = text.match(/Room\s*Reservation(.*?)(Tools\s*Loan)/is)?.[1] || text;
         const toolsSection = text.match(/Tools\s*Loan(.*?)$/is)?.[1] || text;
 
+        const findValue = (section: string, label: string) => {
+          const lowerSection = section.toLowerCase();
+          const lowerLabel = label.toLowerCase();
+          const labelIdx = lowerSection.indexOf(lowerLabel);
+          
+          if (labelIdx === -1) return 0;
+          
+          // Look at 150 chars before the label for a number
+          const lookBehind = section.substring(Math.max(0, labelIdx - 150), labelIdx);
+          const matches = lookBehind.match(/(\d+)/g);
+          if (matches && matches.length > 0) {
+            return matches[matches.length - 1]; // take the last number found before the label
+          }
+          
+          // Fallback: Look at 50 chars after the label
+          const lookAhead = section.substring(labelIdx, labelIdx + 50);
+          const aheadMatches = lookAhead.match(/(\d+)/);
+          return aheadMatches ? aheadMatches[1] : 0;
+        };
+
         const data = {
           complaints: {
-            waiting: (complaintsSection.match(/(\d+)[^0-9]*(Waiting for Confirmation|Waiting|Confirmation)/is) || complaintsSection.match(/(Waiting for Confirmation|Waiting|Confirmation)[^0-9]*(\d+)/is) || [])[1] || (text.match(/(\d+)[^0-9]*Waiting for Confirmation/is) || [])[1] || 0,
-            processing: (complaintsSection.match(/(\d+)[^0-9]*(On Process|Processing|Progress)/is) || complaintsSection.match(/(On Process|Processing|Progress)[^0-9]*(\d+)/is) || [])[1] || (text.match(/(\d+)[^0-9]*On Process/is) || [])[1] || 0
+            waiting: findValue(complaintsSection, 'Waiting for Confirmation'),
+            processing: findValue(complaintsSection, 'On Process')
           },
           rooms: {
-            waiting: (roomSection.match(/(\d+)[^0-9]*(Waiting for Confirmation|Waiting|Confirmation)/is) || roomSection.match(/(Waiting for Confirmation|Waiting|Confirmation)[^0-9]*(\d+)/is) || [])[1] || (text.match(/(\d+)[^0-9]*Waiting for Confirmation/is) || [])[1] || 0,
-            active: (roomSection.match(/(\d+)[^0-9]*(Active Reservation|Active|Reserved|Booked)/is) || roomSection.match(/(Active Reservation|Active|Reserved|Booked)[^0-9]*(\d+)/is) || [])[1] || (text.match(/(\d+)[^0-9]*Active Reservation/is) || [])[1] || 0
+            waiting: findValue(roomSection, 'Waiting for Confirmation'),
+            active: findValue(roomSection, 'Active Reservation')
           },
           tools: {
-            waiting: (toolsSection.match(/(\d+)[^0-9]*(Waiting for Confirmation|Waiting|Confirmation)/is) || toolsSection.match(/(Waiting for Confirmation|Waiting|Confirmation)[^0-9]*(\d+)/is) || [])[1] || (text.match(/(\d+)[^0-9]*Waiting for Confirmation/is) || [])[1] || 0,
-            notReturn: (toolsSection.match(/(\d+)[^0-9]*(Have not return|Not returned|Borrowed)/is) || toolsSection.match(/(Have not return|Not returned|Borrowed)[^0-9]*(\d+)/is) || [])[1] || (text.match(/(\d+)[^0-9]*Have not return/is) || [])[1] || 0
+            waiting: findValue(toolsSection, 'Waiting for Confirmation'),
+            notReturn: findValue(toolsSection, 'Have not return')
           }
         };
 
