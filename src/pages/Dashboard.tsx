@@ -418,7 +418,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   });
   const [mokletRefresh, setMokletRefresh] = useState(0);
   const [showServicePopup, setShowServicePopup] = useState(false);
-  const [servicePopupUrl, setServicePopupUrl] = useState('https://app.smktelkom-mlg.sch.id/');
+  const [servicePopupUrl, setServicePopupUrl] = useState('https://app.smktelkom-mlg.sch.id/teacher/dashboard');
 
   const [wifiData, setWifiData] = useState<any[]>([]);
   const [wifiLoading, setWifiLoading] = useState(false);
@@ -1829,7 +1829,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: mokletService.error ? '#f87171' : mokletService.loading ? '#fbbf24' : '#34d399', boxShadow: `0 0 6px ${mokletService.error ? '#f8717160' : mokletService.loading ? '#fbbf2460' : '#34d39960'}` }} />
               <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Moklet Service — Status Layanan</span>
               <button
-                onClick={() => { setServicePopupUrl('https://app.smktelkom-mlg.sch.id/'); setShowServicePopup(true); }}
+                onClick={() => { setServicePopupUrl('https://app.smktelkom-mlg.sch.id/teacher/dashboard'); setShowServicePopup(true); }}
                 style={{ fontSize: '0.7rem', color: 'var(--accent-blue)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, opacity: 0.85, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}
                 title="Buka Moklet Service Dashboard"
               >
@@ -2834,7 +2834,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                 </div>
               )}
               <button
-                onClick={() => setServicePopupUrl('https://app.smktelkom-mlg.sch.id/')}
+                onClick={() => setServicePopupUrl('https://app.smktelkom-mlg.sch.id/teacher/dashboard')}
                 style={{
                   fontSize: '0.75rem', fontWeight: 600, padding: '0.4rem 0.75rem',
                   background: servicePopupUrl.includes('app.smktelkom-mlg') ? 'rgba(59,130,246,0.15)' : 'transparent',
@@ -2900,7 +2900,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
             padding: '0.5rem 1rem', marginTop: '0.5rem', textAlign: 'center',
             fontSize: '0.7rem', color: 'var(--text-muted)',
           }}>
-            💡 Login di halaman SSO (app.smktelkom-mlg.sch.id), lalu klik "📊 Service Dashboard" untuk melihat data layanan.
+            💡 Login di halaman SSO (app.smktelkom-mlg.sch.id/teacher/dashboard), lalu klik "📊 Service Dashboard" untuk melihat data layanan.
             Jika iframe diblokir, gunakan "↗ Tab Baru".
           </div>
         </div>
