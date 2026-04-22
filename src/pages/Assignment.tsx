@@ -49,7 +49,7 @@ const Assignment = () => {
           <p className="page-subtitle" style={{ margin: 0 }}>Pantau distribusi pekerjaan, load dan overtime personil</p>
         </div>
         {isKaur && (
-          <button className="btn btn-primary" style={{ alignSelf: 'flex-start' }}>
+          <button className="btn btn-primary" style={{ alignSelf: 'flex-start' }} title="Beri tugas baru ke personil">
             <Plus size={18} /> <span className="mobile-hide">Beri Tugas Baru</span><span style={{ display: 'none' }} className="mobile-show">Tugas</span>
           </button>
         )}

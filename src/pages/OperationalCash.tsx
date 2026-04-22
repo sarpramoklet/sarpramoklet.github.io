@@ -437,8 +437,8 @@ const OperationalCash = () => {
           />
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button className="btn btn-outline" style={{ borderRadius: '10px' }}><Filter size={18} /> Filter</button>
-          <button className="btn btn-outline" style={{ borderRadius: '10px' }}><Download size={18} /> Export</button>
+          <button className="btn btn-outline" style={{ borderRadius: '10px' }} title="Filter transaksi"><Filter size={18} /> Filter</button>
+          <button className="btn btn-outline" style={{ borderRadius: '10px' }} title="Export data ke Excel"><Download size={18} /> Export</button>
         </div>
       </div>
 
@@ -503,6 +503,7 @@ const OperationalCash = () => {
                         className="btn-icon" 
                         onClick={() => handleEdit(trx)}
                         style={{ padding: '8px', background: 'rgba(255,255,255,0.05)' }}
+                        title="Ubah transaksi"
                       >
                         <Edit3 size={15} />
                       </button>
@@ -510,6 +511,7 @@ const OperationalCash = () => {
                         className="btn-icon" 
                         onClick={() => handleDelete(trx)}
                         style={{ padding: '8px', color: 'var(--accent-rose)', background: 'rgba(244, 63, 94, 0.05)' }}
+                        title="Hapus transaksi"
                       >
                         <Trash2 size={15} />
                       </button>

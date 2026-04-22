@@ -112,7 +112,7 @@ const Tickets = () => {
           <h1 className="page-title gradient-text">Manajemen Tiket & Work Order</h1>
           <p className="page-subtitle" style={{ margin: 0 }}>Pusat tracking dan distribusi pekerjaan terintegrasi Google Sheets</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setIsModalOpen(true)} style={{ alignSelf: 'flex-start' }}>
+        <button className="btn btn-primary" onClick={() => setIsModalOpen(true)} style={{ alignSelf: 'flex-start' }} title="Buat tiket baru">
           <Plus size={18} /> <span className="mobile-hide">Buat Tiket Baru</span><span style={{ display: 'none' }} className="mobile-show">Buat</span>
         </button>
       </div>
@@ -127,7 +127,7 @@ const Tickets = () => {
               className="input-responsive"
             />
           </div>
-          <button className="btn btn-outline" style={{ padding: '0.4rem 0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <button className="btn btn-outline" style={{ padding: '0.4rem 0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }} title="Filter tiket">
             <Filter size={16} /> <span className="mobile-hide">Filter</span>
           </button>
           {loading && <Loader2 size={16} className="animate-spin" color="var(--accent-blue)" />}

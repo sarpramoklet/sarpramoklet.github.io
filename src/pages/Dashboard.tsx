@@ -970,16 +970,16 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
 
         const data = {
           complaints: {
-            waiting: (complaintsSection[0].match(/(\d+)\s*Waiting for Confirmation/is) || [])[1] || 0,
-            processing: (complaintsSection[0].match(/(\d+)\s*On Process/is) || [])[1] || 0
+            waiting: (complaintsSection[0].match(/(\d+)[^0-9]*Waiting for Confirmation/is) || complaintsSection[0].match(/Waiting for Confirmation[^0-9]*(\d+)/is) || [])[1] || 0,
+            processing: (complaintsSection[0].match(/(\d+)[^0-9]*On Process/is) || complaintsSection[0].match(/On Process[^0-9]*(\d+)/is) || [])[1] || 0
           },
           rooms: {
-            waiting: (roomSection[0].match(/(\d+)\s*Waiting for Confirmation/is) || [])[1] || 0,
-            active: (roomSection[0].match(/(\d+)\s*Active Reservation/is) || [])[1] || 0
+            waiting: (roomSection[0].match(/(\d+)[^0-9]*Waiting for Confirmation/is) || roomSection[0].match(/Waiting for Confirmation[^0-9]*(\d+)/is) || [])[1] || 0,
+            active: (roomSection[0].match(/(\d+)[^0-9]*Active Reservation/is) || roomSection[0].match(/Active Reservation[^0-9]*(\d+)/is) || [])[1] || 0
           },
           tools: {
-            waiting: (toolsSection[0].match(/(\d+)\s*Waiting for Confirmation/is) || [])[1] || 0,
-            notReturn: (toolsSection[0].match(/(\d+)\s*Have not return/is) || [])[1] || 0
+            waiting: (toolsSection[0].match(/(\d+)[^0-9]*Waiting for Confirmation/is) || toolsSection[0].match(/Waiting for Confirmation[^0-9]*(\d+)/is) || [])[1] || 0,
+            notReturn: (toolsSection[0].match(/(\d+)[^0-9]*Have not return/is) || toolsSection[0].match(/Have not return[^0-9]*(\d+)/is) || [])[1] || 0
           }
         };
 

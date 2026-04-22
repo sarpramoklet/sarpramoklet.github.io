@@ -297,10 +297,10 @@ const Finance = () => {
           <p className="page-subtitle" style={{ margin: 0 }}>Portal pelaporan kas operasional terpusat bapak/ibu sarpra.</p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', width: '100%', maxWidth: '400px', justifyContent: 'flex-end' }}>
-          <button className="btn btn-outline" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center' }}>
+          <button className="btn btn-outline" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center' }} title="Lihat riwayat saldo">
             <PiggyBank size={18} /> <span className="mobile-hide">Riwayat Saldo</span><span style={{ display: 'none' }} className="mobile-show">Saldo</span>
           </button>
-          <button className="btn btn-primary" onClick={handleCreate} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center' }}>
+          <button className="btn btn-primary" onClick={handleCreate} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center' }} title="Input transaksi baru">
             <Plus size={18} /> <span className="mobile-hide">Input Transaksi</span><span style={{ display: 'none' }} className="mobile-show">Input</span>
           </button>
         </div>
@@ -369,7 +369,7 @@ const Finance = () => {
             className="input-responsive"
           />
         </div>
-        <button className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <button className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }} title="Filter periode transaksi">
           <Filter size={16} /> <span className="mobile-hide">Filter Periode</span>
         </button>
       </div>
@@ -443,10 +443,10 @@ const Finance = () => {
                       </td>
                       <td style={{ textAlign: 'center' }}>
                         <div style={{ display: 'flex', gap: '0.25rem', justifyContent: 'center' }}>
-                          <button className="btn-icon" onClick={() => handleEdit(trx)} style={{ color: 'var(--accent-blue)', padding: '4px' }}>
+                          <button className="btn-icon" onClick={() => handleEdit(trx)} style={{ color: 'var(--accent-blue)', padding: '4px' }} title="Ubah transaksi">
                             <Edit3 size={14} />
                           </button>
-                          <button className="btn-icon" onClick={() => handleDelete(trx)} style={{ color: 'var(--accent-rose)', padding: '4px' }}>
+                          <button className="btn-icon" onClick={() => handleDelete(trx)} style={{ color: 'var(--accent-rose)', padding: '4px' }} title="Hapus transaksi">
                             <Trash2 size={14} />
                           </button>
                         </div>
@@ -469,7 +469,7 @@ const Finance = () => {
                 {editingTrx ? <Edit3 size={20} color="var(--accent-blue)" /> : <Plus size={20} color="var(--accent-blue)" />}
                 {editingTrx ? 'Ubah Transaksi' : 'Input Transaksi Baru'}
               </h2>
-              <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+              <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }} title="Tutup form input">
                 <X size={24} />
               </button>
             </div>

@@ -16,7 +16,7 @@ const Assets = () => {
           <h1 className="page-title gradient-text">Manajemen Aset & Inventaris</h1>
           <p className="page-subtitle" style={{ margin: 0 }}>Portal pencatatan, depresiasi, dan status kelayakan perangkat.</p>
         </div>
-        <button className="btn btn-primary" style={{ alignSelf: 'flex-start', background: 'linear-gradient(135deg, var(--accent-emerald), var(--accent-cyan))' }}>
+        <button className="btn btn-primary" style={{ alignSelf: 'flex-start', background: 'linear-gradient(135deg, var(--accent-emerald), var(--accent-cyan))' }} title="Tambah register aset baru">
           <Package size={18} /> <span className="mobile-hide">Tambah Register Aset</span><span style={{ display: 'none' }} className="mobile-show">Tambah</span>
         </button>
       </div>
@@ -66,8 +66,8 @@ const Assets = () => {
         <div className="flex-row-responsive" style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-subtle)', gap: '1rem' }}>
           <h3 style={{ fontSize: '1rem', margin: 0 }}>Register Aset Utama</h3>
           <div style={{ display: 'flex', gap: '0.5rem', width: 'auto', flex: 1, justifyContent: 'flex-end' }}>
-            <button className="btn btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}><Filter size={14} /> <span className="mobile-hide">Filter</span></button>
-            <button className="btn btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}><Search size={14} /> <span className="mobile-hide">Cari</span></button>
+            <button className="btn btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }} title="Filter aset"><Filter size={14} /> <span className="mobile-hide">Filter</span></button>
+            <button className="btn btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }} title="Cari aset"><Search size={14} /> <span className="mobile-hide">Cari</span></button>
           </div>
         </div>
         <table>
