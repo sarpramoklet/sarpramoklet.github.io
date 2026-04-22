@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Bell, MessageSquare, Heart, Clock, AlertCircle, Upload, Edit3, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { USERS } from '../data/organization';
+import { ROLES, USERS } from '../data/organization';
 import { useProfileThumbByEmail } from '../hooks/useProfileThumbByEmail';
 import { normalizeClassroomMonitorRows, normalizeClassroomDate } from '../utils/classroomMonitor';
 import {
@@ -13,6 +13,7 @@ import UserAvatar from './UserAvatar';
 
 const FINANCE_API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 const CLASSROOM_MONITOR_SHEET = 'Pantauan_Kelas';
+const ACCESS_LOG_SHEET = 'Log_Akses';
 
 const startOfToday = () => {
   const next = new Date();
@@ -49,6 +50,115 @@ const mergeNotifications = (remoteNotifications: any[], actionNotifications: any
   });
 
   return Array.from(merged.values()).sort((left, right) => right.timestamp - left.timestamp);
+};
+
+const pickLogValue = (log: Record<string, any>, keys: string[]) => {
+  for (const key of keys) {
+    const value = log[key];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+    if (typeof value === 'number') return String(value);
+  }
+  return '';
+};
+
+const formatLogSourceLabel = (value: string) => {
+  if (!value) return '';
+
+  const normalized = value.toLowerCase();
+  if (normalized === 'ui') return 'UI';
+  if (normalized === 'auth') return 'Autentikasi';
+  if (normalized === 'router') return 'Router';
+  if (normalized === 'sidebar') return 'Sidebar';
+
+  return value.charAt(0).toUpperCase() + value.slice(1);
+};
+
+const getAccessLogPresentation = (log: Record<string, any>) => {
+  const eventType = pickLogValue(log, ['EventType', 'eventType']).toLowerCase();
+  const pageName = pickLogValue(log, ['Page', 'page']);
+  const menuName = pickLogValue(log, ['Menu', 'menu']);
+  const detail = pickLogValue(log, ['Detail', 'detail']);
+  const activity = pickLogValue(log, ['Aktivitas', 'Activity', 'aktivitas', 'activity']);
+  const path = pickLogValue(log, ['Path', 'path']);
+  const source = formatLogSourceLabel(pickLogValue(log, ['Source', 'source']));
+  const device = pickLogValue(log, ['Device', 'device']);
+  const metaParts = [pageName, path, source, device].filter(Boolean);
+
+  if (eventType === 'menu_click') {
+    return {
+      title: 'Akses Menu Terdeteksi',
+      message: activity || `Klik menu ${menuName || pageName || 'Navigasi'}`,
+      meta: metaParts.join(' • '),
+      color: 'var(--accent-blue)',
+      bg: 'var(--accent-blue-ghost)',
+    };
+  }
+
+  if (eventType === 'button_click') {
+    return {
+      title: 'Aksi Tombol Terdeteksi',
+      message: activity || `Klik tombol ${detail || pageName || 'Aksi'}`,
+      meta: [detail, ...metaParts].filter(Boolean).join(' • '),
+      color: 'var(--accent-violet)',
+      bg: 'rgba(139, 92, 246, 0.12)',
+    };
+  }
+
+  if (eventType === 'login') {
+    return {
+      title: 'Login Personel',
+      message: activity || 'Login berhasil',
+      meta: [detail, ...metaParts].filter(Boolean).join(' • '),
+      color: 'var(--accent-emerald)',
+      bg: 'rgba(16, 185, 129, 0.14)',
+    };
+  }
+
+  if (eventType === 'logout') {
+    return {
+      title: 'Logout Personel',
+      message: activity || 'Keluar dari aplikasi',
+      meta: metaParts.join(' • '),
+      color: 'var(--accent-amber)',
+      bg: 'rgba(245, 158, 11, 0.12)',
+    };
+  }
+
+  return {
+    title: 'Aktivitas Personel',
+    message: activity || `Buka halaman ${pageName || 'Dashboard'}`,
+    meta: metaParts.join(' • '),
+    color: 'var(--accent-emerald)',
+    bg: 'rgba(16, 185, 129, 0.14)',
+  };
+};
+
+const parseAccessLogTimestamp = (log: Record<string, any>) => {
+  const raw = pickLogValue(log, ['Timestamp', 'timestamp', 'Tanggal']);
+  if (raw) {
+    const localeMatch = raw.match(
+      /^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})(?:,\s*|\s+)(\d{1,2})[.:](\d{1,2})[.:](\d{1,2})$/
+    );
+    if (localeMatch) {
+      const day = parseInt(localeMatch[1], 10) || 1;
+      const month = (parseInt(localeMatch[2], 10) || 1) - 1;
+      const yearRaw = parseInt(localeMatch[3], 10) || 0;
+      const year = yearRaw < 100 ? 2000 + yearRaw : yearRaw;
+      const hour = parseInt(localeMatch[4], 10) || 0;
+      const minute = parseInt(localeMatch[5], 10) || 0;
+      const second = parseInt(localeMatch[6], 10) || 0;
+      return new Date(year, month, day, hour, minute, second).getTime();
+    }
+
+    const direct = new Date(raw).getTime();
+    if (!Number.isNaN(direct)) return direct;
+  }
+
+  const logId = pickLogValue(log, ['ID', 'id']);
+  const idMatch = logId.match(/^LOG-(\d+)-/i);
+  if (idMatch) return Number(idMatch[1]) || 0;
+
+  return 0;
 };
 
 const resolveUserFromClassroomUploader = (identifier: string, currentUser: any) => {
@@ -115,12 +225,15 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
   const fetchNotifs = async () => {
     setLoading(true);
     try {
-      const [notesResp, classroomResp] = await Promise.all([
+      const shouldFetchAccessLogs = currentUser?.roleAplikasi === ROLES.PIMPINAN;
+      const [notesResp, classroomResp, accessLogsResp] = await Promise.all([
         fetch(`${FINANCE_API_URL}?sheetName=Piket`),
         fetch(`${FINANCE_API_URL}?sheetName=${CLASSROOM_MONITOR_SHEET}`),
+        shouldFetchAccessLogs ? fetch(`${FINANCE_API_URL}?sheetName=${ACCESS_LOG_SHEET}`) : Promise.resolve(null),
       ]);
       const data = await notesResp.json();
       const classroomData = await classroomResp.json();
+      const accessLogsData = accessLogsResp ? await accessLogsResp.json() : [];
 
       const notifs: any[] = [];
       let hasFilledToday = false;
@@ -314,6 +427,37 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
           color: 'var(--accent-amber)',
           bg: 'rgba(245, 158, 11, 0.1)'
         });
+      }
+
+      if (shouldFetchAccessLogs && Array.isArray(accessLogsData)) {
+        const recentAccessLogNotifications = accessLogsData
+          .filter((log: Record<string, any>) => pickLogValue(log, ['Nama', 'nama']))
+          .map((log: Record<string, any>) => {
+            const timestamp = parseAccessLogTimestamp(log);
+            const presenter = getAccessLogPresentation(log);
+            const actor = pickLogValue(log, ['Nama', 'nama']).split(',')[0] || 'Personel';
+            const detailSuffix = presenter.meta ? ` • ${presenter.meta}` : '';
+            const logId = pickLogValue(log, ['ID', 'id']) || `access-${timestamp}`;
+
+            return {
+              id: `access-log-${logId}`,
+              dedupeKey: `access-log:${logId}`,
+              type: 'access_log',
+              title: presenter.title,
+              message: `${actor}: ${presenter.message}${detailSuffix}`,
+              date: new Date(timestamp || Date.now()),
+              timestamp: timestamp || 0,
+              path: '/logs',
+              icon: Clock,
+              color: presenter.color,
+              bg: presenter.bg,
+            };
+          })
+          .filter((item) => item.timestamp > 0)
+          .sort((left, right) => right.timestamp - left.timestamp)
+          .slice(0, 5);
+
+        notifs.push(...recentAccessLogNotifications);
       }
 
       applyNotifications(notifs);
