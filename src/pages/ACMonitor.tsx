@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Wind, Search, Edit3, Save, Loader2, X, RefreshCw, AlertTriangle, CheckCircle, CloudUpload, History as HistoryIcon, Plus } from 'lucide-react';
 import { getCurrentUser, ROLES } from '../data/organization';
 import { pushActionNotification } from '../utils/actionNotifications';
-import { getClassroomRoomDetails, getEffectiveRoomDetails } from '../utils/classroomMonitor';
+import { getEffectiveRoomDetails } from '../utils/classroomMonitor';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 const SHEET_NAME = "Monitor_AC";

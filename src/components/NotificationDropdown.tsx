@@ -3,7 +3,12 @@ import { Bell, MessageSquare, Heart, Clock, AlertCircle, Upload, Edit3, Trash2 }
 import { useNavigate } from 'react-router-dom';
 import { ROLES, USERS } from '../data/organization';
 import { useProfileThumbByEmail } from '../hooks/useProfileThumbByEmail';
-import { normalizeClassroomMonitorRows, normalizeClassroomDate } from '../utils/classroomMonitor';
+import {
+  compareClassroomRooms,
+  formatClassroomIdentityLabel,
+  normalizeClassroomMonitorRows,
+  normalizeClassroomDate,
+} from '../utils/classroomMonitor';
 import {
   ACTION_NOTIFICATIONS_EVENT,
   type ActionNotificationIconKey,
@@ -202,9 +207,10 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
   const [loading, setLoading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [classroomUploaders, setClassroomUploaders] = useState<any[]>([]);
-  const [classroomUploadMeta, setClassroomUploadMeta] = useState<{ date: string; totalRooms: number }>({
+  const [classroomUploadMeta, setClassroomUploadMeta] = useState<{ date: string; totalRooms: number; roomPreview: string }>({
     date: '',
     totalRooms: 0,
+    roomPreview: '',
   });
   const remoteNotificationsRef = useRef<any[]>([]);
   const navigate = useNavigate();
@@ -356,8 +362,19 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
         const uploaders = Array.from(uploaderMap.values()).sort(
           (left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime()
         );
+        const latestRoomPreview = latestClassroomRows
+          .slice()
+          .sort((left, right) => compareClassroomRooms(left.ruang, right.ruang))
+          .slice(0, 2)
+          .map((row) => formatClassroomIdentityLabel(row, { shortRoom: true }))
+          .join(' | ');
+
         setClassroomUploaders(uploaders);
-        setClassroomUploadMeta({ date: latestClassroomDate, totalRooms: latestClassroomRows.length });
+        setClassroomUploadMeta({
+          date: latestClassroomDate,
+          totalRooms: latestClassroomRows.length,
+          roomPreview: latestRoomPreview,
+        });
 
         if (uploaders.length > 0) {
           const leadUploader = uploaders[0];
@@ -375,8 +392,8 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
             title: 'Monitor Kelas Sudah Diupload',
             message:
               extraUploaderCount > 0
-                ? `${leadUploader.nama.split(',')[0]} dan ${extraUploaderCount} personil lain sudah upload monitor kelas ${formattedMonitorDate} untuk ${latestClassroomRows.length} ruang.`
-                : `${leadUploader.nama.split(',')[0]} sudah upload monitor kelas ${formattedMonitorDate} untuk ${latestClassroomRows.length} ruang.`,
+                ? `${leadUploader.nama.split(',')[0]} dan ${extraUploaderCount} personil lain sudah upload monitor kelas ${formattedMonitorDate} untuk ${latestClassroomRows.length} ruang. Contoh ruang: ${latestRoomPreview || 'detail kelas siap dilihat di monitor kelas'}.`
+                : `${leadUploader.nama.split(',')[0]} sudah upload monitor kelas ${formattedMonitorDate} untuk ${latestClassroomRows.length} ruang. Contoh ruang: ${latestRoomPreview || 'detail kelas siap dilihat di monitor kelas'}.`,
             date: new Date(uploadTimestamp),
             timestamp: uploadTimestamp + 30000,
             path: '/classroom-monitor',
@@ -395,7 +412,7 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
             dedupeKey: `classroom-upload:${latestClassroomDate}`,
             type: 'classroom_upload',
             title: 'Update Monitor Kelas Terdeteksi',
-            message: `Data monitor kelas terbaru untuk ${latestClassroomRows.length} ruang pada ${formattedMonitorDate} sudah masuk dan siap ditinjau.`,
+            message: `Data monitor kelas terbaru untuk ${latestClassroomRows.length} ruang pada ${formattedMonitorDate} sudah masuk dan siap ditinjau. Contoh ruang: ${latestRoomPreview || 'detail kelas dan wali siap dilihat di monitor kelas'}.`,
             date: new Date(latestClassroomTimestamp),
             timestamp: latestClassroomTimestamp + 30000,
             path: '/classroom-monitor',
@@ -406,7 +423,7 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
         }
       } else {
         setClassroomUploaders([]);
-        setClassroomUploadMeta({ date: '', totalRooms: 0 });
+        setClassroomUploadMeta({ date: '', totalRooms: 0, roomPreview: '' });
       }
 
       // Cek pengingat piket jam 15:00
@@ -484,7 +501,7 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
     } catch (e) {
       console.error(e);
       setClassroomUploaders([]);
-      setClassroomUploadMeta({ date: '', totalRooms: 0 });
+      setClassroomUploadMeta({ date: '', totalRooms: 0, roomPreview: '' });
       applyNotifications([]);
     } finally {
       setLoading(false);
@@ -592,6 +609,11 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
                    ? `${classroomUploadMeta.totalRooms} ruang ter-update pada ${classroomUploadDateLabel}`
                    : 'Belum ada upload monitor kelas terbaru.'}
                </p>
+               {classroomUploadMeta.roomPreview && (
+                 <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.66rem', color: 'var(--text-muted)', lineHeight: 1.35 }}>
+                   {classroomUploadMeta.roomPreview}
+                 </p>
+               )}
              </div>
              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap-reverse' }}>
                {classroomUploaders.length === 0 ? (

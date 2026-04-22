@@ -82,12 +82,37 @@ export const getClassroomRoomDetails = (ruang: string) => {
   return CLASSROOM_ROOM_DETAILS[normalized] || null;
 };
 
+const isRoomAliasValue = (value: string, ruang: string) => {
+  const normalizedValue = normalizeClassroomRoom(value);
+  const normalizedRoom = normalizeClassroomRoom(ruang);
+  return normalizedValue !== '' && normalizedValue === normalizedRoom;
+};
+
 export const getEffectiveRoomDetails = (entry: { ruang: string; namaKelas?: string; waliKelas?: string }) => {
   const staticDetails = getClassroomRoomDetails(entry.ruang);
+  const incomingClassName = String(entry.namaKelas || '').trim();
+  const resolvedClassName = incomingClassName && !isRoomAliasValue(incomingClassName, entry.ruang)
+    ? incomingClassName
+    : staticDetails?.className;
+
   return {
-    className: entry.namaKelas || staticDetails?.className,
-    waliKelas: entry.waliKelas || staticDetails?.waliKelas,
+    className: resolvedClassName,
+    waliKelas: String(entry.waliKelas || '').trim() || staticDetails?.waliKelas,
   };
+};
+
+export const formatClassroomIdentityLabel = (
+  entry: { ruang: string; namaKelas?: string; waliKelas?: string },
+  options: { shortRoom?: boolean; includeWali?: boolean } = {}
+) => {
+  const roomLabel = options.shortRoom ? getShortClassroomLabel(entry.ruang) : normalizeClassroomRoom(entry.ruang);
+  const details = getEffectiveRoomDetails(entry);
+  const parts = [roomLabel];
+
+  if (details.className) parts.push(details.className);
+  if (options.includeWali !== false && details.waliKelas) parts.push(`Wali: ${details.waliKelas}`);
+
+  return parts.join(' · ');
 };
 
 export const CLASSROOM_REFERENCE_TOTAL = CLASSROOM_LOCATION_OPTIONS.length;

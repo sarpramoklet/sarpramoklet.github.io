@@ -8,7 +8,6 @@ import {
   getShortClassroomLabel,
   normalizeClassroomDate,
   normalizeClassroomMonitorRows,
-  getClassroomRoomDetails,
   getEffectiveRoomDetails,
 } from '../utils/classroomMonitor';
 import type { ClassroomMonitorEntry } from '../utils/classroomMonitor';

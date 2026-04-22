@@ -15,9 +15,9 @@ import {
   CLASSROOM_MONITOR_SHEET,
   CLASSROOM_REFERENCE_TOTAL,
   compareClassroomRooms,
+  formatClassroomIdentityLabel,
   getShortClassroomLabel,
   normalizeClassroomMonitorRows,
-  getClassroomRoomDetails,
   getEffectiveRoomDetails,
 } from '../utils/classroomMonitor';
 import type { ClassroomMonitorEntry } from '../utils/classroomMonitor';
@@ -1337,6 +1337,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   ].filter((item) => item.value > 0);
   const classroomPriorityChartData = classroomRoomsNeedAttention.slice(0, 8).map((room) => ({
     ruang: getShortClassroomLabel(room.ruang),
+    ruangLabel: formatClassroomIdentityLabel(room, { shortRoom: true }),
     score: room.score,
     temuan: room.totalFindings,
     fill: room.status.color,
@@ -1494,7 +1495,10 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                             if (name === 'score') return [`${value}%`, 'Skor kondisi'];
                             return [`${value}`, 'Jumlah temuan'];
                           }}
-                          labelFormatter={(label) => `Kelas ${label}`}
+                          labelFormatter={(_label, payload) => {
+                            const tooltipItem = Array.isArray(payload) ? payload[0]?.payload : null;
+                            return tooltipItem?.ruangLabel || '';
+                          }}
                         />
                         <Bar dataKey="score" radius={[0, 6, 6, 0]} barSize={24}>
                           {classroomPriorityChartData.map((item, idx) => (
@@ -1638,9 +1642,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                     </div>
                     <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '0.25rem', lineHeight: 1.5 }}>
                       Contoh lokasi aman: {classroomSafeRooms.slice(0, 6).map((room) => {
-                        const details = getEffectiveRoomDetails(room);
-                        const label = getShortClassroomLabel(room.ruang);
-                        return details?.waliKelas ? `${label} (${details.waliKelas})` : label;
+                        return formatClassroomIdentityLabel(room, { shortRoom: true });
                       }).join(', ') || '-'}
                     </div>
                   </div>
