@@ -161,6 +161,14 @@ const parseAccessLogTimestamp = (log: Record<string, any>) => {
   return 0;
 };
 
+const getAccessLogDistinctKey = (actor: string, presenter: ReturnType<typeof getAccessLogPresentation>) => {
+  return [
+    actor.trim().toLowerCase(),
+    presenter.title.trim().toLowerCase(),
+    presenter.message.trim().toLowerCase(),
+  ].join('::');
+};
+
 const resolveUserFromClassroomUploader = (identifier: string, currentUser: any) => {
   const normalizedIdentifier = String(identifier || '').trim().toLowerCase();
   if (!normalizedIdentifier) return null;
@@ -430,7 +438,9 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
       }
 
       if (shouldFetchAccessLogs && Array.isArray(accessLogsData)) {
-        const recentAccessLogNotifications = accessLogsData
+        const distinctAccessLogMap = new Map<string, any>();
+
+        accessLogsData
           .filter((log: Record<string, any>) => pickLogValue(log, ['Nama', 'nama']))
           .map((log: Record<string, any>) => {
             const timestamp = parseAccessLogTimestamp(log);
@@ -438,10 +448,11 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
             const actor = pickLogValue(log, ['Nama', 'nama']).split(',')[0] || 'Personel';
             const detailSuffix = presenter.meta ? ` • ${presenter.meta}` : '';
             const logId = pickLogValue(log, ['ID', 'id']) || `access-${timestamp}`;
+            const distinctKey = getAccessLogDistinctKey(actor, presenter);
 
             return {
               id: `access-log-${logId}`,
-              dedupeKey: `access-log:${logId}`,
+              dedupeKey: `access-log:${distinctKey}`,
               type: 'access_log',
               title: presenter.title,
               message: `${actor}: ${presenter.message}${detailSuffix}`,
@@ -454,6 +465,15 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
             };
           })
           .filter((item) => item.timestamp > 0)
+          .sort((left, right) => right.timestamp - left.timestamp)
+          .forEach((item) => {
+            const existing = distinctAccessLogMap.get(item.dedupeKey);
+            if (!existing || item.timestamp > existing.timestamp) {
+              distinctAccessLogMap.set(item.dedupeKey, item);
+            }
+          });
+
+        const recentAccessLogNotifications = Array.from(distinctAccessLogMap.values())
           .sort((left, right) => right.timestamp - left.timestamp)
           .slice(0, 5);
 
