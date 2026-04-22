@@ -1181,7 +1181,7 @@ const CapexBudget = () => {
                     : 'Setiap entri menambah serapan anggaran akun yang dipilih'}
                 </p>
               </div>
-              <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}>
+              <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }} title="Tutup modal realisasi">
                 <X size={22}/>
               </button>
             </div>
@@ -1302,7 +1302,7 @@ const CapexBudget = () => {
                     : 'Data baru akan langsung masuk ke daftar pekerjaan CAPEX dan bisa diupdate progresnya setelah tersimpan.'}
                 </p>
               </div>
-              <button onClick={handleCloseProjectFormModal} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+              <button onClick={handleCloseProjectFormModal} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }} title="Tutup form pekerjaan">
                 <X size={20} />
               </button>
             </div>
@@ -1398,7 +1398,7 @@ const CapexBudget = () => {
           <div className="glass-panel" style={{ width: '100%', maxWidth: '400px', padding: '1.5rem', border: '1px solid var(--accent-blue-ghost)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h2 style={{ fontSize: '1.1rem', margin: 0, color: 'var(--text-primary)' }}>Update Progres Mingguan</h2>
-              <button onClick={handleCloseProjectProgressModal} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={20}/></button>
+              <button onClick={handleCloseProjectProgressModal} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }} title="Tutup form progres"><X size={20}/></button>
             </div>
             
             <div style={{ marginBottom: '1.5rem' }}>

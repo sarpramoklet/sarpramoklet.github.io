@@ -732,7 +732,7 @@ const NetMonitorPage = () => {
           <div className="glass-panel" style={{ width: '100%', maxWidth: '780px', maxHeight: '90vh', overflow: 'auto', padding: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h3 style={{ margin: 0 }}>Update Status Jaringan Harian</h3>
-              <button onClick={() => { setIsFormOpen(false); resetNetForm(); }} style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}><X size={20} /></button>
+              <button onClick={() => { setIsFormOpen(false); resetNetForm(); }} style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }} title="Tutup form perangkat"><X size={20} /></button>
             </div>
 
             <form onSubmit={handleSubmit}>

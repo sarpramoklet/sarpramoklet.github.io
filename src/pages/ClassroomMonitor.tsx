@@ -882,6 +882,7 @@ const ClassroomMonitor = () => {
               onChange={(e) => setSelectedDate(e.target.value)}
               className="input-responsive"
               style={{ width: '100%' }}
+              aria-label="Filter tanggal pantauan"
             >
               {availableDates.length === 0 && <option value="">Belum ada data</option>}
               {availableDates.map((date) => (
@@ -1223,7 +1224,7 @@ const ClassroomMonitor = () => {
                   Simpan satu lokasi ke DB. Untuk satu form penuh, gunakan fitur import gambar.
                 </p>
               </div>
-              <button onClick={closeModal} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+              <button onClick={closeModal} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }} title="Tutup form pantauan">
                 <X size={20} />
               </button>
             </div>
@@ -1341,7 +1342,7 @@ const ClassroomMonitor = () => {
                   Upload scan/foto form, biarkan AI membaca tabelnya, lalu simpan hasil review ke database.
                 </p>
               </div>
-              <button onClick={closeImportModal} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+              <button onClick={closeImportModal} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }} title="Tutup import gambar">
                 <X size={20} />
               </button>
             </div>

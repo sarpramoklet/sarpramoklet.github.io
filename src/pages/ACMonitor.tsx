@@ -548,7 +548,7 @@ const ACMonitor = () => {
                       </div>
                     </div>
                     {canUpdate && (
-                      <button onClick={() => handleEdit(ac)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}>
+                      <button onClick={() => handleEdit(ac)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }} title="Edit data AC">
                         <Edit3 size={16} />
                       </button>
                     )}
@@ -600,7 +600,7 @@ const ACMonitor = () => {
           <div className="glass-panel" style={{ width: '100%', maxWidth: '450px', padding: '1.5rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h2 style={{ fontSize: '1.2rem', margin: 0 }}>Update AC Ruang {formData.ruang}</h2>
-              <button onClick={handleCancelEdit} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={20}/></button>
+              <button onClick={handleCancelEdit} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }} title="Tutup form edit"><X size={20}/></button>
             </div>
             
             <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -666,7 +666,7 @@ const ACMonitor = () => {
               <h2 style={{ fontSize: '1.2rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <HistoryIcon size={20} color="var(--accent-blue)" /> Riwayat Ruang {historyRoom}
               </h2>
-              <button onClick={() => { setHistoryRoom(null); setIsAddingHistory(false); }} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={20}/></button>
+              <button onClick={() => { setHistoryRoom(null); setIsAddingHistory(false); }} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }} title="Tutup riwayat"><X size={20}/></button>
             </div>
 
             {!isAddingHistory ? (

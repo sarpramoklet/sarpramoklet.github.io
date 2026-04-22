@@ -378,7 +378,7 @@ const ACCash = () => {
                   style={{ width: '100%', padding: '0.5rem 0.5rem 0.5rem 2rem', borderRadius: '6px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)', fontSize: '0.85rem', color: 'var(--text-primary)' }}
                 />
               </div>
-              <button className="btn btn-outline" style={{ padding: '0 0.75rem' }}><Filter size={16} /></button>
+              <button className="btn btn-outline" style={{ padding: '0 0.75rem' }} title="Filter transaksi"><Filter size={16} /></button>
             </div>
           </div>
 
@@ -426,10 +426,10 @@ const ACCash = () => {
                       {isAdmin && (
                         <td>
                           <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
-                            <button className="btn btn-outline" onClick={() => handleEdit(trx)} style={{ padding: '0.3rem', borderRadius: '4px' }}>
+                            <button className="btn btn-outline" onClick={() => handleEdit(trx)} style={{ padding: '0.3rem', borderRadius: '4px' }} title="Edit transaksi">
                               <Edit3 size={14} />
                             </button>
-                            <button className="btn btn-outline" onClick={() => handleDelete(trx)} style={{ padding: '0.3rem', borderRadius: '4px', color: 'var(--accent-rose)' }}>
+                            <button className="btn btn-outline" onClick={() => handleDelete(trx)} style={{ padding: '0.3rem', borderRadius: '4px', color: 'var(--accent-rose)' }} title="Hapus transaksi">
                               <Trash2 size={14} />
                             </button>
                           </div>
@@ -450,7 +450,7 @@ const ACCash = () => {
           <div className="glass-panel animate-scale-in" style={{ width: '100%', maxWidth: '450px', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h2 style={{ fontSize: '1.25rem', margin: 0 }}>{editingTrx ? 'Edit Transaksi' : 'Transaksi Baru Kas AC'}</h2>
-              <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={24} /></button>
+              <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }} title="Tutup modal"><X size={24} /></button>
             </div>
 
             <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>

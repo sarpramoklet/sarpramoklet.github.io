@@ -1329,7 +1329,7 @@ const ITPage = () => {
                 <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Update Status Network Harian</h3>
                 <p style={{ margin: '0.25rem 0 0', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Upload screenshot traffic atau input manual</p>
               </div>
-              <button onClick={closeNetModal} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '4px' }}><X size={20} /></button>
+              <button onClick={closeNetModal} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '4px' }} title="Tutup detail perangkat"><X size={20} /></button>
             </div>
 
             {/* Tabs */}

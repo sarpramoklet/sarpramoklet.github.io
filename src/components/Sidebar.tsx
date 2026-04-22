@@ -47,7 +47,7 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
               <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600, margin: '0.25rem 0 0 0' }}>Command Center</p>
             </div>
             
-            <button className="mobile-close-btn" onClick={handleClose} style={{ position: 'absolute', top: '-1rem', right: '-0.5rem' }}>
+            <button className="mobile-close-btn" onClick={handleClose} style={{ position: 'absolute', top: '-1rem', right: '-0.5rem' }} title="Tutup menu">
                <X size={24} />
             </button>
           </div>

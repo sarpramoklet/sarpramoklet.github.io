@@ -137,7 +137,7 @@ function App() {
           
           <div className="mobile-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <button className="mobile-menu-btn" onClick={() => setIsSidebarOpen(true)}>
+              <button className="mobile-menu-btn" onClick={() => setIsSidebarOpen(true)} title="Buka menu navigasi">
                 <Menu size={24} />
               </button>
               <h1 className="mobile-title gradient-text" style={{ margin: 0 }}>Sarpramoklet</h1>

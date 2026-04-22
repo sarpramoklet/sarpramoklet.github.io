@@ -530,7 +530,7 @@ const DutyNotes = () => {
           <div className="glass-panel" style={{ width: '500px', maxWidth: '100%', padding: '2rem', marginBottom: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h2 style={{ fontSize: '1.25rem', margin: 0 }}>{editingNote ? 'Edit Catatan' : 'Tambah Catatan'}</h2>
-              <button onClick={() => { setIsModalOpen(false); setEditingNote(null); }} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={20} /></button>
+              <button onClick={() => { setIsModalOpen(false); setEditingNote(null); }} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }} title="Tutup form catatan"><X size={20} /></button>
             </div>
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
