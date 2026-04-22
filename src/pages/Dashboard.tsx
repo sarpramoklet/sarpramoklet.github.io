@@ -964,22 +964,24 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         }
 
         const text = await resp.text();
-        const complaintsSection = text.match(/Complaints(.*?)Room Reservation/s) || [text];
-        const roomSection = text.match(/Room Reservation(.*?)Tools Loan/s) || [text];
-        const toolsSection = text.match(/Tools Loan(.*?)$/s) || [text];
+        
+        // Split text into sections more robustly
+        const complaintsSection = text.match(/Complaints(.*?)(Room\s*Reservation)/is)?.[1] || text;
+        const roomSection = text.match(/Room\s*Reservation(.*?)(Tools\s*Loan)/is)?.[1] || text;
+        const toolsSection = text.match(/Tools\s*Loan(.*?)$/is)?.[1] || text;
 
         const data = {
           complaints: {
-            waiting: (complaintsSection[0].match(/(\d+)[^0-9]*Waiting for Confirmation/is) || complaintsSection[0].match(/Waiting for Confirmation[^0-9]*(\d+)/is) || [])[1] || 0,
-            processing: (complaintsSection[0].match(/(\d+)[^0-9]*On Process/is) || complaintsSection[0].match(/On Process[^0-9]*(\d+)/is) || [])[1] || 0
+            waiting: (complaintsSection.match(/(\d+)[^0-9]*(Waiting for Confirmation|Waiting|Confirmation)/is) || complaintsSection.match(/(Waiting for Confirmation|Waiting|Confirmation)[^0-9]*(\d+)/is) || [])[1] || (text.match(/(\d+)[^0-9]*Waiting for Confirmation/is) || [])[1] || 0,
+            processing: (complaintsSection.match(/(\d+)[^0-9]*(On Process|Processing|Progress)/is) || complaintsSection.match(/(On Process|Processing|Progress)[^0-9]*(\d+)/is) || [])[1] || (text.match(/(\d+)[^0-9]*On Process/is) || [])[1] || 0
           },
           rooms: {
-            waiting: (roomSection[0].match(/(\d+)[^0-9]*Waiting for Confirmation/is) || roomSection[0].match(/Waiting for Confirmation[^0-9]*(\d+)/is) || [])[1] || 0,
-            active: (roomSection[0].match(/(\d+)[^0-9]*Active Reservation/is) || roomSection[0].match(/Active Reservation[^0-9]*(\d+)/is) || [])[1] || 0
+            waiting: (roomSection.match(/(\d+)[^0-9]*(Waiting for Confirmation|Waiting|Confirmation)/is) || roomSection.match(/(Waiting for Confirmation|Waiting|Confirmation)[^0-9]*(\d+)/is) || [])[1] || (text.match(/(\d+)[^0-9]*Waiting for Confirmation/is) || [])[1] || 0,
+            active: (roomSection.match(/(\d+)[^0-9]*(Active Reservation|Active|Reserved|Booked)/is) || roomSection.match(/(Active Reservation|Active|Reserved|Booked)[^0-9]*(\d+)/is) || [])[1] || (text.match(/(\d+)[^0-9]*Active Reservation/is) || [])[1] || 0
           },
           tools: {
-            waiting: (toolsSection[0].match(/(\d+)[^0-9]*Waiting for Confirmation/is) || toolsSection[0].match(/Waiting for Confirmation[^0-9]*(\d+)/is) || [])[1] || 0,
-            notReturn: (toolsSection[0].match(/(\d+)[^0-9]*Have not return/is) || toolsSection[0].match(/Have not return[^0-9]*(\d+)/is) || [])[1] || 0
+            waiting: (toolsSection.match(/(\d+)[^0-9]*(Waiting for Confirmation|Waiting|Confirmation)/is) || toolsSection.match(/(Waiting for Confirmation|Waiting|Confirmation)[^0-9]*(\d+)/is) || [])[1] || (text.match(/(\d+)[^0-9]*Waiting for Confirmation/is) || [])[1] || 0,
+            notReturn: (toolsSection.match(/(\d+)[^0-9]*(Have not return|Not returned|Borrowed)/is) || toolsSection.match(/(Have not return|Not returned|Borrowed)[^0-9]*(\d+)/is) || [])[1] || (text.match(/(\d+)[^0-9]*Have not return/is) || [])[1] || 0
           }
         };
 
