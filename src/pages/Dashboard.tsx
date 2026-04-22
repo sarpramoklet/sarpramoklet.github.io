@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, LabelList, LineChart, Line, Legend } from 'recharts';
-import { UserCircle2, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, MessageSquare, AlertCircle, Edit3, Trash2, Wind, Briefcase, Smartphone, Activity, Coins, Camera, X, RefreshCw, Heart } from 'lucide-react';
+import { UserCircle2, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, MessageSquare, AlertCircle, Edit3, Trash2, Wind, Briefcase, Smartphone, Activity, Coins, Camera, X, RefreshCw, Heart, ExternalLink } from 'lucide-react';
 import { getCurrentUser, ROLES, USERS } from '../data/organization';
 import { mergeCapexProjects } from '../data/capexProjects';
 import { getUtilityChartData } from '../data/utilities';
@@ -417,6 +417,8 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
     error: false,
   });
   const [mokletRefresh, setMokletRefresh] = useState(0);
+  const [showServicePopup, setShowServicePopup] = useState(false);
+  const [servicePopupUrl, setServicePopupUrl] = useState('https://app.smktelkom-mlg.sch.id/');
 
   const [wifiData, setWifiData] = useState<any[]>([]);
   const [wifiLoading, setWifiLoading] = useState(false);
@@ -1826,8 +1828,13 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: mokletService.error ? '#f87171' : mokletService.loading ? '#fbbf24' : '#34d399', boxShadow: `0 0 6px ${mokletService.error ? '#f8717160' : mokletService.loading ? '#fbbf2460' : '#34d39960'}` }} />
               <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Moklet Service — Status Layanan</span>
-              <a href="https://service.smktelkom-mlg.sch.id/administrator/dashboard" target="_blank" rel="noopener noreferrer"
-                style={{ fontSize: '0.7rem', color: 'var(--accent-blue)', textDecoration: 'none', opacity: 0.8 }}>↗ Buka</a>
+              <button
+                onClick={() => { setServicePopupUrl('https://app.smktelkom-mlg.sch.id/'); setShowServicePopup(true); }}
+                style={{ fontSize: '0.7rem', color: 'var(--accent-blue)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, opacity: 0.85, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}
+                title="Buka Moklet Service Dashboard"
+              >
+                <ExternalLink size={11} /> Buka Service
+              </button>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
               {isPimpinan && (
@@ -2789,6 +2796,115 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       </div>
 
 
+
+      {/* ══════════════ MOKLET SERVICE POPUP ══════════════ */}
+      {showServicePopup && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)',
+          zIndex: 2000, display: 'flex', flexDirection: 'column', padding: '1rem',
+        }}>
+          {/* Header */}
+          <div style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            padding: '0.75rem 1rem', marginBottom: '0.5rem',
+            background: 'rgba(255,255,255,0.04)', borderRadius: '12px',
+            border: '1px solid var(--border-subtle)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 0 }}>
+              <div style={{ padding: '0.4rem', background: 'rgba(59,130,246,0.15)', borderRadius: '8px', color: 'var(--accent-blue)', display: 'flex', flexShrink: 0 }}>
+                <ExternalLink size={18} />
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>Moklet Service Dashboard</div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {servicePopupUrl}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+              {servicePopupUrl.includes('app.smktelkom-mlg.sch.id') && (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: '0.35rem',
+                  fontSize: '0.72rem', color: 'var(--accent-amber)',
+                  background: 'rgba(245,158,11,0.12)', padding: '0.3rem 0.65rem', borderRadius: '6px',
+                  fontWeight: 600,
+                }}>
+                  ⚡ Login dulu via Google SSO
+                </div>
+              )}
+              <button
+                onClick={() => setServicePopupUrl('https://app.smktelkom-mlg.sch.id/')}
+                style={{
+                  fontSize: '0.75rem', fontWeight: 600, padding: '0.4rem 0.75rem',
+                  background: servicePopupUrl.includes('app.smktelkom-mlg') ? 'rgba(59,130,246,0.15)' : 'transparent',
+                  color: 'var(--accent-blue)', border: '1px solid var(--border-subtle)',
+                  borderRadius: '6px', cursor: 'pointer',
+                }}
+                title="Buka halaman login SSO"
+              >
+                🔐 Login SSO
+              </button>
+              <button
+                onClick={() => setServicePopupUrl('https://service.smktelkom-mlg.sch.id/administrator/dashboard')}
+                style={{
+                  fontSize: '0.75rem', fontWeight: 600, padding: '0.4rem 0.75rem',
+                  background: servicePopupUrl.includes('service.smktelkom-mlg') ? 'rgba(16,185,129,0.15)' : 'transparent',
+                  color: 'var(--accent-emerald)', border: '1px solid var(--border-subtle)',
+                  borderRadius: '6px', cursor: 'pointer',
+                }}
+                title="Buka service dashboard"
+              >
+                📊 Service Dashboard
+              </button>
+              <button
+                onClick={() => window.open(servicePopupUrl, '_blank')}
+                style={{
+                  fontSize: '0.75rem', fontWeight: 600, padding: '0.4rem 0.75rem',
+                  background: 'transparent', color: 'var(--text-secondary)',
+                  border: '1px solid var(--border-subtle)', borderRadius: '6px', cursor: 'pointer',
+                }}
+                title="Buka di tab baru"
+              >
+                ↗ Tab Baru
+              </button>
+              <button
+                onClick={() => setShowServicePopup(false)}
+                style={{
+                  background: 'rgba(244,63,94,0.12)', border: 'none', color: 'var(--accent-rose)',
+                  cursor: 'pointer', padding: '0.4rem', borderRadius: '8px', display: 'flex',
+                }}
+                title="Tutup popup service"
+              >
+                <X size={20} />
+              </button>
+            </div>
+          </div>
+
+          {/* Iframe Container */}
+          <div style={{
+            flex: 1, borderRadius: '12px', overflow: 'hidden',
+            border: '1px solid var(--border-subtle)', background: '#fff',
+            position: 'relative',
+          }}>
+            <iframe
+              src={servicePopupUrl}
+              title="Moklet Service Dashboard"
+              style={{ width: '100%', height: '100%', border: 'none' }}
+              sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
+            />
+          </div>
+
+          {/* Footer hint */}
+          <div style={{
+            padding: '0.5rem 1rem', marginTop: '0.5rem', textAlign: 'center',
+            fontSize: '0.7rem', color: 'var(--text-muted)',
+          }}>
+            💡 Login di halaman SSO (app.smktelkom-mlg.sch.id), lalu klik "📊 Service Dashboard" untuk melihat data layanan.
+            Jika iframe diblokir, gunakan "↗ Tab Baru".
+          </div>
+        </div>
+      )}
 
     </div>
   );
