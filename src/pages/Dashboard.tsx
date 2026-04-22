@@ -954,16 +954,13 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         const targetUrl = 'https://service.smktelkom-mlg.sch.id/administrator/dashboard';
         const authHeader = `Basic ${window.btoa(`${credentials.username}:${credentials.password}`)}`;
 
-        const resp = await fetch(targetUrl, {
-          headers: {
-            Authorization: authHeader,
-            Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          },
-          signal: AbortSignal.timeout(12000),
-        });
+        // Menggunakan perantara Google Apps Script untuk bypass CORS
+        const proxyUrl = `${FINANCE_API_URL}?proxyUrl=${encodeURIComponent(targetUrl)}&authHeader=${encodeURIComponent(authHeader)}`;
+        
+        const resp = await fetch(proxyUrl);
 
         if (!resp.ok) {
-          throw new Error(`Moklet Service auth failed (${resp.status})`);
+          throw new Error(`Moklet Service proxy failed (${resp.status})`);
         }
 
         const text = await resp.text();
@@ -1891,7 +1888,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                     }}
                   >
                     <RefreshCw size={12} className={mokletService.loading ? "animate-spin" : ""} />
-                    Refresh Data
+                    Ambil Data
                   </button>
                 </>
               )}
