@@ -21,6 +21,38 @@ import {
 import type { ClassroomMonitorEntry } from '../utils/classroomMonitor';
 
 const FINANCE_API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
+const MOKLET_BASIC_AUTH_USERNAME_KEY = 'mokletBasicAuthUsername';
+const MOKLET_BASIC_AUTH_PASSWORD_KEY = 'mokletBasicAuthPassword';
+
+const canUseSessionStorage = () => typeof window !== 'undefined' && typeof window.sessionStorage !== 'undefined';
+
+const getStoredMokletBasicAuth = () => {
+  if (!canUseSessionStorage()) return { username: '', password: '' };
+
+  return {
+    username: window.sessionStorage.getItem(MOKLET_BASIC_AUTH_USERNAME_KEY)?.trim() || '',
+    password: window.sessionStorage.getItem(MOKLET_BASIC_AUTH_PASSWORD_KEY) || '',
+  };
+};
+
+const hasStoredMokletBasicAuth = () => {
+  const credentials = getStoredMokletBasicAuth();
+  return Boolean(credentials.username && credentials.password);
+};
+
+const setStoredMokletBasicAuth = (username: string, password: string) => {
+  if (!canUseSessionStorage()) return;
+
+  window.sessionStorage.setItem(MOKLET_BASIC_AUTH_USERNAME_KEY, username.trim());
+  window.sessionStorage.setItem(MOKLET_BASIC_AUTH_PASSWORD_KEY, password);
+};
+
+const clearStoredMokletBasicAuth = () => {
+  if (!canUseSessionStorage()) return;
+
+  window.sessionStorage.removeItem(MOKLET_BASIC_AUTH_USERNAME_KEY);
+  window.sessionStorage.removeItem(MOKLET_BASIC_AUTH_PASSWORD_KEY);
+};
 
 
 
@@ -394,6 +426,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   const [netSnapshot, setNetSnapshot] = useState<any>(null);
   const [netSnapshotThumb, setNetSnapshotThumb] = useState<any>(null);
   const [netSnapshotLightbox, setNetSnapshotLightbox] = useState<{ src: string; tanggal: string } | null>(null);
+  const [mokletBasicAuthReady, setMokletBasicAuthReady] = useState(() => hasStoredMokletBasicAuth());
   const [publicVisitorSeed] = useState(() => {
     const existing = localStorage.getItem('publicVisitorSeed');
     if (existing) return existing;
@@ -909,71 +942,49 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       // Hanya berjalan jika user sudah login sbg pimpinan
       if (!isLoggedIn || currentUser?.email !== 'hadi@smktelkom-mlg.sch.id') return;
 
+      const credentials = getStoredMokletBasicAuth();
+      setMokletBasicAuthReady(Boolean(credentials.username && credentials.password));
+      if (!credentials.username || !credentials.password) {
+        setMokletService(prev => ({ ...prev, loading: false, error: false }));
+        return;
+      }
+
       setMokletService(prev => ({ ...prev, loading: true, error: false }));
       try {
         const targetUrl = 'https://service.smktelkom-mlg.sch.id/administrator/dashboard';
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbyWfmqPwj18OXgX8fqrN254vzDaih5Q7x42X7Txavw9Y50er2fYMXRh0MEXk8tkMZjYwQ/exec';
+        const authHeader = `Basic ${window.btoa(`${credentials.username}:${credentials.password}`)}`;
 
-        let data: any = null;
+        const resp = await fetch(targetUrl, {
+          headers: {
+            Authorization: authHeader,
+            Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          },
+          signal: AbortSignal.timeout(12000),
+        });
 
-        try {
-          // Attempt direct fetch from browser (requires CORS bypass extension or same-domain auth)
-          // Menggunakan 'credentials: include' agar cookie login di browser ikut terkirim
-          const resp = await fetch(targetUrl, { 
-            headers: { 'Rsc': '1' },
-            credentials: 'include',
-            signal: AbortSignal.timeout(8000) 
-          });
-          
-          if (resp.ok) {
-            const text = await resp.text();
-            
-            // Karena label sering sama, kita cari di section masing-masing jika mungkin
-            const pengaduanSection = text.match(/Pengaduan Layanan(.*?)Peminjaman Ruang/s) || [text];
-            const ruangSection = text.match(/Peminjaman Ruang(.*?)Peminjaman Alat/s) || [text];
-            const alatSection = text.match(/Peminjaman Alat(.*?)$/s) || [text];
-
-            data = {
-              complaints: { 
-                waiting: (pengaduanSection[0].match(/Waiting for Confirmation.*?(\d+)/is) || [])[1] || 0,
-                processing: (pengaduanSection[0].match(/On Process.*?(\d+)/is) || [])[1] || 0
-              },
-              rooms: { 
-                waiting: (ruangSection[0].match(/Waiting for Confirmation.*?(\d+)/is) || [])[1] || 0,
-                active: (ruangSection[0].match(/Active Reservation.*?(\d+)/is) || [])[1] || 0
-              },
-              tools: { 
-                waiting: (alatSection[0].match(/Waiting for Confirmation.*?(\d+)/is) || [])[1] || 0,
-                notReturn: (alatSection[0].match(/Have not return(?:ed)?.*?(\d+)/is) || [])[1] || 0
-              }
-            };
-
-            // Jika semua 0, mungkin masih halaman login atau regex tidak match
-            if (data.complaints.waiting === 0 && data.rooms.waiting === 0 && data.tools.waiting === 0) {
-              console.warn('Direct fetch returned zero values, checking for login or page mismatch.');
-              data = null; 
-            }
-          }
-        } catch (directError) {
-          console.warn('Direct fetch failed (likely CORS blocking):', directError);
+        if (!resp.ok) {
+          throw new Error(`Moklet Service auth failed (${resp.status})`);
         }
 
-        // Fallback to GAS Proxy if direct fetch didn't yield data
-        if (!data) {
-          const resp = await fetch(GAS_URL, { signal: AbortSignal.timeout(15000) });
-          if (!resp.ok) throw new Error('fetch GAS failed');
-          const gasData = await resp.json();
-          
-          if (gasData.error) {
-             throw new Error(gasData.message || 'GAS error');
+        const text = await resp.text();
+        const pengaduanSection = text.match(/Pengaduan Layanan(.*?)Peminjaman Ruang/s) || [text];
+        const ruangSection = text.match(/Peminjaman Ruang(.*?)Peminjaman Alat/s) || [text];
+        const alatSection = text.match(/Peminjaman Alat(.*?)$/s) || [text];
+
+        const data = {
+          complaints: {
+            waiting: (pengaduanSection[0].match(/Waiting for Confirmation.*?(\d+)/is) || [])[1] || 0,
+            processing: (pengaduanSection[0].match(/On Process.*?(\d+)/is) || [])[1] || 0
+          },
+          rooms: {
+            waiting: (ruangSection[0].match(/Waiting for Confirmation.*?(\d+)/is) || [])[1] || 0,
+            active: (ruangSection[0].match(/Active Reservation.*?(\d+)/is) || [])[1] || 0
+          },
+          tools: {
+            waiting: (alatSection[0].match(/Waiting for Confirmation.*?(\d+)/is) || [])[1] || 0,
+            notReturn: (alatSection[0].match(/Have not return(?:ed)?.*?(\d+)/is) || [])[1] || 0
           }
-          
-          data = {
-            complaints: { waiting: gasData.complaints.waiting, processing: gasData.complaints.processing },
-            rooms: { waiting: gasData.rooms.waiting, active: gasData.rooms.active },
-            tools: { waiting: gasData.tools.waiting, notReturn: gasData.tools.notReturn }
-          };
-        }
+        };
 
         setMokletService({
           complaints: {
@@ -1005,6 +1016,44 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
     }
 
   }, [isAuthorizedFinance, isLoggedIn, mokletRefresh]);
+
+  const handleSetMokletBasicAuth = () => {
+    const currentCredentials = getStoredMokletBasicAuth();
+    const username = window.prompt(
+      'Masukkan username Basic Auth untuk Moklet Service:',
+      currentCredentials.username || ''
+    );
+
+    if (username === null) return;
+
+    const password = window.prompt(
+      'Masukkan password Basic Auth untuk Moklet Service:',
+      currentCredentials.password || ''
+    );
+
+    if (password === null) return;
+    if (!username.trim() || !password) {
+      alert('Username dan password Basic Auth harus diisi.');
+      return;
+    }
+
+    setStoredMokletBasicAuth(username, password);
+    setMokletBasicAuthReady(true);
+    setMokletRefresh((prev) => prev + 1);
+  };
+
+  const handleClearMokletBasicAuth = () => {
+    if (!confirm('Hapus kredensial Basic Auth Moklet Service dari sesi browser ini?')) return;
+
+    clearStoredMokletBasicAuth();
+    setMokletBasicAuthReady(false);
+    setMokletService((prev) => ({
+      ...prev,
+      loading: false,
+      error: false,
+      lastUpdated: null,
+    }));
+  };
 
   const handleDeletePiket = async (id: string, keterangan: string) => {
     if (!confirm(`Hapus catatan dari "${keterangan}"?`)) return;
@@ -1782,19 +1831,47 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
               {isPimpinan && (
-                <button
-                  onClick={() => setMokletRefresh(prev => prev + 1)}
-                  disabled={mokletService.loading}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
-                    fontSize: '0.72rem', fontWeight: 600, padding: '0.35rem 0.75rem',
-                    background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-subtle)',
-                    borderRadius: '6px', cursor: mokletService.loading ? 'not-allowed' : 'pointer', opacity: mokletService.loading ? 0.7 : 1
-                  }}
-                >
-                  <RefreshCw size={12} className={mokletService.loading ? "animate-spin" : ""} />
-                  Refresh Data
-                </button>
+                <>
+                  <button
+                    onClick={handleSetMokletBasicAuth}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                      fontSize: '0.72rem', fontWeight: 600, padding: '0.35rem 0.75rem',
+                      background: mokletBasicAuthReady ? 'rgba(16, 185, 129, 0.12)' : 'var(--bg-card)',
+                      color: mokletBasicAuthReady ? 'var(--accent-emerald)' : 'var(--text-primary)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: '6px', cursor: 'pointer'
+                    }}
+                  >
+                    {mokletBasicAuthReady ? 'Auth Tersimpan' : 'Set Basic Auth'}
+                  </button>
+                  {mokletBasicAuthReady && (
+                    <button
+                      onClick={handleClearMokletBasicAuth}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                        fontSize: '0.72rem', fontWeight: 600, padding: '0.35rem 0.75rem',
+                        background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)',
+                        borderRadius: '6px', cursor: 'pointer'
+                      }}
+                    >
+                      Reset Auth
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setMokletRefresh(prev => prev + 1)}
+                    disabled={mokletService.loading || !mokletBasicAuthReady}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                      fontSize: '0.72rem', fontWeight: 600, padding: '0.35rem 0.75rem',
+                      background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-subtle)',
+                      borderRadius: '6px', cursor: mokletService.loading || !mokletBasicAuthReady ? 'not-allowed' : 'pointer', opacity: mokletService.loading || !mokletBasicAuthReady ? 0.7 : 1
+                    }}
+                  >
+                    <RefreshCw size={12} className={mokletService.loading ? "animate-spin" : ""} />
+                    Refresh Data
+                  </button>
+                </>
               )}
               {mokletService.lastUpdated && (
                 <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
@@ -1803,6 +1880,17 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
               )}
             </div>
           </div>
+
+          {isPimpinan && !mokletBasicAuthReady && (
+            <div className="glass-panel" style={{ padding: '0.9rem 1rem', marginBottom: '1rem', background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.18)' }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--accent-amber)', marginBottom: '0.2rem' }}>
+                Basic Auth Moklet Service belum diatur
+              </div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                Klik `Set Basic Auth` untuk menyimpan kredensial ke sesi browser ini, lalu dashboard akan mengambil data langsung dari `service.smktelkom-mlg.sch.id`.
+              </div>
+            </div>
+          )}
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
 
