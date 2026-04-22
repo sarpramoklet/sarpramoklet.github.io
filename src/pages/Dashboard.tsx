@@ -951,7 +951,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
 
       setMokletService(prev => ({ ...prev, loading: true, error: false }));
       try {
-        const targetUrl = 'https://app.smktelkom-mlg.sch.id/administrator/dashboard';
+        const targetUrl = 'https://service.smktelkom-mlg.sch.id/administrator/dashboard';
         const authHeader = `Basic ${window.btoa(`${credentials.username}:${credentials.password}`)}`;
 
         const resp = await fetch(targetUrl, {
@@ -1826,7 +1826,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: mokletService.error ? '#f87171' : mokletService.loading ? '#fbbf24' : '#34d399', boxShadow: `0 0 6px ${mokletService.error ? '#f8717160' : mokletService.loading ? '#fbbf2460' : '#34d39960'}` }} />
               <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Moklet Service — Status Layanan</span>
-              <a href="https://app.smktelkom-mlg.sch.id/administrator/dashboard" target="_blank" rel="noopener noreferrer"
+              <a href="https://service.smktelkom-mlg.sch.id/administrator/dashboard" target="_blank" rel="noopener noreferrer"
                 style={{ fontSize: '0.7rem', color: 'var(--accent-blue)', textDecoration: 'none', opacity: 0.8 }}>↗ Buka</a>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
@@ -1887,7 +1887,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                 Basic Auth Moklet Service belum diatur
               </div>
               <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                Klik `Set Basic Auth` untuk menyimpan kredensial ke sesi browser ini, lalu dashboard akan mengambil data langsung dari `app.smktelkom-mlg.sch.id`.
+                Klik `Set Basic Auth` untuk menyimpan kredensial login `app.smktelkom-mlg.sch.id`, lalu dashboard akan mengambil data langsung dari `service.smktelkom-mlg.sch.id`.
               </div>
             </div>
           )}
