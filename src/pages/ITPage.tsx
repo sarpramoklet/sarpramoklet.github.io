@@ -445,7 +445,7 @@ const ITPage = () => {
       const data = await resp.json();
       if (data && Array.isArray(data) && data.length > 0) {
         const mapped = data.filter((d:any) => (d.id || d.ID) && (d.tanggal || d.Tanggal)).map((item:any) => {
-          let dateStr = String(item.tanggal || item.Tanggal || '').trim();
+         const dateStr = String(item.tanggal || item.Tanggal || '').trim();
           return {
             id: item.id || item.ID,
             date: normalizeWifiDateFromDb(dateStr),

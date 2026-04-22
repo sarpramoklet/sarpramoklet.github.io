@@ -1,8 +1,14 @@
 import { USERS, getCurrentUser, ROLES } from '../data/organization';
 import { Briefcase, Search, AlertTriangle, CheckSquare, Plus } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useProfileThumbByEmail } from '../hooks/useProfileThumbByEmail';
 import UserAvatar from '../components/UserAvatar';
+
+// Simple seeded pseudo-random to avoid impure Math.random() during render
+const seededRandom = (seed: number) => {
+  const x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
+};
 
 const Assignment = () => {
   const currentUser = getCurrentUser();
@@ -12,32 +18,28 @@ const Assignment = () => {
   const isKaur = currentUser.roleAplikasi.includes('Koordinator');
   const isPimpinan = currentUser.roleAplikasi === ROLES.PIMPINAN;
 
-  const filteredAssignments = USERS.filter(u => {
-    // Basic filter: not an executive/pimpinan themselves typically, or show subordinates
-    if (u.atasanLangsung === null && !isPimpinan) return false;
-    
-    // Hadi (Pimpinan) sees everyone
-    if (isPimpinan) {
-      return u.nama.toLowerCase().includes(searchTerm.toLowerCase()) || 
-             u.unit.toLowerCase().includes(searchTerm.toLowerCase());
-    }
-
-    // Kaurs see their unit
-    if (u.unit === currentUser.unit) {
-      return u.nama.toLowerCase().includes(searchTerm.toLowerCase());
-    }
-
-    return false;
-  }).map((user) => {
-    // Add mock data for the UI
-    return {
-      ...user,
-      aktif: Math.floor(Math.random() * 5) + 1,
-      selesai: Math.floor(Math.random() * 20) + 5,
-      overdue: Math.floor(Math.random() * 3),
-      loadKerja: Math.floor(Math.random() * 60) + 40 // 40-100%
-    };
-  });
+  const filteredAssignments = useMemo(() => {
+    return USERS.filter(u => {
+      if (u.atasanLangsung === null && !isPimpinan) return false;
+      if (isPimpinan) {
+        return u.nama.toLowerCase().includes(searchTerm.toLowerCase()) || 
+               u.unit.toLowerCase().includes(searchTerm.toLowerCase());
+      }
+      if (u.unit === currentUser.unit) {
+        return u.nama.toLowerCase().includes(searchTerm.toLowerCase());
+      }
+      return false;
+    }).map((user, idx) => {
+      const seed = idx * 4;
+      return {
+        ...user,
+        aktif: Math.floor(seededRandom(seed) * 5) + 1,
+        selesai: Math.floor(seededRandom(seed + 1) * 20) + 5,
+        overdue: Math.floor(seededRandom(seed + 2) * 3),
+        loadKerja: Math.floor(seededRandom(seed + 3) * 60) + 40
+      };
+    });
+  }, [searchTerm, isPimpinan, currentUser.unit]);
 
   return (
     <div className="animate-fade-in" style={{ paddingBottom: '3rem' }}>

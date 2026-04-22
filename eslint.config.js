@@ -19,5 +19,16 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unused-vars': ['warn', {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_|^e$|^err$|^error$'
+      }],
+      'prefer-const': 'warn',
+      'no-empty': ['warn', { allowEmptyCatch: true }],
+      'react-hooks/exhaustive-deps': 'warn',
+    },
   },
 ])

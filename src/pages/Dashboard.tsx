@@ -729,7 +729,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         if (data && Array.isArray(data)) {
           let terpasang = 0, belum = 0, baik = 0, perbaikan = 0, rusak = 0;
 
-          let fetchedMap = new Map();
+          const fetchedMap = new Map();
           data.forEach(item => {
             const ruang = parseInt(item.ruang || item.Ruang);
             if (!isNaN(ruang)) fetchedMap.set(ruang, item);

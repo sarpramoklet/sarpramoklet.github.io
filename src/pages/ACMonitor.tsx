@@ -66,7 +66,7 @@ const ACMonitor = () => {
         fetch(`${API_URL}?sheetName=${SHEET_HISTORY}`).then(r => r.json()).catch(() => [])
       ]);
       
-      let fetchedMap = new Map<number, ACData>();
+      const fetchedMap = new Map<number, ACData>();
       if (resAc && Array.isArray(resAc)) {
         resAc.forEach(item => {
           const ruang = parseInt(item.ruang || item.Ruang);

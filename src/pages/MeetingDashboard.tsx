@@ -253,6 +253,7 @@ const MeetingDashboard = () => {
   }, [kasAcRows]);
 
   const tickets = useMemo<TicketSummary[]>(() => {
+    // eslint-disable-next-line react-hooks/purity
     const now = Date.now();
 
     return ticketRows.map((ticket, idx) => {

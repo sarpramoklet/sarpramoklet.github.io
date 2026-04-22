@@ -139,7 +139,7 @@ const createEmptyNetForm = () => ({
 const buildNetPayload = (formData: Record<string, string>, snapshot: string) => {
   const tanggal = normalizeDateForSave(formData.date || getSystemDateInput());
   const id = netIdFromDate(tanggal) || `NET-${Date.now()}`;
-  const { date, ...fields } = formData;
+  const { date: _date, ...fields } = formData;
 
   return {
     action: 'FINANCE_RECORD',
