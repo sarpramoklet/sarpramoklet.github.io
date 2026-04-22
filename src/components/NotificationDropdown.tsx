@@ -122,11 +122,12 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
       const data = await notesResp.json();
       const classroomData = await classroomResp.json();
 
-      if (data && Array.isArray(data)) {
-        let notifs: any[] = [];
-        let hasFilledToday = false;
-        const now = new Date();
-        const todayStart = startOfToday();
+      const notifs: any[] = [];
+      let hasFilledToday = false;
+      const now = new Date();
+      const todayStart = startOfToday();
+
+      if (Array.isArray(data)) {
         data.forEach((item: any) => {
           if (!item.id || !item.amount) return;
           const date = new Date(item.tanggal || item.Tanggal);
@@ -189,111 +190,110 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
              });
           }
         });
+      }
 
-        const normalizedClassroomRows = Array.isArray(classroomData)
-          ? normalizeClassroomMonitorRows(classroomData)
-          : [];
-        const latestClassroomDate = normalizedClassroomRows.length > 0
-          ? normalizedClassroomRows
-              .map((item) => item.tanggal)
-              .filter(Boolean)
-              .sort((left, right) => new Date(right).getTime() - new Date(left).getTime())[0]
-          : '';
+      const normalizedClassroomRows = Array.isArray(classroomData)
+        ? normalizeClassroomMonitorRows(classroomData)
+        : [];
+      const latestClassroomDate = normalizedClassroomRows.length > 0
+        ? normalizedClassroomRows
+            .map((item) => item.tanggal)
+            .filter(Boolean)
+            .sort((left, right) => new Date(right).getTime() - new Date(left).getTime())[0]
+        : '';
 
-        if (latestClassroomDate) {
-          const latestClassroomRows = normalizedClassroomRows.filter((row) => row.tanggal === latestClassroomDate);
-          const uploaderMap = new Map<string, any>();
+      if (latestClassroomDate) {
+        const latestClassroomRows = normalizedClassroomRows.filter((row) => row.tanggal === latestClassroomDate);
+        const uploaderMap = new Map<string, any>();
 
-          latestClassroomRows.forEach((row) => {
-            const label = String(row.updatedBy || '').trim();
-            if (!label) return;
+        latestClassroomRows.forEach((row) => {
+          const label = String(row.updatedBy || '').trim();
+          if (!label) return;
 
-            const user = resolveUserFromClassroomUploader(label, currentUser);
-            const key = (user?.email || label).toLowerCase();
-            const nextUpdatedAt = new Date(row.updatedAt || row.tanggal).getTime();
-            const existing = uploaderMap.get(key);
-            const existingUpdatedAt = existing ? new Date(existing.updatedAt || existing.tanggal).getTime() : 0;
+          const user = resolveUserFromClassroomUploader(label, currentUser);
+          const key = (user?.email || label).toLowerCase();
+          const nextUpdatedAt = new Date(row.updatedAt || row.tanggal).getTime();
+          const existing = uploaderMap.get(key);
+          const existingUpdatedAt = existing ? new Date(existing.updatedAt || existing.tanggal).getTime() : 0;
 
-            if (!existing || nextUpdatedAt >= existingUpdatedAt) {
-              uploaderMap.set(key, {
-                id: user?.id || key,
-                nama: user?.nama || label,
-                email: user?.email || '',
-                jabatan: user?.jabatan || 'Pengunggah monitor kelas',
-                fotoProfil: user?.fotoProfil,
-                updatedAt: row.updatedAt || row.tanggal,
-              });
-            }
-          });
-
-          const uploaders = Array.from(uploaderMap.values()).sort(
-            (left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime()
-          );
-          setClassroomUploaders(uploaders);
-          setClassroomUploadMeta({ date: latestClassroomDate, totalRooms: latestClassroomRows.length });
-
-          if (uploaders.length > 0) {
-            const leadUploader = uploaders[0];
-            const extraUploaderCount = uploaders.length - 1;
-            const formattedMonitorDate = new Intl.DateTimeFormat('id-ID', {
-              day: 'numeric',
-              month: 'short',
-            }).format(new Date(normalizeClassroomDate(latestClassroomDate)));
-
-            notifs.push({
-              id: `classroom-upload-${latestClassroomDate}`,
-              dedupeKey: `classroom-upload:${latestClassroomDate}`,
-              type: 'classroom_upload',
-              title: 'Monitor Kelas Sudah Diupload',
-              message:
-                extraUploaderCount > 0
-                  ? `${leadUploader.nama.split(',')[0]} dan ${extraUploaderCount} personil lain sudah upload monitor kelas ${formattedMonitorDate} untuk ${latestClassroomRows.length} ruang.`
-                  : `${leadUploader.nama.split(',')[0]} sudah upload monitor kelas ${formattedMonitorDate} untuk ${latestClassroomRows.length} ruang.`,
-              date: new Date(leadUploader.updatedAt || latestClassroomDate),
-              timestamp: new Date(leadUploader.updatedAt || latestClassroomDate).getTime() + 30000,
-              path: '/classroom-monitor',
-              icon: Upload,
-              color: 'var(--accent-emerald)',
-              bg: 'rgba(16, 185, 129, 0.14)',
+          if (!existing || nextUpdatedAt >= existingUpdatedAt) {
+            uploaderMap.set(key, {
+              id: user?.id || key,
+              nama: user?.nama || label,
+              email: user?.email || '',
+              jabatan: user?.jabatan || 'Pengunggah monitor kelas',
+              fotoProfil: user?.fotoProfil,
+              updatedAt: row.updatedAt || row.tanggal,
             });
           }
-        } else {
-          setClassroomUploaders([]);
-          setClassroomUploadMeta({ date: '', totalRooms: 0 });
-        }
+        });
 
-        // Cek pengingat piket jam 15:00
-        const PiketSchedule = [
-          { day: 'Senin', personnel: ['Chusni', 'Whyna', 'Rudi'] },
-          { day: 'Selasa', personnel: ['Bidin', 'Bagus', 'Rudi'] },
-          { day: 'Rabu', personnel: ['Zakaria', 'Yoko', 'Rudi'] },
-          { day: 'Kamis', personnel: ['Chandra', 'Nico', 'Rudi'] },
-          { day: 'Jumat', personnel: ['Ayat', 'Amalia', 'Rudi'] },
-        ];
-        const todayDayName = new Intl.DateTimeFormat('id-ID', { weekday: 'long' }).format(now);
-        const todaySchedule = PiketSchedule.find(s => s.day.toLowerCase() === todayDayName.toLowerCase());
-        const isCurrentUserOnDuty = todaySchedule?.personnel.some(p => currentUser.nama.toLowerCase().includes(p.toLowerCase()));
-        
-        if (isCurrentUserOnDuty && !hasFilledToday && now.getHours() >= 15) {
+        const uploaders = Array.from(uploaderMap.values()).sort(
+          (left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime()
+        );
+        setClassroomUploaders(uploaders);
+        setClassroomUploadMeta({ date: latestClassroomDate, totalRooms: latestClassroomRows.length });
+
+        if (uploaders.length > 0) {
+          const leadUploader = uploaders[0];
+          const extraUploaderCount = uploaders.length - 1;
+          const formattedMonitorDate = new Intl.DateTimeFormat('id-ID', {
+            day: 'numeric',
+            month: 'short',
+          }).format(new Date(normalizeClassroomDate(latestClassroomDate)));
+          const uploadTimestamp = new Date(leadUploader.updatedAt || latestClassroomDate).getTime();
+
           notifs.push({
-            id: 'reminder-piket-15',
-            dedupeKey: 'reminder:piket-15',
-            type: 'reminder',
-            title: '❗ Reminder Piket',
-            message: 'Saat ini sudah lebih dari jam 15.00. Anda bertugas piket hari ini, dimohon segera mengisi catatan piket ya!',
-            date: now,
-            timestamp: now.getTime() + 100000, // force to top
-            path: '/duty-notes',
-            icon: AlertCircle,
-            color: 'var(--accent-amber)',
-            bg: 'rgba(245, 158, 11, 0.1)'
+            id: `classroom-upload-${latestClassroomDate}`,
+            dedupeKey: `classroom-upload:${latestClassroomDate}`,
+            type: 'classroom_upload',
+            title: 'Monitor Kelas Sudah Diupload',
+            message:
+              extraUploaderCount > 0
+                ? `${leadUploader.nama.split(',')[0]} dan ${extraUploaderCount} personil lain sudah upload monitor kelas ${formattedMonitorDate} untuk ${latestClassroomRows.length} ruang.`
+                : `${leadUploader.nama.split(',')[0]} sudah upload monitor kelas ${formattedMonitorDate} untuk ${latestClassroomRows.length} ruang.`,
+            date: new Date(uploadTimestamp),
+            timestamp: uploadTimestamp + 30000,
+            path: '/classroom-monitor',
+            icon: Upload,
+            color: 'var(--accent-emerald)',
+            bg: 'rgba(16, 185, 129, 0.14)',
           });
         }
-
-        applyNotifications(notifs);
       } else {
-        applyNotifications([]);
+        setClassroomUploaders([]);
+        setClassroomUploadMeta({ date: '', totalRooms: 0 });
       }
+
+      // Cek pengingat piket jam 15:00
+      const PiketSchedule = [
+        { day: 'Senin', personnel: ['Chusni', 'Whyna', 'Rudi'] },
+        { day: 'Selasa', personnel: ['Bidin', 'Bagus', 'Rudi'] },
+        { day: 'Rabu', personnel: ['Zakaria', 'Yoko', 'Rudi'] },
+        { day: 'Kamis', personnel: ['Chandra', 'Nico', 'Rudi'] },
+        { day: 'Jumat', personnel: ['Ayat', 'Amalia', 'Rudi'] },
+      ];
+      const todayDayName = new Intl.DateTimeFormat('id-ID', { weekday: 'long' }).format(now);
+      const todaySchedule = PiketSchedule.find(s => s.day.toLowerCase() === todayDayName.toLowerCase());
+      const isCurrentUserOnDuty = todaySchedule?.personnel.some(p => currentUser.nama.toLowerCase().includes(p.toLowerCase()));
+      
+      if (isCurrentUserOnDuty && !hasFilledToday && now.getHours() >= 15) {
+        notifs.push({
+          id: 'reminder-piket-15',
+          dedupeKey: 'reminder:piket-15',
+          type: 'reminder',
+          title: '❗ Reminder Piket',
+          message: 'Saat ini sudah lebih dari jam 15.00. Anda bertugas piket hari ini, dimohon segera mengisi catatan piket ya!',
+          date: now,
+          timestamp: now.getTime() + 100000, // force to top
+          path: '/duty-notes',
+          icon: AlertCircle,
+          color: 'var(--accent-amber)',
+          bg: 'rgba(245, 158, 11, 0.1)'
+        });
+      }
+
+      applyNotifications(notifs);
     } catch (e) {
       console.error(e);
       setClassroomUploaders([]);
