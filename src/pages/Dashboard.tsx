@@ -1273,36 +1273,31 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
     };
   };
 
-  // Cutoff: Senin minggu ini s.d. hari ini (sinkron dengan halaman Monitor Pantauan Kelas)
-  const _cmToday = new Date(); _cmToday.setHours(0, 0, 0, 0);
-  const _cmDow = _cmToday.getDay(); // 0=Min,1=Sen,...,6=Sab
-  const _cmCutoff = new Date(_cmToday);
-  _cmCutoff.setDate(_cmCutoff.getDate() - (_cmDow === 0 ? 6 : _cmDow - 1));
-  const _cmPad = (n: number) => String(n).padStart(2, '0');
-  const _cmCutoffStr = `${_cmCutoff.getFullYear()}-${_cmPad(_cmCutoff.getMonth() + 1)}-${_cmPad(_cmCutoff.getDate())}`;
-  const classroomWeekRows = classroomMonitorRows.filter(
-    (row) => row.tanggal >= _cmCutoffStr
-  );
+  const classroomSnapshotDate = classroomMonitorRows
+    .slice()
+    .sort((a, b) => (parseWifiDateValue(b.tanggal)?.getTime() || 0) - (parseWifiDateValue(a.tanggal)?.getTime() || 0))[0]?.tanggal || '';
+  const classroomDailyRows = classroomSnapshotDate
+    ? classroomMonitorRows.filter((row) => row.tanggal === classroomSnapshotDate)
+    : [];
+  const classroomDailyRowMap = new Map(classroomDailyRows.map((row) => [row.ruang, row]));
 
   const classroomRoomSummaries = CLASSROOM_LOCATION_OPTIONS.map((ruang) => {
-    const roomRows = classroomWeekRows.filter((item) => item.ruang === ruang);
-    const latestRow = roomRows
-      .slice()
-      .sort((a, b) => (parseWifiDateValue(b.tanggal)?.getTime() || 0) - (parseWifiDateValue(a.tanggal)?.getTime() || 0))[0] || null;
-
-    const energyFindings = roomRows.reduce((sum, item) => sum + item.lampu + item.tv + item.ac + item.kipas + item.lainnya, 0);
-    const cleanlinessFindings = roomRows.reduce((sum, item) => sum + item.sampah + item.kotoran, 0);
-    const tidinessFindings = roomRows.reduce((sum, item) => sum + item.rapih, 0);
-    const totalFindings = roomRows.reduce((sum, item) => sum + item.total, 0);
-    const observationCount = roomRows.length;
+    const dayRow = classroomDailyRowMap.get(ruang) || null;
+    const energyFindings = dayRow ? dayRow.lampu + dayRow.tv + dayRow.ac + dayRow.kipas + dayRow.lainnya : 0;
+    const cleanlinessFindings = dayRow ? dayRow.sampah + dayRow.kotoran : 0;
+    const tidinessFindings = dayRow ? dayRow.rapih : 0;
+    const totalFindings = dayRow?.total || 0;
+    const observationCount = dayRow ? 1 : 0;
     const score = Math.max(
       0,
-      100 - (energyFindings * 12) - (cleanlinessFindings * 15) - (tidinessFindings * 10) - Math.max(0, observationCount - 1) * 3
+      100 - (energyFindings * 12) - (cleanlinessFindings * 15) - (tidinessFindings * 10)
     );
     const status = getClassroomStatusMeta(score);
 
     return {
       ruang,
+      namaKelas: dayRow?.namaKelas || '',
+      waliKelas: dayRow?.waliKelas || '',
       observationCount,
       energyFindings,
       cleanlinessFindings,
@@ -1310,9 +1305,9 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       totalFindings,
       score,
       status,
-      latestDate: latestRow?.tanggal || '',
-      latestDateLabel: latestRow ? formatWifiDateDisplay(latestRow.tanggal) : '-',
-      latestNote: latestRow?.keterangan || (latestRow ? buildMonitorIssueSummary(latestRow) : 'Belum ada data'),
+      latestDate: dayRow?.tanggal || '',
+      latestDateLabel: dayRow ? formatWifiDateDisplay(dayRow.tanggal) : '-',
+      latestNote: dayRow?.keterangan || (dayRow ? buildMonitorIssueSummary(dayRow) : 'Belum ada data'),
     };
   });
 
@@ -1326,10 +1321,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   const classroomTotalEnergyFindings = classroomObservedRooms.reduce((sum, room) => sum + room.energyFindings, 0);
   const classroomTotalCleanlinessFindings = classroomObservedRooms.reduce((sum, room) => sum + room.cleanlinessFindings, 0);
   const classroomTotalTidinessFindings = classroomObservedRooms.reduce((sum, room) => sum + room.tidinessFindings, 0);
-  const classroomSnapshotDate = classroomWeekRows
-    .slice()
-    .sort((a, b) => (parseWifiDateValue(b.tanggal)?.getTime() || 0) - (parseWifiDateValue(a.tanggal)?.getTime() || 0))[0]?.tanggal || '';
-  const hasClassroomMonitorData = classroomWeekRows.length > 0;
+  const hasClassroomMonitorData = classroomDailyRows.length > 0;
   const classroomIssueComposition = [
     { name: 'Kebersihan', value: classroomTotalCleanlinessFindings, color: '#06b6d4' },
     { name: 'Kerapihan', value: classroomTotalTidinessFindings, color: '#8b5cf6' },
@@ -1383,7 +1375,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
             <AlertCircle size={18} color="var(--accent-cyan)" /> Monitor Rekap Pantauan Kelas
           </h3>
           <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)', maxWidth: '760px' }}>
-            Ringkasan kebersihan, kerapihan, dan awareness penghematan energi agar wali kelas dan guru cepat tahu ruang yang perlu ditindaklanjuti.
+            Ringkasan harian kebersihan, kerapihan, dan awareness penghematan energi agar wali kelas dan guru cepat tahu ruang yang perlu ditindaklanjuti pada snapshot terbaru.
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -1429,7 +1421,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                   {classroomSafeRooms.length}
                 </div>
                 <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
-                  {classroomSafeRooms.length} lokasi tanpa temuan pada snapshot terbaru.
+                  {classroomSafeRooms.length} lokasi tanpa temuan pada snapshot harian ini.
                 </div>
               </div>
 
@@ -1453,7 +1445,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                       : 'Kerapihan'}
                 </div>
                 <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
-                  {classroomTotalCleanlinessFindings + classroomTotalEnergyFindings + classroomTotalTidinessFindings} temuan tercatat dari data pantauan.
+                  {classroomTotalCleanlinessFindings + classroomTotalEnergyFindings + classroomTotalTidinessFindings} temuan tercatat pada snapshot harian.
                 </div>
               </div>
 
@@ -1463,7 +1455,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                   {classroomCoverageRate}%
                 </div>
                 <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
-                  Siap disambungkan ke sheet `{CLASSROOM_MONITOR_SHEET}` untuk rekap harian otomatis.
+                  Membaca cakupan lokasi yang berhasil terisi pada snapshot tanggal ini.
                 </div>
               </div>
             </div>
@@ -1474,11 +1466,11 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                   <div>
                     <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>Prioritas ruang untuk diinformasikan</div>
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
-                      Skor makin rendah berarti butuh perhatian lebih cepat.
+                      Skor makin rendah berarti butuh perhatian lebih cepat pada hasil pantauan hari ini.
                     </div>
                   </div>
                   <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-                    Berdasarkan form pantauan kelas
+                    Berdasarkan snapshot harian
                   </span>
                 </div>
 
@@ -1519,7 +1511,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
               <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', minHeight: '320px', display: 'flex', flexDirection: 'column' }}>
                 <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>Sebaran jenis temuan</div>
                 <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
-                  Membantu fokus pembinaan: kebersihan, kerapihan, atau penghematan energi.
+                  Membantu fokus pembinaan harian: kebersihan, kerapihan, atau penghematan energi.
                 </div>
 
                 <div style={{ flex: 1, position: 'relative', minHeight: '210px', marginTop: '0.5rem' }}>
@@ -1624,7 +1616,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                     </div>
                   )) : (
                     <div style={{ padding: '1rem', borderRadius: '12px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
-                      Semua ruang yang terpantau berada dalam kondisi aman.
+                      Semua ruang pada snapshot harian ini berada dalam kondisi aman.
                     </div>
                   )}
                 </div>
@@ -1657,7 +1649,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                   <div style={{ padding: '0.8rem', borderRadius: '12px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)' }}>
                     <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Catatan implementasi</div>
                     <div style={{ marginTop: '0.35rem', fontSize: '0.74rem', color: 'var(--text-secondary)', lineHeight: 1.55 }}>
-                      Section ini otomatis memakai seed dari form contoh, dan akan memakai data live saat sheet `{CLASSROOM_MONITOR_SHEET}` sudah tersedia.
+                      Section ini membaca snapshot tanggal paling baru dari sheet `{CLASSROOM_MONITOR_SHEET}` lalu merangkum kondisi harian per ruang.
                     </div>
                   </div>
                 </div>
