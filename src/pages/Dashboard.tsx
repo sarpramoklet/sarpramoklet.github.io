@@ -417,8 +417,6 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
     error: false,
   });
   const [mokletRefresh, setMokletRefresh] = useState(0);
-  const [showServicePopup, setShowServicePopup] = useState(false);
-  const [servicePopupUrl, setServicePopupUrl] = useState('https://app.smktelkom-mlg.sch.id/teacher/dashboard');
 
   const [wifiData, setWifiData] = useState<any[]>([]);
   const [wifiLoading, setWifiLoading] = useState(false);
@@ -1055,6 +1053,23 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       error: false,
       lastUpdated: null,
     }));
+  };
+
+  const handleOpenMokletService = (url: string = 'https://app.smktelkom-mlg.sch.id/teacher/dashboard') => {
+    const width = 1200;
+    const height = 800;
+    const left = (window.screen.width - width) / 2;
+    const top = (window.screen.height - height) / 2;
+    
+    const popup = window.open(
+      url, 
+      'MokletService', 
+      `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes,menubar=no,toolbar=no,location=no,status=no`
+    );
+    
+    if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+      alert('Popup diblokir oleh browser! Silakan izinkan popup untuk situs ini agar bisa membuka Dashboard Moklet Service.');
+    }
   };
 
   const handleDeletePiket = async (id: string, keterangan: string) => {
@@ -1829,9 +1844,9 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: mokletService.error ? '#f87171' : mokletService.loading ? '#fbbf24' : '#34d399', boxShadow: `0 0 6px ${mokletService.error ? '#f8717160' : mokletService.loading ? '#fbbf2460' : '#34d39960'}` }} />
               <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Moklet Service — Status Layanan</span>
               <button
-                onClick={() => { setServicePopupUrl('https://app.smktelkom-mlg.sch.id/teacher/dashboard'); setShowServicePopup(true); }}
+                onClick={() => handleOpenMokletService()}
                 style={{ fontSize: '0.7rem', color: 'var(--accent-blue)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, opacity: 0.85, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}
-                title="Buka Moklet Service Dashboard"
+                title="Buka Moklet Service Dashboard (Popup)"
               >
                 <ExternalLink size={11} /> Buka Service
               </button>
@@ -2794,117 +2809,6 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           })}
         </div>
       </div>
-
-
-
-      {/* ══════════════ MOKLET SERVICE POPUP ══════════════ */}
-      {showServicePopup && (
-        <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)',
-          zIndex: 2000, display: 'flex', flexDirection: 'column', padding: '1rem',
-        }}>
-          {/* Header */}
-          <div style={{
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            padding: '0.75rem 1rem', marginBottom: '0.5rem',
-            background: 'rgba(255,255,255,0.04)', borderRadius: '12px',
-            border: '1px solid var(--border-subtle)',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 0 }}>
-              <div style={{ padding: '0.4rem', background: 'rgba(59,130,246,0.15)', borderRadius: '8px', color: 'var(--accent-blue)', display: 'flex', flexShrink: 0 }}>
-                <ExternalLink size={18} />
-              </div>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>Moklet Service Dashboard</div>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {servicePopupUrl}
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
-              {servicePopupUrl.includes('app.smktelkom-mlg.sch.id') && (
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: '0.35rem',
-                  fontSize: '0.72rem', color: 'var(--accent-amber)',
-                  background: 'rgba(245,158,11,0.12)', padding: '0.3rem 0.65rem', borderRadius: '6px',
-                  fontWeight: 600,
-                }}>
-                  ⚡ Login dulu via Google SSO
-                </div>
-              )}
-              <button
-                onClick={() => setServicePopupUrl('https://app.smktelkom-mlg.sch.id/teacher/dashboard')}
-                style={{
-                  fontSize: '0.75rem', fontWeight: 600, padding: '0.4rem 0.75rem',
-                  background: servicePopupUrl.includes('app.smktelkom-mlg') ? 'rgba(59,130,246,0.15)' : 'transparent',
-                  color: 'var(--accent-blue)', border: '1px solid var(--border-subtle)',
-                  borderRadius: '6px', cursor: 'pointer',
-                }}
-                title="Buka halaman login SSO"
-              >
-                🔐 Login SSO
-              </button>
-              <button
-                onClick={() => setServicePopupUrl('https://service.smktelkom-mlg.sch.id/administrator/dashboard')}
-                style={{
-                  fontSize: '0.75rem', fontWeight: 600, padding: '0.4rem 0.75rem',
-                  background: servicePopupUrl.includes('service.smktelkom-mlg') ? 'rgba(16,185,129,0.15)' : 'transparent',
-                  color: 'var(--accent-emerald)', border: '1px solid var(--border-subtle)',
-                  borderRadius: '6px', cursor: 'pointer',
-                }}
-                title="Buka service dashboard"
-              >
-                📊 Service Dashboard
-              </button>
-              <button
-                onClick={() => window.open(servicePopupUrl, '_blank')}
-                style={{
-                  fontSize: '0.75rem', fontWeight: 600, padding: '0.4rem 0.75rem',
-                  background: 'transparent', color: 'var(--text-secondary)',
-                  border: '1px solid var(--border-subtle)', borderRadius: '6px', cursor: 'pointer',
-                }}
-                title="Buka di tab baru"
-              >
-                ↗ Tab Baru
-              </button>
-              <button
-                onClick={() => setShowServicePopup(false)}
-                style={{
-                  background: 'rgba(244,63,94,0.12)', border: 'none', color: 'var(--accent-rose)',
-                  cursor: 'pointer', padding: '0.4rem', borderRadius: '8px', display: 'flex',
-                }}
-                title="Tutup popup service"
-              >
-                <X size={20} />
-              </button>
-            </div>
-          </div>
-
-          {/* Iframe Container */}
-          <div style={{
-            flex: 1, borderRadius: '12px', overflow: 'hidden',
-            border: '1px solid var(--border-subtle)', background: '#fff',
-            position: 'relative',
-          }}>
-            <iframe
-              src={servicePopupUrl}
-              title="Moklet Service Dashboard"
-              style={{ width: '100%', height: '100%', border: 'none' }}
-              sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
-            />
-          </div>
-
-          {/* Footer hint */}
-          <div style={{
-            padding: '0.5rem 1rem', marginTop: '0.5rem', textAlign: 'center',
-            fontSize: '0.7rem', color: 'var(--text-muted)',
-          }}>
-            💡 Login di halaman SSO (app.smktelkom-mlg.sch.id/teacher/dashboard), lalu klik "📊 Service Dashboard" untuk melihat data layanan.
-            Jika iframe diblokir, gunakan "↗ Tab Baru".
-          </div>
-        </div>
-      )}
 
     </div>
   );
