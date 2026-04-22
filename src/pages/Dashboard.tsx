@@ -1859,8 +1859,8 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         </div>
       </div>
 
-      {/* ── Moklet Service Integration Boxes (hanya saat login) ── */}
-      {isLoggedIn && (
+      {/* ── Moklet Service Integration Boxes (hanya untuk Pimpinan tertentu) ── */}
+      {isLoggedIn && currentUser?.email === 'hadi@smktelkom-mlg.sch.id' && (
         <div style={{ marginBottom: '2rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem', gap: '1rem', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
