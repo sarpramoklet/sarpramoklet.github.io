@@ -209,8 +209,40 @@ const normalizeImageImportResponse = (raw: any): { tanggal: string; partials: Cl
 
   const partials = items
     .map((item: any) => {
-      const ruang = normalizeClassroomRoom(item?.ruang || item?.kelas || item?.room || '');
+      const ruang = normalizeClassroomRoom(
+        item?.ruang || item?.Ruang || item?.room || item?.Room || item?.lokasi || item?.Lokasi || ''
+      );
       if (!ruang) return null;
+
+      const namaKelas = String(
+        item?.namaKelas ||
+        item?.NamaKelas ||
+        item?.kelas ||
+        item?.Kelas ||
+        item?.className ||
+        item?.ClassName ||
+        ''
+      ).trim();
+      const waliKelas = String(
+        item?.waliKelas ||
+        item?.WaliKelas ||
+        item?.walas ||
+        item?.Walas ||
+        item?.pemakaianKelas ||
+        item?.PemakaianKelas ||
+        item?.penggunaRuang ||
+        item?.PenggunaRuang ||
+        ''
+      ).trim();
+      const issueNote = String(
+        item?.keterangan ||
+        item?.Keterangan ||
+        item?.catatan ||
+        item?.Catatan ||
+        item?.catatanTemuan ||
+        item?.CatatanTemuan ||
+        ''
+      ).trim();
 
       const normalized: ClassroomMonitorSeedPartial = {
         ruang,
@@ -221,8 +253,10 @@ const normalizeImageImportResponse = (raw: any): { tanggal: string; partials: Cl
         lainnya: toMonitorFlag(item?.lainnya || item?.Lainnya),
         sampah: toMonitorFlag(item?.sampah || item?.Sampah),
         kotoran: toMonitorFlag(item?.kotoran || item?.Kotoran),
-        rapih: toMonitorFlag(item?.rapih || item?.Rapih),
-        keterangan: String(item?.keterangan || item?.Keterangan || '').trim(),
+        rapih: toMonitorFlag(item?.rapih || item?.Rapih || item?.tdkRapi || item?.TdkRapi || item?.tidakRapi || item?.TidakRapi),
+        namaKelas,
+        waliKelas,
+        keterangan: issueNote,
       };
 
       const hasIssue = Boolean(
@@ -234,7 +268,7 @@ const normalizeImageImportResponse = (raw: any): { tanggal: string; partials: Cl
         normalized.sampah ||
         normalized.kotoran ||
         normalized.rapih ||
-        normalized.keterangan
+        issueNote
       );
 
       return hasIssue ? normalized : null;
@@ -250,17 +284,21 @@ const analyzeClassroomFormImage = async (base64: string, mimeType: string) => {
 "LAPORAN PANTAUAN KEBERSIHAN DAN KERAPIHAN RUANG KELAS".
 
 The sheet layout contains:
-- Header with date such as "Selasa, 07 April 2026" or "Rabu, 08 April 2026"
+- Header with date such as "Selasa, 07 April 2026" or "Rabu, 22 April 2026"
 - Rows for locations: Ruang 1 to Ruang 40, Lab 1 to Lab 7, R. Studio, Aula, UKS
+- Identity columns before findings:
+  nomor, ruang, kelas, and "Keterangan (Pemakaian Kelas/Wali Kelas)"
+- The "Keterangan (Pemakaian Kelas/Wali Kelas)" column contains classroom usage identity such as wali kelas name or labels like "Ujian", NOT a freeform issue note column
 - Columns for findings:
-  lampu, tv, ac, kipas, lainnya, sampah, kotoran, rapih
+  lampu, tv, ac, kipas, lainnya, sampah, kotoran, tdk. rapi
 - Red cells with "1" indicate the finding is present
-- Keterangan column may contain notes even when total is 0
+- The last total column is "Jumlah Hasil Pantauan"
 
 Your task:
 1. Extract the form date.
-2. Extract ONLY rows that have at least one marked finding OR non-empty keterangan.
-3. Return strict JSON only, with no markdown and no extra explanation.
+2. Extract ONLY rows that have at least one marked finding.
+3. When clearly readable, also extract the class name and wali kelas / room usage identity for those rows.
+4. Return strict JSON only, with no markdown and no extra explanation.
 
 Output schema:
 {
@@ -268,6 +306,8 @@ Output schema:
   "items": [
     {
       "ruang": "Ruang 4",
+      "namaKelas": "X-RPL4",
+      "waliKelas": "Ina Indra Rustika, S.Pd.",
       "lampu": 0,
       "tv": 0,
       "ac": 0,
@@ -284,7 +324,11 @@ Output schema:
 Rules:
 - Keep room names exactly in the normalized style: "Ruang 1", "Lab 4", "R. Studio", "Aula", "UKS"
 - Use 0 or 1 for finding columns
-- If a note exists, copy it as plain text
+- Map "TDK. RAPI" / "tidak rapi" to the JSON field "rapih"
+- Put the class code in "namaKelas" when visible, for example "X-RPL1" or "XI-TKJ2"
+- Put the wali kelas / room usage text in "waliKelas" when visible
+- Do NOT copy wali kelas text into "keterangan"
+- For this new form format, "keterangan" should normally be an empty string unless there is a separate issue note outside the identity column
 - If you are unsure, prefer leaving a column as 0 rather than inventing a mark
 - Return only JSON`;
 
@@ -632,7 +676,7 @@ const ClassroomMonitor = () => {
       setImportDraft({
         tanggal: parsed.tanggal,
         rows: rowsForDate,
-        issueRows: rowsForDate.filter((entry) => entry.total > 0 || entry.keterangan !== 'Aman, tidak ada temuan.'),
+        issueRows: rowsForDate.filter((entry) => entry.total > 0),
       });
     } catch (error: any) {
       console.error('Analyze classroom form failed:', error);
@@ -1504,14 +1548,14 @@ const ClassroomMonitor = () => {
                         {formatMonitorDate(importDraft.tanggal)}
                       </div>
                       <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
-                        {importDraft.rows.length} baris akan dikirim, {importDraft.issueRows.length} lokasi berisi temuan atau catatan.
+                        {importDraft.rows.length} baris akan dikirim, {importDraft.issueRows.length} lokasi berisi temuan.
                       </div>
                     </div>
 
                     <div style={{ maxHeight: '360px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
                       {importDraft.issueRows.length === 0 ? (
                         <div style={{ color: 'var(--text-secondary)', fontSize: '0.78rem' }}>
-                          AI tidak menemukan temuan/catatan pada gambar ini.
+                          AI tidak menemukan temuan pada gambar ini.
                         </div>
                       ) : importDraft.issueRows.map((row) => (
                         <div key={row.id} style={{ padding: '0.75rem 0.8rem', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
@@ -1519,6 +1563,13 @@ const ClassroomMonitor = () => {
                             <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)' }}>{row.ruang}</div>
                             <span className={`badge ${row.total > 0 ? 'badge-danger' : 'badge-info'}`}>{row.total}</span>
                           </div>
+                          {getEffectiveRoomDetails(row) && (getEffectiveRoomDetails(row).className || getEffectiveRoomDetails(row).waliKelas) && (
+                            <div style={{ marginTop: '0.25rem', fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
+                              {getEffectiveRoomDetails(row).className && <span>{getEffectiveRoomDetails(row).className}</span>}
+                              {getEffectiveRoomDetails(row).className && getEffectiveRoomDetails(row).waliKelas && <span> · </span>}
+                              {getEffectiveRoomDetails(row).waliKelas && <span>Wali: {getEffectiveRoomDetails(row).waliKelas}</span>}
+                            </div>
+                          )}
                           <div style={{ marginTop: '0.3rem', fontSize: '0.74rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                             {row.keterangan}
                           </div>

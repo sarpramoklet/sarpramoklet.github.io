@@ -22,7 +22,7 @@ export type ClassroomMonitorEntry = {
 export type ClassroomMonitorSeedPartial = Partial<
   Pick<
     ClassroomMonitorEntry,
-    'lampu' | 'tv' | 'ac' | 'kipas' | 'lainnya' | 'sampah' | 'kotoran' | 'rapih' | 'keterangan'
+    'lampu' | 'tv' | 'ac' | 'kipas' | 'lainnya' | 'sampah' | 'kotoran' | 'rapih' | 'keterangan' | 'namaKelas' | 'waliKelas'
   >
 > & {
   ruang: string;
@@ -289,6 +289,7 @@ export const createEmptyClassroomEntry = (
 ): ClassroomMonitorEntry => {
   const normalizedDate = normalizeClassroomDate(tanggal);
   const normalizedRoom = normalizeClassroomRoom(ruang);
+  const roomDetails = getClassroomRoomDetails(normalizedRoom);
   return {
     id: buildClassroomEntryId(normalizedDate, normalizedRoom),
     tanggal: normalizedDate,
@@ -304,6 +305,8 @@ export const createEmptyClassroomEntry = (
     rapih: 0,
     total: 0,
     keterangan: 'Aman, tidak ada temuan.',
+    namaKelas: roomDetails?.className || '',
+    waliKelas: roomDetails?.waliKelas || '',
     updatedBy,
     updatedAt,
   };
@@ -335,6 +338,8 @@ export const buildFullDayEntries = (
       sampah: found.sampah ? 1 : 0,
       kotoran: found.kotoran ? 1 : 0,
       rapih: found.rapih ? 1 : 0,
+      namaKelas: String(found.namaKelas || base.namaKelas || '').trim(),
+      waliKelas: String(found.waliKelas || base.waliKelas || '').trim(),
       keterangan: String(found.keterangan || '').trim(),
     };
 
