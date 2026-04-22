@@ -967,22 +967,22 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         }
 
         const text = await resp.text();
-        const pengaduanSection = text.match(/Pengaduan Layanan(.*?)Peminjaman Ruang/s) || [text];
-        const ruangSection = text.match(/Peminjaman Ruang(.*?)Peminjaman Alat/s) || [text];
-        const alatSection = text.match(/Peminjaman Alat(.*?)$/s) || [text];
+        const complaintsSection = text.match(/Complaints(.*?)Room Reservation/s) || [text];
+        const roomSection = text.match(/Room Reservation(.*?)Tools Loan/s) || [text];
+        const toolsSection = text.match(/Tools Loan(.*?)$/s) || [text];
 
         const data = {
           complaints: {
-            waiting: (pengaduanSection[0].match(/Waiting for Confirmation.*?(\d+)/is) || [])[1] || 0,
-            processing: (pengaduanSection[0].match(/On Process.*?(\d+)/is) || [])[1] || 0
+            waiting: (complaintsSection[0].match(/(\d+)\s*Waiting for Confirmation/is) || [])[1] || 0,
+            processing: (complaintsSection[0].match(/(\d+)\s*On Process/is) || [])[1] || 0
           },
           rooms: {
-            waiting: (ruangSection[0].match(/Waiting for Confirmation.*?(\d+)/is) || [])[1] || 0,
-            active: (ruangSection[0].match(/Active Reservation.*?(\d+)/is) || [])[1] || 0
+            waiting: (roomSection[0].match(/(\d+)\s*Waiting for Confirmation/is) || [])[1] || 0,
+            active: (roomSection[0].match(/(\d+)\s*Active Reservation/is) || [])[1] || 0
           },
           tools: {
-            waiting: (alatSection[0].match(/Waiting for Confirmation.*?(\d+)/is) || [])[1] || 0,
-            notReturn: (alatSection[0].match(/Have not return(?:ed)?.*?(\d+)/is) || [])[1] || 0
+            waiting: (toolsSection[0].match(/(\d+)\s*Waiting for Confirmation/is) || [])[1] || 0,
+            notReturn: (toolsSection[0].match(/(\d+)\s*Have not return/is) || [])[1] || 0
           }
         };
 
