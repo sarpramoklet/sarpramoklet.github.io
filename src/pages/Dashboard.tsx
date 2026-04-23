@@ -9,6 +9,8 @@ import { useProfileThumbByEmail } from '../hooks/useProfileThumbByEmail';
 import UserAvatar from '../components/UserAvatar';
 import { getMotivationForLogin, getPublicEducationalMotivation } from '../utils/motivation';
 import { pushActionNotification } from '../utils/actionNotifications';
+import { SARMOK_DASHBOARD_API_URL, parseSarmokDashboardBody } from '../utils/sarmokDashboard';
+import type { SarmokDashboardData } from '../utils/sarmokDashboard';
 import {
   buildMonitorIssueSummary,
   CLASSROOM_LOCATION_OPTIONS,
@@ -25,20 +27,48 @@ import type { ClassroomMonitorEntry } from '../utils/classroomMonitor';
 const FINANCE_API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 const MOKLET_BASIC_AUTH_USERNAME_KEY = 'mokletBasicAuthUsername';
 const MOKLET_BASIC_AUTH_PASSWORD_KEY = 'mokletBasicAuthPassword';
+type MokletBasicAuthSource = 'session' | 'env' | 'missing';
+type MokletBasicAuthCredentials = { username: string; password: string; source: MokletBasicAuthSource };
 
 const canUseSessionStorage = () => typeof window !== 'undefined' && typeof window.sessionStorage !== 'undefined';
 
-const getStoredMokletBasicAuth = () => {
-  if (!canUseSessionStorage()) return { username: '', password: '' };
+const getSessionMokletBasicAuth = (): MokletBasicAuthCredentials => {
+  if (!canUseSessionStorage()) return { username: '', password: '', source: 'missing' };
 
+  const username = window.sessionStorage.getItem(MOKLET_BASIC_AUTH_USERNAME_KEY)?.trim() || '';
+  const password = window.sessionStorage.getItem(MOKLET_BASIC_AUTH_PASSWORD_KEY) || '';
   return {
-    username: window.sessionStorage.getItem(MOKLET_BASIC_AUTH_USERNAME_KEY)?.trim() || '',
-    password: window.sessionStorage.getItem(MOKLET_BASIC_AUTH_PASSWORD_KEY) || '',
+    username,
+    password,
+    source: username && password ? 'session' : 'missing',
   };
 };
 
-const hasStoredMokletBasicAuth = () => {
-  const credentials = getStoredMokletBasicAuth();
+const getEnvMokletBasicAuth = (): MokletBasicAuthCredentials => {
+  if (!import.meta.env.DEV) return { username: '', password: '', source: 'missing' };
+
+  const username = import.meta.env.VITE_SARMOK_BASIC_AUTH_USERNAME?.trim() || '';
+  const password = import.meta.env.VITE_SARMOK_BASIC_AUTH_PASSWORD || '';
+
+  return {
+    username,
+    password,
+    source: username && password ? 'env' : 'missing',
+  };
+};
+
+const getMokletBasicAuth = (): MokletBasicAuthCredentials => {
+  const sessionCredentials = getSessionMokletBasicAuth();
+  if (sessionCredentials.username && sessionCredentials.password) return sessionCredentials;
+
+  const envCredentials = getEnvMokletBasicAuth();
+  if (envCredentials.username && envCredentials.password) return envCredentials;
+
+  return { username: sessionCredentials.username || envCredentials.username, password: '', source: 'missing' };
+};
+
+const hasMokletBasicAuth = () => {
+  const credentials = getMokletBasicAuth();
   return Boolean(credentials.username && credentials.password);
 };
 
@@ -402,7 +432,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   const [capexProjects, setCapexProjects] = useState<any[]>([]);
   const [capexLoading, setCapexLoading] = useState(false);
 
-  // Moklet Service Dashboard data
+  // Sarmok Dashboard data
   const [mokletService, setMokletService] = useState<{
     complaints: { waitingConfirmation: number; onProcess: number } | null;
     roomReservation: { waitingConfirmation: number; activeReservation: number } | null;
@@ -428,7 +458,8 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   const [netSnapshot, setNetSnapshot] = useState<any>(null);
   const [netSnapshotThumb, setNetSnapshotThumb] = useState<any>(null);
   const [netSnapshotLightbox, setNetSnapshotLightbox] = useState<{ src: string; tanggal: string } | null>(null);
-  const [mokletBasicAuthReady, setMokletBasicAuthReady] = useState(() => hasStoredMokletBasicAuth());
+  const [mokletBasicAuthReady, setMokletBasicAuthReady] = useState(() => hasMokletBasicAuth());
+  const [mokletBasicAuthSource, setMokletBasicAuthSource] = useState<MokletBasicAuthSource>(() => getMokletBasicAuth().source);
   const [publicVisitorSeed] = useState(() => {
     const existing = localStorage.getItem('publicVisitorSeed');
     if (existing) return existing;
@@ -939,13 +970,23 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
     fetchNetSnapshot();
     fetchUtilityChart();
 
-    // Fetch Moklet Service Dashboard data langsung (menggunakan perantara Google Apps Script)
+    const readSarmokDashboardResponse = async (resp: Response) => {
+      const contentType = resp.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        return parseSarmokDashboardBody(await resp.json());
+      }
+
+      return parseSarmokDashboardBody(await resp.text());
+    };
+
+    // Fetch Sarmok Dashboard data dari API resmi. Proxy tetap dipakai sebagai fallback CORS.
     const fetchMokletService = async () => {
       // Hanya berjalan jika user sudah login sbg pimpinan
       if (!isLoggedIn || currentUser?.email !== 'hadi@smktelkom-mlg.sch.id') return;
 
-      const credentials = getStoredMokletBasicAuth();
+      const credentials = getMokletBasicAuth();
       setMokletBasicAuthReady(Boolean(credentials.username && credentials.password));
+      setMokletBasicAuthSource(credentials.source);
       if (!credentials.username || !credentials.password) {
         setMokletService(prev => ({ ...prev, loading: false, error: false }));
         return;
@@ -953,83 +994,43 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
 
       setMokletService(prev => ({ ...prev, loading: true, error: false }));
       try {
-        const targetUrl = 'https://service.smktelkom-mlg.sch.id/administrator/dashboard';
+        const targetUrl = SARMOK_DASHBOARD_API_URL;
         const authHeader = `Basic ${window.btoa(`${credentials.username}:${credentials.password}`)}`;
+        let data: SarmokDashboardData;
 
-        // Menggunakan perantara Google Apps Script untuk bypass CORS
-        const proxyUrl = `${FINANCE_API_URL}?proxyUrl=${encodeURIComponent(targetUrl)}&authHeader=${encodeURIComponent(authHeader)}`;
-        
-        const resp = await fetch(proxyUrl);
+        try {
+          const directResp = await fetch(targetUrl, {
+            method: 'GET',
+            headers: {
+              Authorization: authHeader,
+              Accept: 'application/json',
+            },
+          });
 
-        if (!resp.ok) {
-          throw new Error(`Moklet Service proxy failed (${resp.status})`);
-        }
+          if (!directResp.ok) throw new Error(`Sarmok API failed (${directResp.status})`);
+          data = await readSarmokDashboardResponse(directResp);
+        } catch (directError) {
+          console.warn('Sarmok direct fetch failed, trying proxy fallback:', directError);
+          const proxyUrl = `${FINANCE_API_URL}?proxyUrl=${encodeURIComponent(targetUrl)}&authHeader=${encodeURIComponent(authHeader)}`;
+          const proxyResp = await fetch(proxyUrl, { headers: { Accept: 'application/json' } });
 
-        const text = await resp.text();
-        console.log('Moklet Service Raw Response Length:', text.length);
-        if (text.length < 500) {
-          console.warn('Response too short, possibly a login page or error.');
-        }
-        
-        // Split text into sections more robustly
-        const complaintsSection = text.match(/Complaints(.*?)(Room\s*Reservation)/is)?.[1] || text;
-        const roomSection = text.match(/Room\s*Reservation(.*?)(Tools\s*Loan)/is)?.[1] || text;
-        const toolsSection = text.match(/Tools\s*Loan(.*?)$/is)?.[1] || text;
-
-        const findValue = (section: string, label: string) => {
-          const lowerSection = section.toLowerCase();
-          const lowerLabel = label.toLowerCase();
-          const labelIdx = lowerSection.indexOf(lowerLabel);
-          
-          if (labelIdx === -1) return 0;
-          
-          // Look at 150 chars before the label for a number
-          const lookBehind = section.substring(Math.max(0, labelIdx - 150), labelIdx);
-          const matches = lookBehind.match(/(\d+)/g);
-          if (matches && matches.length > 0) {
-            return matches[matches.length - 1]; // take the last number found before the label
+          if (!proxyResp.ok) {
+            throw new Error(`Sarmok proxy failed (${proxyResp.status})`);
           }
-          
-          // Fallback: Look at 50 chars after the label
-          const lookAhead = section.substring(labelIdx, labelIdx + 50);
-          const aheadMatches = lookAhead.match(/(\d+)/);
-          return aheadMatches ? aheadMatches[1] : 0;
-        };
 
-        const data = {
-          complaints: {
-            waiting: findValue(complaintsSection, 'Waiting for Confirmation'),
-            processing: findValue(complaintsSection, 'On Process')
-          },
-          rooms: {
-            waiting: findValue(roomSection, 'Waiting for Confirmation'),
-            active: findValue(roomSection, 'Active Reservation')
-          },
-          tools: {
-            waiting: findValue(toolsSection, 'Waiting for Confirmation'),
-            notReturn: findValue(toolsSection, 'Have not return')
-          }
-        };
+          data = await readSarmokDashboardResponse(proxyResp);
+        }
 
         setMokletService({
-          complaints: {
-            waitingConfirmation: Number(data.complaints.waiting || 0),
-            onProcess: Number(data.complaints.processing || 0),
-          },
-          roomReservation: {
-            waitingConfirmation: Number(data.rooms.waiting || 0),
-            activeReservation: Number(data.rooms.active || 0),
-          },
-          toolsLoan: {
-            waitingConfirmation: Number(data.tools.waiting || 0),
-            haveNotReturn: Number(data.tools.notReturn || 0),
-          },
+          complaints: data.complaints,
+          roomReservation: data.roomReservation,
+          toolsLoan: data.toolsLoan,
           loading: false,
           lastUpdated: new Date(),
           error: false,
         });
       } catch (e) {
-        console.warn('Moklet Service monitoring failed:', e);
+        console.warn('Sarmok dashboard monitoring failed:', e);
         setMokletService(prev => ({ ...prev, loading: false, error: true }));
       }
     };
@@ -1043,17 +1044,17 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   }, [isAuthorizedFinance, isLoggedIn, mokletRefresh]);
 
   const handleSetMokletBasicAuth = () => {
-    const currentCredentials = getStoredMokletBasicAuth();
+    const currentCredentials = getMokletBasicAuth();
     const username = window.prompt(
-      'Masukkan username Basic Auth untuk Moklet Service:',
+      'Masukkan username Basic Auth untuk Sarmok API:',
       currentCredentials.username || ''
     );
 
     if (username === null) return;
 
     const password = window.prompt(
-      'Masukkan password Basic Auth untuk Moklet Service:',
-      currentCredentials.password || ''
+      'Masukkan password Basic Auth untuk Sarmok API:',
+      currentCredentials.source === 'session' ? currentCredentials.password : ''
     );
 
     if (password === null) return;
@@ -1064,14 +1065,17 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
 
     setStoredMokletBasicAuth(username, password);
     setMokletBasicAuthReady(true);
+    setMokletBasicAuthSource('session');
     setMokletRefresh((prev) => prev + 1);
   };
 
   const handleClearMokletBasicAuth = () => {
-    if (!confirm('Hapus kredensial Basic Auth Moklet Service dari sesi browser ini?')) return;
+    if (!confirm('Hapus kredensial Basic Auth Sarmok API dari sesi browser ini?')) return;
 
     clearStoredMokletBasicAuth();
-    setMokletBasicAuthReady(false);
+    const credentials = getMokletBasicAuth();
+    setMokletBasicAuthReady(Boolean(credentials.username && credentials.password));
+    setMokletBasicAuthSource(credentials.source);
     setMokletService((prev) => ({
       ...prev,
       loading: false,
@@ -1080,7 +1084,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
     }));
   };
 
-  const handleOpenMokletService = (url: string = 'https://app.smktelkom-mlg.sch.id/teacher/dashboard') => {
+  const handleOpenMokletService = (url: string = SARMOK_DASHBOARD_API_URL) => {
     const width = 1200;
     const height = 800;
     const left = (window.screen.width - width) / 2;
@@ -1093,7 +1097,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
     );
     
     if (!popup || popup.closed || typeof popup.closed === 'undefined') {
-      alert('Popup diblokir oleh browser! Silakan izinkan popup untuk situs ini agar bisa membuka Dashboard Moklet Service.');
+      alert('Popup diblokir oleh browser! Silakan izinkan popup untuk situs ini agar bisa membuka Dashboard Sarmok.');
     }
   };
 
@@ -1880,19 +1884,19 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         </div>
       </div>
 
-      {/* ── Moklet Service Integration Boxes (hanya untuk Pimpinan tertentu) ── */}
+      {/* ── Sarmok API Integration Boxes (hanya untuk Pimpinan tertentu) ── */}
       {isLoggedIn && currentUser?.email === 'hadi@smktelkom-mlg.sch.id' && (
         <div style={{ marginBottom: '2rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem', gap: '1rem', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: mokletService.error ? '#f87171' : mokletService.loading ? '#fbbf24' : '#34d399', boxShadow: `0 0 6px ${mokletService.error ? '#f8717160' : mokletService.loading ? '#fbbf2460' : '#34d39960'}` }} />
-              <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Moklet Service — Status Layanan</span>
+              <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Sarmok Dashboard — Status Layanan</span>
               <button
-                onClick={() => handleOpenMokletService()}
+                onClick={() => handleOpenMokletService(SARMOK_DASHBOARD_API_URL)}
                 style={{ fontSize: '0.7rem', color: 'var(--accent-blue)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, opacity: 0.85, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}
-                title="Buka Moklet Service Dashboard (Popup)"
+                title="Buka endpoint Sarmok Dashboard (Popup)"
               >
-                <ExternalLink size={11} /> Buka Service
+                <ExternalLink size={11} /> Buka API
               </button>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
@@ -1909,9 +1913,9 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                       borderRadius: '6px', cursor: 'pointer'
                     }}
                   >
-                    {mokletBasicAuthReady ? 'Auth Tersimpan' : 'Set Basic Auth'}
+                    {mokletBasicAuthReady ? (mokletBasicAuthSource === 'env' ? 'Auth Env Aktif' : 'Auth Tersimpan') : 'Set Basic Auth'}
                   </button>
-                  {mokletBasicAuthReady && (
+                  {mokletBasicAuthSource === 'session' && (
                     <button
                       onClick={handleClearMokletBasicAuth}
                       style={{
@@ -1921,7 +1925,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                         borderRadius: '6px', cursor: 'pointer'
                       }}
                     >
-                      Reset Auth
+                      Reset Auth Sesi
                     </button>
                   )}
                   <button
@@ -1950,10 +1954,10 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           {isPimpinan && !mokletBasicAuthReady && (
             <div className="glass-panel" style={{ padding: '0.9rem 1rem', marginBottom: '1rem', background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.18)' }}>
               <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--accent-amber)', marginBottom: '0.2rem' }}>
-                Basic Auth Moklet Service belum diatur
+                Basic Auth Sarmok API belum diatur
               </div>
               <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                Klik `Set Basic Auth` untuk menyimpan kredensial login `app.smktelkom-mlg.sch.id`, lalu dashboard akan mengambil data langsung dari `service.smktelkom-mlg.sch.id`.
+                Klik `Set Basic Auth` atau isi `VITE_SARMOK_BASIC_AUTH_USERNAME` dan `VITE_SARMOK_BASIC_AUTH_PASSWORD` di environment, lalu dashboard akan mengambil data dari API Sarmok.
               </div>
             </div>
           )}
@@ -2031,7 +2035,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                   </div>
                   <div style={{ height: '1px', background: 'var(--border-subtle)' }} />
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Belum Dikembalikan</span>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Terverifikasi/Aktif</span>
                     <span style={{ fontWeight: 800, fontSize: '1.3rem', color: '#3b82f6', lineHeight: 1 }}>{mokletService.toolsLoan?.haveNotReturn ?? '-'}</span>
                   </div>
                 </div>
