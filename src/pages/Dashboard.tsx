@@ -25,65 +25,13 @@ import {
 import type { ClassroomMonitorEntry } from '../utils/classroomMonitor';
 
 const FINANCE_API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
-const MOKLET_BASIC_AUTH_USERNAME_KEY = 'mokletBasicAuthUsername';
-const MOKLET_BASIC_AUTH_PASSWORD_KEY = 'mokletBasicAuthPassword';
-type MokletBasicAuthSource = 'session' | 'env' | 'missing';
-type MokletBasicAuthCredentials = { username: string; password: string; source: MokletBasicAuthSource };
+const SARMOK_BASIC_AUTH_USERNAME = import.meta.env.VITE_SARMOK_BASIC_AUTH_USERNAME?.trim() || '';
+const SARMOK_BASIC_AUTH_PASSWORD = import.meta.env.VITE_SARMOK_BASIC_AUTH_PASSWORD || '';
+const SARMOK_BASIC_AUTH_READY = Boolean(SARMOK_BASIC_AUTH_USERNAME && SARMOK_BASIC_AUTH_PASSWORD);
 
-const canUseSessionStorage = () => typeof window !== 'undefined' && typeof window.sessionStorage !== 'undefined';
-
-const getSessionMokletBasicAuth = (): MokletBasicAuthCredentials => {
-  if (!canUseSessionStorage()) return { username: '', password: '', source: 'missing' };
-
-  const username = window.sessionStorage.getItem(MOKLET_BASIC_AUTH_USERNAME_KEY)?.trim() || '';
-  const password = window.sessionStorage.getItem(MOKLET_BASIC_AUTH_PASSWORD_KEY) || '';
-  return {
-    username,
-    password,
-    source: username && password ? 'session' : 'missing',
-  };
-};
-
-const getEnvMokletBasicAuth = (): MokletBasicAuthCredentials => {
-  if (!import.meta.env.DEV) return { username: '', password: '', source: 'missing' };
-
-  const username = import.meta.env.VITE_SARMOK_BASIC_AUTH_USERNAME?.trim() || '';
-  const password = import.meta.env.VITE_SARMOK_BASIC_AUTH_PASSWORD || '';
-
-  return {
-    username,
-    password,
-    source: username && password ? 'env' : 'missing',
-  };
-};
-
-const getMokletBasicAuth = (): MokletBasicAuthCredentials => {
-  const sessionCredentials = getSessionMokletBasicAuth();
-  if (sessionCredentials.username && sessionCredentials.password) return sessionCredentials;
-
-  const envCredentials = getEnvMokletBasicAuth();
-  if (envCredentials.username && envCredentials.password) return envCredentials;
-
-  return { username: sessionCredentials.username || envCredentials.username, password: '', source: 'missing' };
-};
-
-const hasMokletBasicAuth = () => {
-  const credentials = getMokletBasicAuth();
-  return Boolean(credentials.username && credentials.password);
-};
-
-const setStoredMokletBasicAuth = (username: string, password: string) => {
-  if (!canUseSessionStorage()) return;
-
-  window.sessionStorage.setItem(MOKLET_BASIC_AUTH_USERNAME_KEY, username.trim());
-  window.sessionStorage.setItem(MOKLET_BASIC_AUTH_PASSWORD_KEY, password);
-};
-
-const clearStoredMokletBasicAuth = () => {
-  if (!canUseSessionStorage()) return;
-
-  window.sessionStorage.removeItem(MOKLET_BASIC_AUTH_USERNAME_KEY);
-  window.sessionStorage.removeItem(MOKLET_BASIC_AUTH_PASSWORD_KEY);
+const getSarmokBasicAuthHeader = () => {
+  if (!SARMOK_BASIC_AUTH_READY) return '';
+  return `Basic ${window.btoa(`${SARMOK_BASIC_AUTH_USERNAME}:${SARMOK_BASIC_AUTH_PASSWORD}`)}`;
 };
 
 
@@ -458,8 +406,6 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   const [netSnapshot, setNetSnapshot] = useState<any>(null);
   const [netSnapshotThumb, setNetSnapshotThumb] = useState<any>(null);
   const [netSnapshotLightbox, setNetSnapshotLightbox] = useState<{ src: string; tanggal: string } | null>(null);
-  const [mokletBasicAuthReady, setMokletBasicAuthReady] = useState(() => hasMokletBasicAuth());
-  const [mokletBasicAuthSource, setMokletBasicAuthSource] = useState<MokletBasicAuthSource>(() => getMokletBasicAuth().source);
   const [publicVisitorSeed] = useState(() => {
     const existing = localStorage.getItem('publicVisitorSeed');
     if (existing) return existing;
@@ -979,15 +925,13 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       return parseSarmokDashboardBody(await resp.text());
     };
 
-    // Fetch Sarmok Dashboard data dari API resmi. Proxy tetap dipakai sebagai fallback CORS.
+    // Fetch Sarmok Dashboard data via proxy terpusat agar user tidak perlu set auth per browser.
     const fetchMokletService = async () => {
       // Hanya berjalan jika user sudah login sbg pimpinan
       if (!isLoggedIn || currentUser?.email !== 'hadi@smktelkom-mlg.sch.id') return;
 
-      const credentials = getMokletBasicAuth();
-      setMokletBasicAuthReady(Boolean(credentials.username && credentials.password));
-      setMokletBasicAuthSource(credentials.source);
-      if (!credentials.username || !credentials.password) {
+      const authHeader = getSarmokBasicAuthHeader();
+      if (!authHeader) {
         setMokletService(prev => ({ ...prev, loading: false, error: false }));
         return;
       }
@@ -995,30 +939,12 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       setMokletService(prev => ({ ...prev, loading: true, error: false }));
       try {
         const targetUrl = SARMOK_DASHBOARD_API_URL;
-        const authHeader = `Basic ${window.btoa(`${credentials.username}:${credentials.password}`)}`;
-        let data: SarmokDashboardData;
+        const proxyUrl = `${FINANCE_API_URL}?proxyUrl=${encodeURIComponent(targetUrl)}&authHeader=${encodeURIComponent(authHeader)}`;
+        const proxyResp = await fetch(proxyUrl, { headers: { Accept: 'application/json' } });
+        const data: SarmokDashboardData = await readSarmokDashboardResponse(proxyResp);
 
-        try {
-          const directResp = await fetch(targetUrl, {
-            method: 'GET',
-            headers: {
-              Authorization: authHeader,
-              Accept: 'application/json',
-            },
-          });
-
-          if (!directResp.ok) throw new Error(`Sarmok API failed (${directResp.status})`);
-          data = await readSarmokDashboardResponse(directResp);
-        } catch (directError) {
-          console.warn('Sarmok direct fetch failed, trying proxy fallback:', directError);
-          const proxyUrl = `${FINANCE_API_URL}?proxyUrl=${encodeURIComponent(targetUrl)}&authHeader=${encodeURIComponent(authHeader)}`;
-          const proxyResp = await fetch(proxyUrl, { headers: { Accept: 'application/json' } });
-
-          if (!proxyResp.ok) {
-            throw new Error(`Sarmok proxy failed (${proxyResp.status})`);
-          }
-
-          data = await readSarmokDashboardResponse(proxyResp);
+        if (!proxyResp.ok) {
+          throw new Error(`Sarmok proxy failed (${proxyResp.status})`);
         }
 
         setMokletService({
@@ -1042,47 +968,6 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
     }
 
   }, [isAuthorizedFinance, isLoggedIn, mokletRefresh]);
-
-  const handleSetMokletBasicAuth = () => {
-    const currentCredentials = getMokletBasicAuth();
-    const username = window.prompt(
-      'Masukkan username Basic Auth untuk Sarmok API:',
-      currentCredentials.username || ''
-    );
-
-    if (username === null) return;
-
-    const password = window.prompt(
-      'Masukkan password Basic Auth untuk Sarmok API:',
-      currentCredentials.source === 'session' ? currentCredentials.password : ''
-    );
-
-    if (password === null) return;
-    if (!username.trim() || !password) {
-      alert('Username dan password Basic Auth harus diisi.');
-      return;
-    }
-
-    setStoredMokletBasicAuth(username, password);
-    setMokletBasicAuthReady(true);
-    setMokletBasicAuthSource('session');
-    setMokletRefresh((prev) => prev + 1);
-  };
-
-  const handleClearMokletBasicAuth = () => {
-    if (!confirm('Hapus kredensial Basic Auth Sarmok API dari sesi browser ini?')) return;
-
-    clearStoredMokletBasicAuth();
-    const credentials = getMokletBasicAuth();
-    setMokletBasicAuthReady(Boolean(credentials.username && credentials.password));
-    setMokletBasicAuthSource(credentials.source);
-    setMokletService((prev) => ({
-      ...prev,
-      loading: false,
-      error: false,
-      lastUpdated: null,
-    }));
-  };
 
   const handleOpenMokletService = (url: string = SARMOK_DASHBOARD_API_URL) => {
     const width = 1200;
@@ -1902,40 +1787,26 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
               {isPimpinan && (
                 <>
-                  <button
-                    onClick={handleSetMokletBasicAuth}
+                  <span
                     style={{
                       display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
                       fontSize: '0.72rem', fontWeight: 600, padding: '0.35rem 0.75rem',
-                      background: mokletBasicAuthReady ? 'rgba(16, 185, 129, 0.12)' : 'var(--bg-card)',
-                      color: mokletBasicAuthReady ? 'var(--accent-emerald)' : 'var(--text-primary)',
+                      background: SARMOK_BASIC_AUTH_READY ? 'rgba(16, 185, 129, 0.12)' : 'var(--bg-card)',
+                      color: SARMOK_BASIC_AUTH_READY ? 'var(--accent-emerald)' : 'var(--text-primary)',
                       border: '1px solid var(--border-subtle)',
-                      borderRadius: '6px', cursor: 'pointer'
+                      borderRadius: '6px'
                     }}
                   >
-                    {mokletBasicAuthReady ? (mokletBasicAuthSource === 'env' ? 'Auth Env Aktif' : 'Auth Tersimpan') : 'Set Basic Auth'}
-                  </button>
-                  {mokletBasicAuthSource === 'session' && (
-                    <button
-                      onClick={handleClearMokletBasicAuth}
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
-                        fontSize: '0.72rem', fontWeight: 600, padding: '0.35rem 0.75rem',
-                        background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)',
-                        borderRadius: '6px', cursor: 'pointer'
-                      }}
-                    >
-                      Reset Auth Sesi
-                    </button>
-                  )}
+                    {SARMOK_BASIC_AUTH_READY ? 'Auth Terpusat Aktif' : 'Auth Build Missing'}
+                  </span>
                   <button
                     onClick={() => setMokletRefresh(prev => prev + 1)}
-                    disabled={mokletService.loading || !mokletBasicAuthReady}
+                    disabled={mokletService.loading || !SARMOK_BASIC_AUTH_READY}
                     style={{
                       display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
                       fontSize: '0.72rem', fontWeight: 600, padding: '0.35rem 0.75rem',
                       background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-subtle)',
-                      borderRadius: '6px', cursor: mokletService.loading || !mokletBasicAuthReady ? 'not-allowed' : 'pointer', opacity: mokletService.loading || !mokletBasicAuthReady ? 0.7 : 1
+                      borderRadius: '6px', cursor: mokletService.loading || !SARMOK_BASIC_AUTH_READY ? 'not-allowed' : 'pointer', opacity: mokletService.loading || !SARMOK_BASIC_AUTH_READY ? 0.7 : 1
                     }}
                   >
                     <RefreshCw size={12} className={mokletService.loading ? "animate-spin" : ""} />
@@ -1951,13 +1822,13 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
             </div>
           </div>
 
-          {isPimpinan && !mokletBasicAuthReady && (
+          {isPimpinan && !SARMOK_BASIC_AUTH_READY && (
             <div className="glass-panel" style={{ padding: '0.9rem 1rem', marginBottom: '1rem', background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.18)' }}>
               <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--accent-amber)', marginBottom: '0.2rem' }}>
-                Basic Auth Sarmok API belum diatur
+                Basic Auth terpusat belum tersedia di build
               </div>
               <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                Klik `Set Basic Auth` atau isi `VITE_SARMOK_BASIC_AUTH_USERNAME` dan `VITE_SARMOK_BASIC_AUTH_PASSWORD` di environment, lalu dashboard akan mengambil data dari API Sarmok.
+                Isi `VITE_SARMOK_BASIC_AUTH_USERNAME` dan `VITE_SARMOK_BASIC_AUTH_PASSWORD` saat build/deploy agar dashboard mengambil data Sarmok tanpa setting ulang di browser.
               </div>
             </div>
           )}
