@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, LabelList, LineChart, Line, Legend } from 'recharts';
-import { UserCircle2, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, MessageSquare, AlertCircle, Edit3, Trash2, Wind, Briefcase, Smartphone, Activity, Coins, Camera, X, RefreshCw, Heart, ExternalLink } from 'lucide-react';
+import { UserCircle2, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, MessageSquare, AlertCircle, Edit3, Trash2, Wind, Briefcase, Smartphone, Activity, Coins, Camera, X, Heart } from 'lucide-react';
 import { getCurrentUser, ROLES, USERS } from '../data/organization';
 import { mergeCapexProjects } from '../data/capexProjects';
 import { getUtilityChartData } from '../data/utilities';
@@ -400,7 +400,6 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
     lastUpdated: null,
     error: false,
   });
-  const [mokletRefresh, setMokletRefresh] = useState(0);
 
   const [wifiData, setWifiData] = useState<any[]>([]);
   const [wifiLoading, setWifiLoading] = useState(false);
@@ -991,24 +990,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       return () => clearInterval(mokletInterval);
     }
 
-  }, [isAuthorizedFinance, isLoggedIn, mokletRefresh]);
-
-  const handleOpenMokletService = (url: string = SARMOK_DASHBOARD_API_URL) => {
-    const width = 1200;
-    const height = 800;
-    const left = (window.screen.width - width) / 2;
-    const top = (window.screen.height - height) / 2;
-    
-    const popup = window.open(
-      url, 
-      'MokletService', 
-      `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes,menubar=no,toolbar=no,location=no,status=no`
-    );
-    
-    if (!popup || popup.closed || typeof popup.closed === 'undefined') {
-      alert('Popup diblokir oleh browser! Silakan izinkan popup untuk situs ini agar bisa membuka Dashboard Sarmok.');
-    }
-  };
+  }, [isAuthorizedFinance, isLoggedIn]);
 
   const handleDeletePiket = async (id: string, keterangan: string) => {
     if (!confirm(`Hapus catatan dari "${keterangan}"?`)) return;
@@ -1800,44 +1782,8 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: mokletService.error ? '#f87171' : mokletService.loading ? '#fbbf24' : '#34d399', boxShadow: `0 0 6px ${mokletService.error ? '#f8717160' : mokletService.loading ? '#fbbf2460' : '#34d39960'}` }} />
               <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Sarmok Dashboard — Status Layanan</span>
-              <button
-                onClick={() => handleOpenMokletService(SARMOK_DASHBOARD_API_URL)}
-                style={{ fontSize: '0.7rem', color: 'var(--accent-blue)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, opacity: 0.85, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}
-                title="Buka endpoint Sarmok Dashboard (Popup)"
-              >
-                <ExternalLink size={11} /> Buka API
-              </button>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              {isPimpinan && (
-                <>
-                  <span
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
-                      fontSize: '0.72rem', fontWeight: 600, padding: '0.35rem 0.75rem',
-                      background: SARMOK_BASIC_AUTH_READY ? 'rgba(16, 185, 129, 0.12)' : 'var(--bg-card)',
-                      color: SARMOK_BASIC_AUTH_READY ? 'var(--accent-emerald)' : 'var(--text-primary)',
-                      border: '1px solid var(--border-subtle)',
-                      borderRadius: '6px'
-                    }}
-                  >
-                    {SARMOK_BASIC_AUTH_READY ? 'Auth Terpusat Aktif' : 'Auth Build Missing'}
-                  </span>
-                  <button
-                    onClick={() => setMokletRefresh(prev => prev + 1)}
-                    disabled={mokletService.loading || !SARMOK_BASIC_AUTH_READY}
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
-                      fontSize: '0.72rem', fontWeight: 600, padding: '0.35rem 0.75rem',
-                      background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-subtle)',
-                      borderRadius: '6px', cursor: mokletService.loading || !SARMOK_BASIC_AUTH_READY ? 'not-allowed' : 'pointer', opacity: mokletService.loading || !SARMOK_BASIC_AUTH_READY ? 0.7 : 1
-                    }}
-                  >
-                    <RefreshCw size={12} className={mokletService.loading ? "animate-spin" : ""} />
-                    Ambil Data
-                  </button>
-                </>
-              )}
               {mokletService.lastUpdated && (
                 <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
                   Update: {mokletService.lastUpdated.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
