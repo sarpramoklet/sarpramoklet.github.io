@@ -930,9 +930,6 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
 
     // Fetch Sarmok Dashboard data langsung; proxy hanya fallback jika browser/network menolak.
     const fetchMokletService = async () => {
-      // Hanya berjalan jika user sudah login sbg pimpinan
-      if (!isLoggedIn || currentUser?.email !== 'hadi@smktelkom-mlg.sch.id') return;
-
       const authHeader = getSarmokBasicAuthHeader();
       if (!authHeader) {
         setMokletService(prev => ({ ...prev, loading: false, error: false }));
@@ -984,11 +981,9 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       }
     };
 
-    if (isLoggedIn && currentUser?.email === 'hadi@smktelkom-mlg.sch.id') {
-      fetchMokletService();
-      const mokletInterval = setInterval(fetchMokletService, 5 * 60 * 1000); // refresh every 5 mins
-      return () => clearInterval(mokletInterval);
-    }
+    fetchMokletService();
+    const mokletInterval = setInterval(fetchMokletService, 5 * 60 * 1000); // refresh every 5 mins
+    return () => clearInterval(mokletInterval);
 
   }, [isAuthorizedFinance, isLoggedIn]);
 
@@ -1775,9 +1770,8 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         </div>
       </div>
 
-      {/* ── Sarmok API Integration Boxes (hanya untuk Pimpinan tertentu) ── */}
-      {isLoggedIn && currentUser?.email === 'hadi@smktelkom-mlg.sch.id' && (
-        <div style={{ marginBottom: '2rem' }}>
+      {/* ── Sarmok API Integration Boxes ── */}
+      <div style={{ marginBottom: '2rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem', gap: '1rem', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: mokletService.error ? '#f87171' : mokletService.loading ? '#fbbf24' : '#34d399', boxShadow: `0 0 6px ${mokletService.error ? '#f8717160' : mokletService.loading ? '#fbbf2460' : '#34d39960'}` }} />
@@ -1885,7 +1879,6 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
 
           </div>
         </div>
-      )}
 
       {classroomMonitorSection}
 
