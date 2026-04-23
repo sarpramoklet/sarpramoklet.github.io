@@ -27,11 +27,15 @@ import type { ClassroomMonitorEntry } from '../utils/classroomMonitor';
 const FINANCE_API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 const SARMOK_BASIC_AUTH_USERNAME = import.meta.env.VITE_SARMOK_BASIC_AUTH_USERNAME?.trim() || '';
 const SARMOK_BASIC_AUTH_PASSWORD = import.meta.env.VITE_SARMOK_BASIC_AUTH_PASSWORD || '';
-const SARMOK_BASIC_AUTH_READY = Boolean(SARMOK_BASIC_AUTH_USERNAME && SARMOK_BASIC_AUTH_PASSWORD);
+const SARMOK_DEFAULT_BASIC_AUTH_HEADER = 'Basic bW9rbGV0TWFsYW5nOnRlbGtvbUhlYmF0MjAyMw==';
+const SARMOK_BASIC_AUTH_READY = Boolean((SARMOK_BASIC_AUTH_USERNAME && SARMOK_BASIC_AUTH_PASSWORD) || SARMOK_DEFAULT_BASIC_AUTH_HEADER);
 
 const getSarmokBasicAuthHeader = () => {
-  if (!SARMOK_BASIC_AUTH_READY) return '';
-  return `Basic ${window.btoa(`${SARMOK_BASIC_AUTH_USERNAME}:${SARMOK_BASIC_AUTH_PASSWORD}`)}`;
+  if (SARMOK_BASIC_AUTH_USERNAME && SARMOK_BASIC_AUTH_PASSWORD) {
+    return `Basic ${window.btoa(`${SARMOK_BASIC_AUTH_USERNAME}:${SARMOK_BASIC_AUTH_PASSWORD}`)}`;
+  }
+
+  return SARMOK_DEFAULT_BASIC_AUTH_HEADER;
 };
 
 
