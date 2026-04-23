@@ -929,7 +929,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       return parseSarmokDashboardBody(await resp.text());
     };
 
-    // Fetch Sarmok Dashboard data via proxy terpusat agar user tidak perlu set auth per browser.
+    // Fetch Sarmok Dashboard data langsung; proxy hanya fallback jika browser/network menolak.
     const fetchMokletService = async () => {
       // Hanya berjalan jika user sudah login sbg pimpinan
       if (!isLoggedIn || currentUser?.email !== 'hadi@smktelkom-mlg.sch.id') return;
@@ -943,12 +943,32 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       setMokletService(prev => ({ ...prev, loading: true, error: false }));
       try {
         const targetUrl = SARMOK_DASHBOARD_API_URL;
-        const proxyUrl = `${FINANCE_API_URL}?proxyUrl=${encodeURIComponent(targetUrl)}&authHeader=${encodeURIComponent(authHeader)}`;
-        const proxyResp = await fetch(proxyUrl, { headers: { Accept: 'application/json' } });
-        const data: SarmokDashboardData = await readSarmokDashboardResponse(proxyResp);
+        let data: SarmokDashboardData;
 
-        if (!proxyResp.ok) {
-          throw new Error(`Sarmok proxy failed (${proxyResp.status})`);
+        try {
+          const directResp = await fetch(targetUrl, {
+            method: 'GET',
+            headers: {
+              Authorization: authHeader,
+              Accept: 'application/json',
+            },
+          });
+
+          if (!directResp.ok) {
+            throw new Error(`Sarmok API failed (${directResp.status})`);
+          }
+
+          data = await readSarmokDashboardResponse(directResp);
+        } catch (directError) {
+          console.warn('Sarmok direct fetch failed, trying proxy fallback:', directError);
+          const proxyUrl = `${FINANCE_API_URL}?proxyUrl=${encodeURIComponent(targetUrl)}&authHeader=${encodeURIComponent(authHeader)}`;
+          const proxyResp = await fetch(proxyUrl, { headers: { Accept: 'application/json' } });
+
+          if (!proxyResp.ok) {
+            throw new Error(`Sarmok proxy failed (${proxyResp.status})`);
+          }
+
+          data = await readSarmokDashboardResponse(proxyResp);
         }
 
         setMokletService({
