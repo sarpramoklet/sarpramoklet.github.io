@@ -29,6 +29,8 @@ const SARMOK_BASIC_AUTH_USERNAME = import.meta.env.VITE_SARMOK_BASIC_AUTH_USERNA
 const SARMOK_BASIC_AUTH_PASSWORD = import.meta.env.VITE_SARMOK_BASIC_AUTH_PASSWORD || '';
 const SARMOK_DEFAULT_BASIC_AUTH_HEADER = 'Basic bW9rbGV0TWFsYW5nOnRlbGtvbUhlYmF0MjAyMw==';
 const SARMOK_BASIC_AUTH_READY = Boolean((SARMOK_BASIC_AUTH_USERNAME && SARMOK_BASIC_AUTH_PASSWORD) || SARMOK_DEFAULT_BASIC_AUTH_HEADER);
+const SARMOK_COMPLAINT_DETAIL_API_URL = 'https://api.smktelkom-mlg.sch.id/sarpra-complaint/sarmok/complaint';
+const SARMOK_BORROW_DETAIL_API_URL = 'https://api.smktelkom-mlg.sch.id/sarpra-borrow/sarmok/borrow';
 
 const getSarmokBasicAuthHeader = () => {
   if (SARMOK_BASIC_AUTH_USERNAME && SARMOK_BASIC_AUTH_PASSWORD) {
@@ -36,6 +38,69 @@ const getSarmokBasicAuthHeader = () => {
   }
 
   return SARMOK_DEFAULT_BASIC_AUTH_HEADER;
+};
+
+type SarmokDetailKind = 'complaints' | 'roomReservation' | 'toolsLoan';
+
+type SarmokDetailModal = {
+  kind: SarmokDetailKind;
+  title: string;
+  metricLabel: string;
+  endpoint: string;
+  accent: string;
+  rows: any[];
+  raw: unknown;
+  loading: boolean;
+  error: string;
+};
+
+const unwrapSarmokDetailPayload = (payload: unknown): unknown => {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return payload;
+
+  const record = payload as Record<string, unknown>;
+  for (const key of ['data', 'result', 'results', 'payload', 'items', 'rows']) {
+    if (record[key] !== undefined) return unwrapSarmokDetailPayload(record[key]);
+  }
+
+  return payload;
+};
+
+const normalizeSarmokDetailRows = (payload: unknown): any[] => {
+  const unwrapped = unwrapSarmokDetailPayload(payload);
+  if (Array.isArray(unwrapped)) return unwrapped;
+  if (unwrapped && typeof unwrapped === 'object') return [unwrapped];
+  if (unwrapped === undefined || unwrapped === null || unwrapped === '') return [];
+  return [{ value: unwrapped }];
+};
+
+const formatDetailKey = (key: string) => {
+  return key
+    .replace(/[_-]+/g, ' ')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
+const formatDetailValue = (value: unknown): string => {
+  if (value === null || value === undefined || value === '') return '-';
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);
+  return JSON.stringify(value);
+};
+
+const summarizeDetailRow = (row: any) => {
+  if (!row || typeof row !== 'object' || Array.isArray(row)) return String(row ?? '-');
+
+  const titleKeys = ['title', 'judul', 'name', 'nama', 'item', 'barang', 'room', 'ruang', 'location', 'lokasi', 'complaint', 'keluhan', 'description', 'deskripsi'];
+  for (const key of titleKeys) {
+    if (row[key]) return String(row[key]);
+  }
+
+  const firstValue = Object.values(row).find((value) => typeof value === 'string' || typeof value === 'number');
+  return firstValue ? String(firstValue) : 'Detail Sarmok';
+};
+
+const getDetailEntries = (row: any) => {
+  if (!row || typeof row !== 'object' || Array.isArray(row)) return [['Nilai', row]] as [string, unknown][];
+  return Object.entries(row).filter(([, value]) => value !== undefined && value !== null && value !== '');
 };
 
 
@@ -400,6 +465,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
     lastUpdated: null,
     error: false,
   });
+  const [sarmokDetailModal, setSarmokDetailModal] = useState<SarmokDetailModal | null>(null);
 
   const [wifiData, setWifiData] = useState<any[]>([]);
   const [wifiLoading, setWifiLoading] = useState(false);
@@ -986,6 +1052,125 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
     return () => clearInterval(mokletInterval);
 
   }, [isAuthorizedFinance, isLoggedIn]);
+
+  const readSarmokDetailResponse = async (resp: Response) => {
+    const contentType = resp.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) return resp.json();
+
+    const text = await resp.text();
+    try {
+      return JSON.parse(text);
+    } catch {
+      return text;
+    }
+  };
+
+  const openSarmokDetail = async (
+    kind: SarmokDetailKind,
+    title: string,
+    metricLabel: string,
+    endpoint: string,
+    accent: string,
+  ) => {
+    const initialModal: SarmokDetailModal = {
+      kind,
+      title,
+      metricLabel,
+      endpoint,
+      accent,
+      rows: [],
+      raw: null,
+      loading: true,
+      error: '',
+    };
+
+    setSarmokDetailModal(initialModal);
+
+    const authHeader = getSarmokBasicAuthHeader();
+    if (!authHeader) {
+      setSarmokDetailModal({ ...initialModal, loading: false, error: 'Basic Auth Sarmok belum tersedia.' });
+      return;
+    }
+
+    try {
+      let payload: unknown;
+
+      try {
+        const directResp = await fetch(endpoint, {
+          method: 'GET',
+          headers: {
+            Authorization: authHeader,
+            Accept: 'application/json',
+          },
+        });
+
+        if (!directResp.ok) throw new Error(`Sarmok detail API failed (${directResp.status})`);
+        payload = await readSarmokDetailResponse(directResp);
+      } catch (directError) {
+        console.warn('Sarmok detail direct fetch failed, trying proxy fallback:', directError);
+        const proxyUrl = `${FINANCE_API_URL}?proxyUrl=${encodeURIComponent(endpoint)}&authHeader=${encodeURIComponent(authHeader)}`;
+        const proxyResp = await fetch(proxyUrl, { headers: { Accept: 'application/json' } });
+
+        if (!proxyResp.ok) throw new Error(`Sarmok detail proxy failed (${proxyResp.status})`);
+        payload = await readSarmokDetailResponse(proxyResp);
+      }
+
+      setSarmokDetailModal({
+        ...initialModal,
+        rows: normalizeSarmokDetailRows(payload),
+        raw: payload,
+        loading: false,
+      });
+    } catch (error) {
+      console.warn('Sarmok detail monitoring failed:', error);
+      setSarmokDetailModal({
+        ...initialModal,
+        loading: false,
+        error: error instanceof Error ? error.message : 'Gagal mengambil detail Sarmok.',
+      });
+    }
+  };
+
+  const renderSarmokMetricButton = (
+    value: number | string,
+    color: string,
+    kind: SarmokDetailKind,
+    title: string,
+    metricLabel: string,
+    endpoint: string,
+  ) => (
+    <button
+      type="button"
+      onClick={() => openSarmokDetail(kind, title, metricLabel, endpoint, color)}
+      disabled={mokletService.loading}
+      aria-label={`Lihat detail ${title} ${metricLabel}`}
+      title="Lihat detail"
+      style={{
+        appearance: 'none',
+        border: '1px solid transparent',
+        background: 'transparent',
+        padding: '0.1rem 0.25rem',
+        margin: '-0.1rem -0.25rem',
+        borderRadius: '6px',
+        cursor: mokletService.loading ? 'default' : 'pointer',
+        fontWeight: 800,
+        fontSize: '1.3rem',
+        color,
+        lineHeight: 1,
+        transition: 'background 0.2s, border-color 0.2s',
+      }}
+      onMouseEnter={(event) => {
+        event.currentTarget.style.background = `${color}18`;
+        event.currentTarget.style.borderColor = `${color}40`;
+      }}
+      onMouseLeave={(event) => {
+        event.currentTarget.style.background = 'transparent';
+        event.currentTarget.style.borderColor = 'transparent';
+      }}
+    >
+      {value}
+    </button>
+  );
 
   const handleDeletePiket = async (id: string, keterangan: string) => {
     if (!confirm(`Hapus catatan dari "${keterangan}"?`)) return;
@@ -1715,6 +1900,106 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
 
   return (
     <div className="animate-fade-in">
+      {sarmokDetailModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Detail ${sarmokDetailModal.title}`}
+          onClick={() => setSarmokDetailModal(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 2200,
+            background: 'rgba(2,6,23,0.72)',
+            backdropFilter: 'blur(10px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem',
+          }}
+        >
+          <div
+            className="glass-panel"
+            onClick={(event) => event.stopPropagation()}
+            style={{
+              width: 'min(920px, 100%)',
+              maxHeight: '86vh',
+              overflow: 'hidden',
+              border: `1px solid ${sarmokDetailModal.accent}55`,
+              background: 'var(--bg-secondary)',
+              boxShadow: '0 24px 80px rgba(0,0,0,0.35)',
+            }}
+          >
+            <div style={{ padding: '1rem 1.1rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
+              <div>
+                <div style={{ fontSize: '0.68rem', color: sarmokDetailModal.accent, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  {sarmokDetailModal.metricLabel}
+                </div>
+                <h3 style={{ margin: '0.25rem 0 0', color: 'var(--text-primary)', fontSize: '1.05rem' }}>
+                  Detail {sarmokDetailModal.title}
+                </h3>
+                <p style={{ margin: '0.35rem 0 0', color: 'var(--text-muted)', fontSize: '0.72rem', wordBreak: 'break-all' }}>
+                  {sarmokDetailModal.kind === 'complaints' ? 'Complaint API' : 'Borrow API'}: {sarmokDetailModal.endpoint}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSarmokDetailModal(null)}
+                aria-label="Tutup detail Sarmok"
+                className="btn btn-outline"
+                style={{ width: 36, height: 36, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div style={{ padding: '1rem 1.1rem', overflowY: 'auto', maxHeight: 'calc(86vh - 105px)' }}>
+              {sarmokDetailModal.loading ? (
+                <div style={{ minHeight: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: sarmokDetailModal.accent }}>
+                  <Loader2 size={24} className="animate-spin" />
+                </div>
+              ) : sarmokDetailModal.error ? (
+                <div style={{ padding: '1rem', border: '1px solid rgba(248,113,113,0.24)', background: 'rgba(248,113,113,0.08)', borderRadius: 8 }}>
+                  <div style={{ fontWeight: 800, color: 'var(--accent-rose)', fontSize: '0.86rem' }}>Gagal mengambil detail</div>
+                  <div style={{ marginTop: '0.35rem', color: 'var(--text-secondary)', fontSize: '0.76rem', lineHeight: 1.5 }}>{sarmokDetailModal.error}</div>
+                </div>
+              ) : sarmokDetailModal.rows.length === 0 ? (
+                <div style={{ padding: '1.25rem', textAlign: 'center', color: 'var(--text-secondary)', border: '1px dashed var(--border-subtle)', borderRadius: 8 }}>
+                  Tidak ada data detail dari API untuk status ini.
+                  {sarmokDetailModal.raw !== null && (
+                    <pre style={{ marginTop: '0.75rem', whiteSpace: 'pre-wrap', textAlign: 'left', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                      {formatDetailValue(sarmokDetailModal.raw)}
+                    </pre>
+                  )}
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gap: '0.8rem' }}>
+                  {sarmokDetailModal.rows.map((row, index) => {
+                    const entries = getDetailEntries(row);
+                    return (
+                      <div key={index} style={{ border: '1px solid var(--border-subtle)', borderRadius: 8, background: 'rgba(255,255,255,0.02)', overflow: 'hidden' }}>
+                        <div style={{ padding: '0.75rem 0.85rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
+                          <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.84rem', lineHeight: 1.35 }}>{summarizeDetailRow(row)}</div>
+                          <div style={{ color: sarmokDetailModal.accent, fontSize: '0.72rem', fontWeight: 800, flexShrink: 0 }}>#{index + 1}</div>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.65rem', padding: '0.85rem' }}>
+                          {entries.slice(0, 18).map(([key, value]) => (
+                            <div key={key} style={{ minWidth: 0 }}>
+                              <div style={{ fontSize: '0.64rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{formatDetailKey(key)}</div>
+                              <div style={{ marginTop: '0.2rem', fontSize: '0.76rem', color: 'var(--text-secondary)', lineHeight: 1.45, wordBreak: 'break-word' }}>{formatDetailValue(value)}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {isLoggedIn && (
         <div className="glass-panel" style={{ padding: '1rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', borderLeft: '4px solid var(--accent-blue)', background: 'linear-gradient(90deg, var(--accent-blue-ghost), transparent)' }}>
           <div style={{ padding: userPicture ? '0' : '8px', background: 'var(--bg-card)', borderRadius: '12px', color: 'var(--accent-blue)', border: '1px solid var(--border-subtle)', width: '40px', height: '40px', flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1814,12 +2099,12 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', opacity: mokletService.loading ? 0.5 : 1, transition: 'opacity 0.2s' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Menunggu Konfirmasi</span>
-                    <span style={{ fontWeight: 800, fontSize: '1.3rem', color: '#f97316', lineHeight: 1 }}>{mokletService.complaints?.waitingConfirmation ?? '-'}</span>
+                    {renderSarmokMetricButton(mokletService.complaints?.waitingConfirmation ?? '-', '#f97316', 'complaints', 'Pengaduan', 'Menunggu Konfirmasi', SARMOK_COMPLAINT_DETAIL_API_URL)}
                   </div>
                   <div style={{ height: '1px', background: 'var(--border-subtle)' }} />
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Sedang Diproses</span>
-                    <span style={{ fontWeight: 800, fontSize: '1.3rem', color: '#fb923c', lineHeight: 1 }}>{mokletService.complaints?.onProcess ?? '-'}</span>
+                    {renderSarmokMetricButton(mokletService.complaints?.onProcess ?? '-', '#fb923c', 'complaints', 'Pengaduan', 'Sedang Diproses', SARMOK_COMPLAINT_DETAIL_API_URL)}
                   </div>
                 </div>
               )}
@@ -1840,12 +2125,12 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', opacity: mokletService.loading ? 0.5 : 1, transition: 'opacity 0.2s' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Menunggu Konfirmasi</span>
-                    <span style={{ fontWeight: 800, fontSize: '1.3rem', color: '#6b7280', lineHeight: 1 }}>{mokletService.roomReservation?.waitingConfirmation ?? '-'}</span>
+                    {renderSarmokMetricButton(mokletService.roomReservation?.waitingConfirmation ?? '-', '#6b7280', 'roomReservation', 'Peminjaman Ruang', 'Menunggu Konfirmasi', SARMOK_BORROW_DETAIL_API_URL)}
                   </div>
                   <div style={{ height: '1px', background: 'var(--border-subtle)' }} />
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Reservasi Aktif</span>
-                    <span style={{ fontWeight: 800, fontSize: '1.3rem', color: '#10b981', lineHeight: 1 }}>{mokletService.roomReservation?.activeReservation ?? '-'}</span>
+                    {renderSarmokMetricButton(mokletService.roomReservation?.activeReservation ?? '-', '#10b981', 'roomReservation', 'Peminjaman Ruang', 'Reservasi Aktif', SARMOK_BORROW_DETAIL_API_URL)}
                   </div>
                 </div>
               )}
@@ -1866,12 +2151,12 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', opacity: mokletService.loading ? 0.5 : 1, transition: 'opacity 0.2s' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Menunggu Konfirmasi</span>
-                    <span style={{ fontWeight: 800, fontSize: '1.3rem', color: '#6b7280', lineHeight: 1 }}>{mokletService.toolsLoan?.waitingConfirmation ?? '-'}</span>
+                    {renderSarmokMetricButton(mokletService.toolsLoan?.waitingConfirmation ?? '-', '#6b7280', 'toolsLoan', 'Peminjaman Alat', 'Menunggu Konfirmasi', SARMOK_BORROW_DETAIL_API_URL)}
                   </div>
                   <div style={{ height: '1px', background: 'var(--border-subtle)' }} />
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Terverifikasi/Aktif</span>
-                    <span style={{ fontWeight: 800, fontSize: '1.3rem', color: '#3b82f6', lineHeight: 1 }}>{mokletService.toolsLoan?.haveNotReturn ?? '-'}</span>
+                    {renderSarmokMetricButton(mokletService.toolsLoan?.haveNotReturn ?? '-', '#3b82f6', 'toolsLoan', 'Peminjaman Alat', 'Terverifikasi/Aktif', SARMOK_BORROW_DETAIL_API_URL)}
                   </div>
                 </div>
               )}
