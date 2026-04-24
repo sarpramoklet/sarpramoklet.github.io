@@ -171,6 +171,52 @@ const getSarmokStatusLabel = (value: unknown) => {
   return statusMap[raw.toLowerCase()] || raw;
 };
 
+const normalizeStatusValue = (value: unknown) => {
+  return formatDetailValue(value).trim().toLowerCase().replace(/\s+/g, '_');
+};
+
+const getRowStatusValue = (row: unknown) => {
+  return normalizeStatusValue(pickDetailValue(row, ['status', 'status_name', 'state', 'approval_status', 'borrow_status']));
+};
+
+const hasAnyDetailValue = (row: unknown, paths: string[]) => {
+  return paths.some((path) => {
+    const value = pickDetailValue(row, [path]);
+    return value !== undefined && value !== null && value !== '';
+  });
+};
+
+const isSarmokPendingRow = (row: unknown) => {
+  const status = getRowStatusValue(row);
+  if (['0', 'pending', 'waiting', 'waiting_confirmation', 'menunggu', 'menunggu_konfirmasi'].includes(status)) return true;
+  if (status !== '-') return false;
+  return !hasAnyDetailValue(row, ['process_at', 'processed_at', 'approved_at', 'start_at']);
+};
+
+const isSarmokProcessRow = (row: unknown) => {
+  const status = getRowStatusValue(row);
+  if (['1', 'process', 'processing', 'in_progress', 'on_process', 'proses', 'diproses'].includes(status)) return true;
+  if (status !== '-') return false;
+  return hasAnyDetailValue(row, ['process_at', 'processed_at', 'start_at']) && !hasAnyDetailValue(row, ['finish_at', 'finished_at', 'completed_at']);
+};
+
+const isSarmokActiveRow = (row: unknown) => {
+  const status = getRowStatusValue(row);
+  if (['1', 'active', 'approved', 'verified', 'terverifikasi', 'aktif'].includes(status)) return true;
+  if (status !== '-') return false;
+  return hasAnyDetailValue(row, ['process_at', 'processed_at', 'approved_at', 'start_at', 'borrow_at']) && !hasAnyDetailValue(row, ['return_at', 'returned_at', 'finish_at', 'finished_at']);
+};
+
+const filterSarmokDetailRows = (rows: any[], metricLabel: string) => {
+  const normalizedLabel = metricLabel.toLowerCase();
+
+  if (normalizedLabel.includes('menunggu')) return rows.filter(isSarmokPendingRow);
+  if (normalizedLabel.includes('diproses') || normalizedLabel.includes('proses')) return rows.filter(isSarmokProcessRow);
+  if (normalizedLabel.includes('aktif') || normalizedLabel.includes('terverifikasi') || normalizedLabel.includes('reservasi')) return rows.filter(isSarmokActiveRow);
+
+  return rows;
+};
+
 const summarizeDetailRow = (row: any) => {
   if (!row || typeof row !== 'object' || Array.isArray(row)) return String(row ?? '-');
 
@@ -1268,9 +1314,12 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         payload = await readSarmokDetailResponse(proxyResp);
       }
 
+      const detailRows = normalizeSarmokDetailRows(payload);
+      const filteredRows = filterSarmokDetailRows(detailRows, metricLabel);
+
       setSarmokDetailModal({
         ...initialModal,
-        rows: normalizeSarmokDetailRows(payload),
+        rows: filteredRows,
         raw: payload,
         loading: false,
       });
