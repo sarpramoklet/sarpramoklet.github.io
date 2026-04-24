@@ -30,6 +30,7 @@ const SARMOK_BASIC_AUTH_PASSWORD = import.meta.env.VITE_SARMOK_BASIC_AUTH_PASSWO
 const SARMOK_DEFAULT_BASIC_AUTH_HEADER = 'Basic bW9rbGV0TWFsYW5nOnRlbGtvbUhlYmF0MjAyMw==';
 const SARMOK_BASIC_AUTH_READY = Boolean((SARMOK_BASIC_AUTH_USERNAME && SARMOK_BASIC_AUTH_PASSWORD) || SARMOK_DEFAULT_BASIC_AUTH_HEADER);
 const SARMOK_COMPLAINT_DETAIL_API_URL = 'https://api.smktelkom-mlg.sch.id/sarpra-complaint/sarmok/complaint';
+const SARMOK_ROOM_DETAIL_API_URL = 'https://api.smktelkom-mlg.sch.id/sarpra-room-reservation/sarmok/room';
 const SARMOK_BORROW_DETAIL_API_URL = 'https://api.smktelkom-mlg.sch.id/sarpra-borrow/sarmok/borrow';
 
 const getSarmokBasicAuthHeader = () => {
@@ -81,6 +82,8 @@ const normalizeSarmokDetailRows = (payload: unknown): any[] => {
       'roomReservation',
       'tools',
       'loans',
+      'lends',
+      'lend',
       'items',
       'rows',
     ];
@@ -190,6 +193,32 @@ const pickCreatorName = (row: unknown) => {
   ]);
 };
 
+const formatBorrowItems = (row: unknown) => {
+  const direct = pickHumanValue(row, ['tool.name', 'tool.nama', 'item.name', 'item.nama', 'asset.name', 'asset.nama', 'goods.name', 'barang.name', 'tool_name', 'item_name', 'asset_name', 'name']);
+  if (direct !== '-') return direct;
+
+  const details = pickDetailValue(row, ['sarpra_detail_borrow', 'detail_borrow', 'borrow_details', 'details', 'items', 'tools']);
+  if (!Array.isArray(details) || details.length === 0) return '-';
+
+  return details.map((detail) => {
+    const itemName = pickHumanValue(detail, [
+      'sarpra.name',
+      'sarpra.nama',
+      'sarpra_item.name',
+      'sarpra_item.nama',
+      'item.name',
+      'item.nama',
+      'tool.name',
+      'tool.nama',
+      'asset.name',
+      'asset.nama',
+      'name',
+    ]);
+    const qty = pickHumanValue(detail, ['quantity', 'qty', 'jumlah', 'amount', 'total']);
+    return qty !== '-' ? `${itemName} (${qty})` : itemName;
+  }).filter((item) => item !== '-').join(', ') || '-';
+};
+
 const formatSarmokDate = (value: unknown) => {
   const raw = formatDetailValue(value);
   if (raw === '-') return raw;
@@ -215,6 +244,44 @@ const formatSarmokDateRange = (row: unknown, startPaths: string[], endPaths: str
   return '-';
 };
 
+const getCurrentMonthDateRange = () => {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const formatDate = (date: Date) => {
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  return { startDate: formatDate(start), endDate: formatDate(end) };
+};
+
+const getSarmokApiStatusFilter = (metricLabel: string) => {
+  const normalizedLabel = metricLabel.toLowerCase();
+  if (normalizedLabel.includes('menunggu')) return 'PENDING';
+  if (normalizedLabel.includes('aktif') || normalizedLabel.includes('terverifikasi') || normalizedLabel.includes('reservasi')) return 'VERIFIED';
+  if (normalizedLabel.includes('diproses') || normalizedLabel.includes('proses')) return 'PROCESS';
+  return '';
+};
+
+const buildSarmokDetailUrl = (endpoint: string, kind: SarmokDetailKind, metricLabel: string) => {
+  const { startDate, endDate } = getCurrentMonthDateRange();
+  const url = new URL(endpoint);
+  url.searchParams.set('page', '1');
+  url.searchParams.set('quantity', '100');
+  url.searchParams.set('startDate', startDate);
+  url.searchParams.set('endDate', endDate);
+
+  const apiStatus = getSarmokApiStatusFilter(metricLabel);
+  if (apiStatus) {
+    url.searchParams.set(kind === 'roomReservation' ? 'filter' : 'status', apiStatus);
+  }
+
+  return url.toString();
+};
+
 const getSarmokStatusLabel = (value: unknown) => {
   const raw = formatDetailValue(value);
   const statusMap: Record<string, string> = {
@@ -224,6 +291,7 @@ const getSarmokStatusLabel = (value: unknown) => {
     pending: 'Menunggu',
     process: 'Proses',
     in_progress: 'Proses',
+    verified: 'Terverifikasi',
     completed: 'Selesai',
     finished: 'Selesai',
   };
@@ -247,7 +315,7 @@ const hasAnyDetailValue = (row: unknown, paths: string[]) => {
 };
 
 const ROOM_BORROW_FIELDS = ['room.name', 'room.nama', 'room.number', 'room.code', 'room_id', 'room_name', 'room_number', 'room_code', 'classroom.name', 'classroom', 'space.name', 'space'];
-const TOOL_BORROW_FIELDS = ['tool.name', 'tool_id', 'tool_name', 'item.name', 'item_id', 'item_name', 'asset.name', 'asset_id', 'asset_name', 'goods.name', 'barang.name', 'tools', 'items', 'assets'];
+const TOOL_BORROW_FIELDS = ['tool.name', 'tool_id', 'tool_name', 'item.name', 'item_id', 'item_name', 'asset.name', 'asset_id', 'asset_name', 'goods.name', 'barang.name', 'sarpra_detail_borrow', 'detail_borrow', 'borrow_details', 'tools', 'items', 'assets'];
 
 const filterSarmokRowsByKind = (rows: any[], kind: SarmokDetailKind) => {
   if (kind === 'complaints') return rows;
@@ -428,7 +496,7 @@ const getReminderColumns = (kind: SarmokDetailKind) => {
     {
       label: 'Alat/Barang',
       minWidth: 190,
-      render: (row: any) => pickHumanValue(row, ['tool.name', 'tool.nama', 'item.name', 'item.nama', 'asset.name', 'asset.nama', 'goods.name', 'barang.name', 'tool_name', 'item_name', 'asset_name', 'name']),
+      render: (row: any) => formatBorrowItems(row),
     },
     {
       label: 'Jumlah',
@@ -472,7 +540,7 @@ const getDecisionNote = (kind: SarmokDetailKind, row: unknown) => {
 
   return [
     `Peminjam: ${pickCreatorName(row)}`,
-    `Alat: ${pickHumanValue(row, ['tool.name', 'item.name', 'asset.name', 'tool_name', 'item_name', 'name'])}`,
+    `Alat: ${formatBorrowItems(row)}`,
     `Keperluan: ${pickHumanValue(row, ['need_description', 'purpose', 'keperluan', 'borrow_description', 'description', 'event_name'])}`,
   ].join(' | ');
 };
@@ -1459,6 +1527,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
     };
 
     setSarmokDetailModal(initialModal);
+    const targetEndpoint = buildSarmokDetailUrl(endpoint, kind, metricLabel);
 
     const authHeader = getSarmokBasicAuthHeader();
     if (!authHeader) {
@@ -1470,7 +1539,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       let payload: unknown;
 
       try {
-        const directResp = await fetch(endpoint, {
+        const directResp = await fetch(targetEndpoint, {
           method: 'GET',
           headers: {
             Authorization: authHeader,
@@ -1482,7 +1551,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         payload = await readSarmokDetailResponse(directResp);
       } catch (directError) {
         console.warn('Sarmok detail direct fetch failed, trying proxy fallback:', directError);
-        const proxyUrl = `${FINANCE_API_URL}?proxyUrl=${encodeURIComponent(endpoint)}&authHeader=${encodeURIComponent(authHeader)}`;
+        const proxyUrl = `${FINANCE_API_URL}?proxyUrl=${encodeURIComponent(targetEndpoint)}&authHeader=${encodeURIComponent(authHeader)}`;
         const proxyResp = await fetch(proxyUrl, { headers: { Accept: 'application/json' } });
 
         if (!proxyResp.ok) throw new Error(`Sarmok detail proxy failed (${proxyResp.status})`);
@@ -2563,12 +2632,12 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', opacity: mokletService.loading ? 0.5 : 1, transition: 'opacity 0.2s' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Menunggu Konfirmasi</span>
-                    {renderSarmokMetricButton(mokletService.roomReservation?.waitingConfirmation ?? '-', '#6b7280', 'roomReservation', 'Peminjaman Ruang', 'Menunggu Konfirmasi', SARMOK_BORROW_DETAIL_API_URL)}
+                    {renderSarmokMetricButton(mokletService.roomReservation?.waitingConfirmation ?? '-', '#6b7280', 'roomReservation', 'Peminjaman Ruang', 'Menunggu Konfirmasi', SARMOK_ROOM_DETAIL_API_URL)}
                   </div>
                   <div style={{ height: '1px', background: 'var(--border-subtle)' }} />
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Reservasi Aktif</span>
-                    {renderSarmokMetricButton(mokletService.roomReservation?.activeReservation ?? '-', '#10b981', 'roomReservation', 'Peminjaman Ruang', 'Reservasi Aktif', SARMOK_BORROW_DETAIL_API_URL)}
+                    {renderSarmokMetricButton(mokletService.roomReservation?.activeReservation ?? '-', '#10b981', 'roomReservation', 'Peminjaman Ruang', 'Reservasi Aktif', SARMOK_ROOM_DETAIL_API_URL)}
                   </div>
                 </div>
               )}
