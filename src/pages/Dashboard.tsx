@@ -246,6 +246,27 @@ const hasAnyDetailValue = (row: unknown, paths: string[]) => {
   });
 };
 
+const ROOM_BORROW_FIELDS = ['room.name', 'room.nama', 'room.number', 'room.code', 'room_id', 'room_name', 'room_number', 'room_code', 'classroom.name', 'classroom', 'space.name', 'space'];
+const TOOL_BORROW_FIELDS = ['tool.name', 'tool_id', 'tool_name', 'item.name', 'item_id', 'item_name', 'asset.name', 'asset_id', 'asset_name', 'goods.name', 'barang.name', 'tools', 'items', 'assets'];
+
+const filterSarmokRowsByKind = (rows: any[], kind: SarmokDetailKind) => {
+  if (kind === 'complaints') return rows;
+
+  const filtered = rows.filter((row) => {
+    const hasRoom = hasAnyDetailValue(row, ROOM_BORROW_FIELDS);
+    const hasTool = hasAnyDetailValue(row, TOOL_BORROW_FIELDS);
+    const type = normalizeStatusValue(pickDetailValue(row, ['type', 'borrow_type', 'category', 'category.name', 'module']));
+
+    if (kind === 'roomReservation') {
+      return type.includes('room') || type.includes('ruang') || (hasRoom && !hasTool);
+    }
+
+    return type.includes('tool') || type.includes('alat') || type.includes('barang') || hasTool;
+  });
+
+  return filtered.length > 0 ? filtered : rows;
+};
+
 const isSarmokPendingRow = (row: unknown) => {
   const status = getRowStatusValue(row);
   if (['0', 'pending', 'waiting', 'waiting_confirmation', 'menunggu', 'menunggu_konfirmasi'].includes(status)) return true;
@@ -311,6 +332,11 @@ const getReminderColumns = (kind: SarmokDetailKind) => {
   if (kind === 'complaints') {
     return [
       {
+        label: 'Tanggal',
+        minWidth: 150,
+        render: (row: any) => formatSarmokDate(pickDetailValue(row, ['created_at', 'updated_at', 'process_at', 'date', 'tanggal'])),
+      },
+      {
         label: 'Dari/Pelapor',
         minWidth: 170,
         render: (row: any) => pickCreatorName(row),
@@ -351,29 +377,34 @@ const getReminderColumns = (kind: SarmokDetailKind) => {
   if (kind === 'roomReservation') {
     return [
       {
-        label: 'Peminjam',
-        minWidth: 170,
-        render: (row: any) => pickHumanValue(row, ['borrower.name', 'requester.name', 'user.name', 'user.full_name', 'teacher.name', 'employee.name', 'student.name', 'created_by.name', 'createdBy.name', 'created_by']),
+        label: 'Tanggal',
+        minWidth: 150,
+        render: (row: any) => formatSarmokDate(pickDetailValue(row, ['start_date', 'start_at', 'borrow_date', 'borrow_at', 'created_at', 'updated_at', 'tanggal'])),
       },
       {
         label: 'Ruang',
         minWidth: 160,
-        render: (row: any) => pickHumanValue(row, ['room.name', 'room.nama', 'room_name', 'room', 'location.name', 'location', 'lokasi']),
+        render: (row: any) => pickHumanValue(row, ['room.name', 'room.nama', 'room.number', 'room.code', 'room_name', 'room_number', 'room_code', 'classroom.name', 'classroom', 'space.name', 'space', 'location.name', 'location', 'lokasi']),
       },
       {
         label: 'Keperluan',
         minWidth: 330,
-        render: (row: any) => pickHumanValue(row, ['purpose', 'keperluan', 'borrow_description', 'description', 'deskripsi', 'event_name', 'activity', 'reason', 'note', 'notes']),
+        render: (row: any) => pickHumanValue(row, ['need_description', 'purpose', 'keperluan', 'borrow_description', 'description', 'deskripsi', 'event_name', 'activity', 'reason', 'note', 'notes']),
+      },
+      {
+        label: 'Peminjam',
+        minWidth: 170,
+        render: (row: any) => pickCreatorName(row),
       },
       {
         label: 'Jadwal Pakai',
         minWidth: 180,
-        render: (row: any) => formatSarmokDateRange(row, ['start_at', 'start_date', 'borrow_at', 'borrow_date', 'date_start', 'from', 'tanggal'], ['end_at', 'end_date', 'return_at', 'date_end', 'to']),
+        render: (row: any) => formatSarmokDateRange(row, ['start_date', 'start_at', 'borrow_at', 'borrow_date', 'date_start', 'from', 'tanggal'], ['end_date', 'end_at', 'return_at', 'date_end', 'to']),
       },
       {
         label: 'Penanggung Jawab',
         minWidth: 170,
-        render: (row: any) => pickHumanValue(row, ['pic.name', 'user_pic.name', 'approver.name', 'approved_by.name', 'handler.name']),
+        render: (row: any) => pickHumanValue(row, ['person_responsibility.name', 'person_responsibility.nama', 'pic.name', 'user_pic.name', 'approver.name', 'approved_by.name', 'handler.name']),
       },
       {
         label: 'Status',
@@ -385,9 +416,14 @@ const getReminderColumns = (kind: SarmokDetailKind) => {
 
   return [
     {
+      label: 'Tanggal',
+      minWidth: 150,
+      render: (row: any) => formatSarmokDate(pickDetailValue(row, ['start_date', 'start_at', 'borrow_date', 'borrow_at', 'created_at', 'updated_at', 'tanggal'])),
+    },
+    {
       label: 'Peminjam',
       minWidth: 170,
-      render: (row: any) => pickHumanValue(row, ['borrower.name', 'requester.name', 'user.name', 'user.full_name', 'teacher.name', 'employee.name', 'student.name', 'created_by.name', 'createdBy.name', 'created_by']),
+      render: (row: any) => pickCreatorName(row),
     },
     {
       label: 'Alat/Barang',
@@ -402,7 +438,7 @@ const getReminderColumns = (kind: SarmokDetailKind) => {
     {
       label: 'Keperluan',
       minWidth: 300,
-      render: (row: any) => pickHumanValue(row, ['purpose', 'keperluan', 'borrow_description', 'description', 'deskripsi', 'activity', 'event_name', 'reason', 'note', 'notes']),
+      render: (row: any) => pickHumanValue(row, ['need_description', 'purpose', 'keperluan', 'borrow_description', 'description', 'deskripsi', 'activity', 'event_name', 'reason', 'note', 'notes']),
     },
     {
       label: 'Jadwal Pinjam',
@@ -428,16 +464,16 @@ const getDecisionNote = (kind: SarmokDetailKind, row: unknown) => {
 
   if (kind === 'roomReservation') {
     return [
-      `Peminjam: ${pickHumanValue(row, ['borrower.name', 'requester.name', 'user.name', 'created_by.name'])}`,
-      `Ruang: ${pickHumanValue(row, ['room.name', 'room_name', 'location'])}`,
-      `Keperluan: ${pickHumanValue(row, ['purpose', 'keperluan', 'borrow_description', 'description', 'event_name'])}`,
+      `Peminjam: ${pickCreatorName(row)}`,
+      `Ruang: ${pickHumanValue(row, ['room.name', 'room_name', 'room_number', 'room_code', 'classroom.name', 'location'])}`,
+      `Keperluan: ${pickHumanValue(row, ['need_description', 'purpose', 'keperluan', 'borrow_description', 'description', 'event_name'])}`,
     ].join(' | ');
   }
 
   return [
-    `Peminjam: ${pickHumanValue(row, ['borrower.name', 'requester.name', 'user.name', 'created_by.name'])}`,
+    `Peminjam: ${pickCreatorName(row)}`,
     `Alat: ${pickHumanValue(row, ['tool.name', 'item.name', 'asset.name', 'tool_name', 'item_name', 'name'])}`,
-    `Keperluan: ${pickHumanValue(row, ['purpose', 'keperluan', 'borrow_description', 'description', 'event_name'])}`,
+    `Keperluan: ${pickHumanValue(row, ['need_description', 'purpose', 'keperluan', 'borrow_description', 'description', 'event_name'])}`,
   ].join(' | ');
 };
 
@@ -1454,7 +1490,8 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       }
 
       const detailRows = normalizeSarmokDetailRows(payload);
-      const filteredRows = filterSarmokDetailRows(detailRows, metricLabel);
+      const kindRows = filterSarmokRowsByKind(detailRows, kind);
+      const filteredRows = filterSarmokDetailRows(kindRows, metricLabel);
 
       setSarmokDetailModal({
         ...initialModal,
@@ -2292,8 +2329,8 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                 <h3 style={{ margin: '0.25rem 0 0', color: 'var(--text-primary)', fontSize: '1.05rem' }}>
                   Detail {sarmokDetailModal.title}
                 </h3>
-                <p style={{ margin: '0.35rem 0 0', color: 'var(--text-muted)', fontSize: '0.72rem', wordBreak: 'break-all' }}>
-                  {sarmokDetailModal.kind === 'complaints' ? 'Complaint API' : 'Borrow API'}: {sarmokDetailModal.endpoint}
+                <p style={{ margin: '0.35rem 0 0', color: 'var(--text-muted)', fontSize: '0.72rem' }}>
+                  Data sudah difilter sesuai kategori dan status yang diklik.
                 </p>
               </div>
               <button
