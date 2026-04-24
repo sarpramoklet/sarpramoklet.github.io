@@ -158,6 +158,38 @@ const pickHumanValue = (row: unknown, paths: string[]) => {
   return formatHumanValue(pickDetailValue(row, paths));
 };
 
+const pickCreatorName = (row: unknown) => {
+  return pickHumanValue(row, [
+    'creator.name',
+    'creator.nama',
+    'creator.full_name',
+    'created_by.name',
+    'created_by.nama',
+    'created_by.full_name',
+    'createdBy.name',
+    'createdBy.nama',
+    'createdBy.full_name',
+    'created_user.name',
+    'created_user.nama',
+    'created_user.full_name',
+    'user_creator.name',
+    'user_creator.nama',
+    'user_creator.full_name',
+    'user.name',
+    'user.nama',
+    'user.full_name',
+    'student.name',
+    'student.nama',
+    'teacher.name',
+    'teacher.nama',
+    'employee.name',
+    'employee.nama',
+    'complainant.name',
+    'reporter.name',
+    'requester.name',
+  ]);
+};
+
 const formatSarmokDate = (value: unknown) => {
   const raw = formatDetailValue(value);
   if (raw === '-') return raw;
@@ -281,7 +313,7 @@ const getReminderColumns = (kind: SarmokDetailKind) => {
       {
         label: 'Dari/Pelapor',
         minWidth: 170,
-        render: (row: any) => pickHumanValue(row, ['complainant.name', 'reporter.name', 'requester.name', 'user.name', 'user.full_name', 'student.name', 'teacher.name', 'employee.name', 'created_by.name', 'createdBy.name', 'created_by']),
+        render: (row: any) => pickCreatorName(row),
       },
       {
         label: 'Ruang/Lokasi',
