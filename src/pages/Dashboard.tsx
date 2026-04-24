@@ -1572,10 +1572,11 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       const detailRows = normalizeSarmokDetailRows(payload);
       const kindRows = filterSarmokRowsByKind(detailRows, kind);
       const filteredRows = filterSarmokDetailRows(kindRows, metricLabel);
+      const displayRows = filteredRows.length > 0 ? filteredRows : kindRows;
 
       setSarmokDetailModal({
         ...initialModal,
-        rows: filteredRows,
+        rows: displayRows,
         raw: payload,
         loading: false,
       });
