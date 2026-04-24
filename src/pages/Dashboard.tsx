@@ -68,9 +68,44 @@ const unwrapSarmokDetailPayload = (payload: unknown): unknown => {
 const normalizeSarmokDetailRows = (payload: unknown): any[] => {
   const unwrapped = unwrapSarmokDetailPayload(payload);
   if (Array.isArray(unwrapped)) return unwrapped;
-  if (unwrapped && typeof unwrapped === 'object') return [unwrapped];
+
+  if (unwrapped && typeof unwrapped === 'object') {
+    const record = unwrapped as Record<string, unknown>;
+    const preferredArrayKeys = [
+      'complaints',
+      'complaint',
+      'borrows',
+      'borrow',
+      'reservations',
+      'room_reservations',
+      'roomReservation',
+      'tools',
+      'loans',
+      'items',
+      'rows',
+    ];
+
+    for (const key of preferredArrayKeys) {
+      if (Array.isArray(record[key])) return record[key];
+    }
+
+    const firstArray = Object.values(record).find(Array.isArray);
+    if (firstArray) return firstArray;
+
+    return [unwrapped];
+  }
+
   if (unwrapped === undefined || unwrapped === null || unwrapped === '') return [];
   return [{ value: unwrapped }];
+};
+
+const getSarmokDetailSummaryEntries = (payload: unknown) => {
+  const unwrapped = unwrapSarmokDetailPayload(payload);
+  if (!unwrapped || typeof unwrapped !== 'object' || Array.isArray(unwrapped)) return [] as [string, unknown][];
+
+  return Object.entries(unwrapped as Record<string, unknown>).filter(([, value]) => {
+    return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
+  });
 };
 
 const formatDetailKey = (key: string) => {
@@ -84,6 +119,56 @@ const formatDetailValue = (value: unknown): string => {
   if (value === null || value === undefined || value === '') return '-';
   if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);
   return JSON.stringify(value);
+};
+
+const isDetailRecord = (value: unknown): value is Record<string, unknown> => {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+};
+
+const pickDetailValue = (source: unknown, paths: string[]): unknown => {
+  if (!isDetailRecord(source)) return undefined;
+
+  for (const path of paths) {
+    const value = path.split('.').reduce<unknown>((current, key) => {
+      if (!isDetailRecord(current)) return undefined;
+      return current[key];
+    }, source);
+
+    if (value !== undefined && value !== null && value !== '') return value;
+  }
+
+  return undefined;
+};
+
+const formatSarmokDate = (value: unknown) => {
+  const raw = formatDetailValue(value);
+  if (raw === '-') return raw;
+
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return raw;
+
+  return parsed.toLocaleString('id-ID', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
+const getSarmokStatusLabel = (value: unknown) => {
+  const raw = formatDetailValue(value);
+  const statusMap: Record<string, string> = {
+    '0': 'Menunggu',
+    '1': 'Proses',
+    '2': 'Selesai',
+    pending: 'Menunggu',
+    process: 'Proses',
+    in_progress: 'Proses',
+    completed: 'Selesai',
+    finished: 'Selesai',
+  };
+
+  return statusMap[raw.toLowerCase()] || raw;
 };
 
 const summarizeDetailRow = (row: any) => {
@@ -101,6 +186,74 @@ const summarizeDetailRow = (row: any) => {
 const getDetailEntries = (row: any) => {
   if (!row || typeof row !== 'object' || Array.isArray(row)) return [['Nilai', row]] as [string, unknown][];
   return Object.entries(row).filter(([, value]) => value !== undefined && value !== null && value !== '');
+};
+
+const getReminderColumns = (kind: SarmokDetailKind) => {
+  const placeLabel = kind === 'toolsLoan' ? 'Barang/Alat' : 'Ruang/Lokasi';
+  const descriptionLabel = kind === 'complaints' ? 'Keluhan' : 'Keperluan';
+  const personLabel = kind === 'complaints' ? 'PIC/Pelapor' : 'Peminjam/PIC';
+
+  return [
+    {
+      label: placeLabel,
+      minWidth: 150,
+      render: (row: any) => formatDetailValue(pickDetailValue(row, [
+        'room.name',
+        'room_name',
+        'room',
+        'location',
+        'lokasi',
+        'item.name',
+        'item_name',
+        'tool.name',
+        'tool_name',
+        'asset.name',
+        'name',
+      ])),
+    },
+    {
+      label: descriptionLabel,
+      minWidth: 260,
+      render: (row: any) => formatDetailValue(pickDetailValue(row, [
+        'complaint_description',
+        'description',
+        'deskripsi',
+        'purpose',
+        'keperluan',
+        'reason',
+        'note',
+        'notes',
+      ])),
+    },
+    {
+      label: personLabel,
+      minWidth: 170,
+      render: (row: any) => formatDetailValue(pickDetailValue(row, [
+        'pic.name',
+        'user_pic.name',
+        'user.name',
+        'borrower.name',
+        'created_by.name',
+        'requester.name',
+        'name',
+      ])),
+    },
+    {
+      label: 'Status',
+      minWidth: 115,
+      render: (row: any) => getSarmokStatusLabel(pickDetailValue(row, ['status', 'status_name', 'state'])),
+    },
+    {
+      label: 'Proses',
+      minWidth: 130,
+      render: (row: any) => formatSarmokDate(pickDetailValue(row, ['process_at', 'processed_at', 'approved_at', 'start_at', 'borrow_at'])),
+    },
+    {
+      label: 'Update',
+      minWidth: 130,
+      render: (row: any) => formatSarmokDate(pickDetailValue(row, ['updated_at', 'created_at', 'date', 'tanggal'])),
+    },
+  ];
 };
 
 
@@ -1913,17 +2066,18 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
             background: 'rgba(2,6,23,0.72)',
             backdropFilter: 'blur(10px)',
             display: 'flex',
-            alignItems: 'center',
+            alignItems: 'flex-start',
             justifyContent: 'center',
-            padding: '1rem',
+            padding: '1.25rem 1rem',
+            overflowY: 'auto',
           }}
         >
           <div
             className="glass-panel"
             onClick={(event) => event.stopPropagation()}
             style={{
-              width: 'min(920px, 100%)',
-              maxHeight: '86vh',
+              width: 'min(1180px, 100%)',
+              maxHeight: 'calc(100vh - 2.5rem)',
               overflow: 'hidden',
               border: `1px solid ${sarmokDetailModal.accent}55`,
               background: 'var(--bg-secondary)',
@@ -1953,7 +2107,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
               </button>
             </div>
 
-            <div style={{ padding: '1rem 1.1rem', overflowY: 'auto', maxHeight: 'calc(86vh - 105px)' }}>
+            <div style={{ padding: '1rem 1.1rem', overflowY: 'auto', maxHeight: 'calc(100vh - 9rem)' }}>
               {sarmokDetailModal.loading ? (
                 <div style={{ minHeight: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: sarmokDetailModal.accent }}>
                   <Loader2 size={24} className="animate-spin" />
@@ -1973,26 +2127,70 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                   )}
                 </div>
               ) : (
-                <div style={{ display: 'grid', gap: '0.8rem' }}>
-                  {sarmokDetailModal.rows.map((row, index) => {
-                    const entries = getDetailEntries(row);
-                    return (
-                      <div key={index} style={{ border: '1px solid var(--border-subtle)', borderRadius: 8, background: 'rgba(255,255,255,0.02)', overflow: 'hidden' }}>
-                        <div style={{ padding: '0.75rem 0.85rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
-                          <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.84rem', lineHeight: 1.35 }}>{summarizeDetailRow(row)}</div>
-                          <div style={{ color: sarmokDetailModal.accent, fontSize: '0.72rem', fontWeight: 800, flexShrink: 0 }}>#{index + 1}</div>
+                <div style={{ display: 'grid', gap: '0.85rem' }}>
+                  {getSarmokDetailSummaryEntries(sarmokDetailModal.raw).length > 0 && (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.65rem' }}>
+                      {getSarmokDetailSummaryEntries(sarmokDetailModal.raw).map(([key, value]) => (
+                        <div key={key} style={{ padding: '0.75rem', border: '1px solid var(--border-subtle)', borderRadius: 8, background: 'rgba(255,255,255,0.02)' }}>
+                          <div style={{ fontSize: '0.63rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{formatDetailKey(key)}</div>
+                          <div style={{ marginTop: '0.25rem', fontSize: '1.1rem', lineHeight: 1, fontWeight: 800, color: sarmokDetailModal.accent }}>{formatDetailValue(value)}</div>
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.65rem', padding: '0.85rem' }}>
-                          {entries.slice(0, 18).map(([key, value]) => (
-                            <div key={key} style={{ minWidth: 0 }}>
-                              <div style={{ fontSize: '0.64rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{formatDetailKey(key)}</div>
-                              <div style={{ marginTop: '0.2rem', fontSize: '0.76rem', color: 'var(--text-secondary)', lineHeight: 1.45, wordBreak: 'break-word' }}>{formatDetailValue(value)}</div>
-                            </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div style={{ overflowX: 'auto', border: '1px solid var(--border-subtle)', borderRadius: 8, background: 'rgba(255,255,255,0.02)' }}>
+                    <table style={{ width: '100%', minWidth: '960px', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                      <thead>
+                        <tr style={{ background: 'rgba(255,255,255,0.03)' }}>
+                          <th style={{ width: 52, padding: '0.75rem 0.7rem', textAlign: 'left', fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border-subtle)' }}>No</th>
+                          {getReminderColumns(sarmokDetailModal.kind).map((column) => (
+                            <th key={column.label} style={{ width: column.minWidth, padding: '0.75rem 0.7rem', textAlign: 'left', fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border-subtle)' }}>
+                              {column.label}
+                            </th>
                           ))}
-                        </div>
-                      </div>
-                    );
-                  })}
+                          <th style={{ width: 190, padding: '0.75rem 0.7rem', textAlign: 'left', fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border-subtle)' }}>Ringkas</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sarmokDetailModal.rows.map((row, index) => (
+                          <tr key={index} style={{ borderBottom: index === sarmokDetailModal.rows.length - 1 ? 'none' : '1px solid var(--border-subtle)' }}>
+                            <td style={{ padding: '0.75rem 0.7rem', verticalAlign: 'top', color: sarmokDetailModal.accent, fontSize: '0.76rem', fontWeight: 800 }}>#{index + 1}</td>
+                            {getReminderColumns(sarmokDetailModal.kind).map((column) => (
+                              <td key={column.label} style={{ padding: '0.75rem 0.7rem', verticalAlign: 'top', color: 'var(--text-secondary)', fontSize: '0.76rem', lineHeight: 1.45, wordBreak: 'break-word' }}>
+                                {column.render(row)}
+                              </td>
+                            ))}
+                            <td style={{ padding: '0.75rem 0.7rem', verticalAlign: 'top', color: 'var(--text-primary)', fontSize: '0.76rem', lineHeight: 1.45, fontWeight: 700, wordBreak: 'break-word' }}>
+                              {summarizeDetailRow(row)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <details style={{ border: '1px solid var(--border-subtle)', borderRadius: 8, padding: '0.75rem 0.85rem', background: 'rgba(255,255,255,0.015)' }}>
+                    <summary style={{ cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 700 }}>Field lengkap per data</summary>
+                    <div style={{ display: 'grid', gap: '0.8rem', marginTop: '0.8rem' }}>
+                      {sarmokDetailModal.rows.map((row, index) => {
+                        const entries = getDetailEntries(row);
+                        return (
+                          <div key={index} style={{ borderTop: index === 0 ? 'none' : '1px solid var(--border-subtle)', paddingTop: index === 0 ? 0 : '0.8rem' }}>
+                            <div style={{ color: sarmokDetailModal.accent, fontSize: '0.72rem', fontWeight: 800, marginBottom: '0.55rem' }}>#{index + 1} {summarizeDetailRow(row)}</div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.65rem' }}>
+                              {entries.slice(0, 18).map(([key, value]) => (
+                                <div key={key} style={{ minWidth: 0 }}>
+                                  <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{formatDetailKey(key)}</div>
+                                  <div style={{ marginTop: '0.2rem', fontSize: '0.74rem', color: 'var(--text-secondary)', lineHeight: 1.45, wordBreak: 'break-word' }}>{formatDetailValue(value)}</div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </details>
                 </div>
               )}
             </div>
