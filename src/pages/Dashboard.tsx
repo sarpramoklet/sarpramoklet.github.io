@@ -267,6 +267,8 @@ const getSarmokApiStatusFilter = (metricLabel: string) => {
 };
 
 const buildSarmokDetailUrl = (endpoint: string, kind: SarmokDetailKind, metricLabel: string) => {
+  if (kind === 'complaints') return endpoint;
+
   const { startDate, endDate } = getCurrentMonthDateRange();
   const url = new URL(endpoint);
   url.searchParams.set('page', '1');
