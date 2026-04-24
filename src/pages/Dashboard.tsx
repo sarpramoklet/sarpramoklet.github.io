@@ -1300,28 +1300,40 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       title="Lihat detail"
       style={{
         appearance: 'none',
-        border: '1px solid transparent',
-        background: 'transparent',
-        padding: '0.1rem 0.25rem',
-        margin: '-0.1rem -0.25rem',
-        borderRadius: '6px',
+        border: `1px solid ${color}4d`,
+        background: `${color}12`,
+        padding: '0.2rem 0.45rem 0.25rem',
+        margin: '-0.2rem -0.45rem',
+        borderRadius: '8px',
         cursor: mokletService.loading ? 'default' : 'pointer',
-        fontWeight: 800,
-        fontSize: '1.3rem',
         color,
         lineHeight: 1,
-        transition: 'background 0.2s, border-color 0.2s',
+        display: 'inline-flex',
+        flexDirection: 'column',
+        alignItems: 'flex-end',
+        gap: '0.2rem',
+        boxShadow: `0 0 0 1px ${color}12 inset`,
+        transition: 'background 0.2s, border-color 0.2s, transform 0.2s, box-shadow 0.2s',
       }}
       onMouseEnter={(event) => {
-        event.currentTarget.style.background = `${color}18`;
-        event.currentTarget.style.borderColor = `${color}40`;
+        event.currentTarget.style.background = `${color}20`;
+        event.currentTarget.style.borderColor = `${color}80`;
+        event.currentTarget.style.transform = 'translateY(-1px)';
+        event.currentTarget.style.boxShadow = `0 0 0 1px ${color}20 inset, 0 8px 18px ${color}18`;
       }}
       onMouseLeave={(event) => {
-        event.currentTarget.style.background = 'transparent';
-        event.currentTarget.style.borderColor = 'transparent';
+        event.currentTarget.style.background = `${color}12`;
+        event.currentTarget.style.borderColor = `${color}4d`;
+        event.currentTarget.style.transform = 'translateY(0)';
+        event.currentTarget.style.boxShadow = `0 0 0 1px ${color}12 inset`;
       }}
     >
-      {value}
+      <span style={{ fontWeight: 900, fontSize: '1.35rem', textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: '4px' }}>
+        {value}
+      </span>
+      <span style={{ fontSize: '0.52rem', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase', opacity: 0.9 }}>
+        Detail
+      </span>
     </button>
   );
 
@@ -2259,6 +2271,9 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: mokletService.error ? '#f87171' : mokletService.loading ? '#fbbf24' : '#34d399', boxShadow: `0 0 6px ${mokletService.error ? '#f8717160' : mokletService.loading ? '#fbbf2460' : '#34d39960'}` }} />
               <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Sarmok Dashboard — Status Layanan</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', padding: '0.25rem 0.45rem', border: '1px solid var(--border-subtle)', borderRadius: 999, color: 'var(--text-muted)', fontSize: '0.62rem', fontWeight: 700, background: 'rgba(255,255,255,0.03)' }}>
+                <Info size={11} /> Klik angka
+              </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
               {mokletService.lastUpdated && (
