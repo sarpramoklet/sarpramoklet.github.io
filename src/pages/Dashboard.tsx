@@ -140,6 +140,24 @@ const pickDetailValue = (source: unknown, paths: string[]): unknown => {
   return undefined;
 };
 
+const formatHumanValue = (value: unknown): string => {
+  if (isDetailRecord(value)) {
+    const readable = pickDetailValue(value, ['name', 'nama', 'full_name', 'fullname', 'title', 'label', 'description', 'code', 'kode', 'email']);
+    if (readable !== undefined) return formatDetailValue(readable);
+  }
+
+  if (Array.isArray(value)) {
+    if (value.length === 0) return '-';
+    return value.map(formatHumanValue).filter((item) => item !== '-').join(', ') || '-';
+  }
+
+  return formatDetailValue(value);
+};
+
+const pickHumanValue = (row: unknown, paths: string[]) => {
+  return formatHumanValue(pickDetailValue(row, paths));
+};
+
 const formatSarmokDate = (value: unknown) => {
   const raw = formatDetailValue(value);
   if (raw === '-') return raw;
@@ -153,6 +171,16 @@ const formatSarmokDate = (value: unknown) => {
     hour: '2-digit',
     minute: '2-digit',
   });
+};
+
+const formatSarmokDateRange = (row: unknown, startPaths: string[], endPaths: string[]) => {
+  const start = formatSarmokDate(pickDetailValue(row, startPaths));
+  const end = formatSarmokDate(pickDetailValue(row, endPaths));
+
+  if (start !== '-' && end !== '-' && start !== end) return `${start} - ${end}`;
+  if (start !== '-') return start;
+  if (end !== '-') return end;
+  return '-';
 };
 
 const getSarmokStatusLabel = (value: unknown) => {
@@ -220,10 +248,23 @@ const filterSarmokDetailRows = (rows: any[], metricLabel: string) => {
 const summarizeDetailRow = (row: any) => {
   if (!row || typeof row !== 'object' || Array.isArray(row)) return String(row ?? '-');
 
-  const titleKeys = ['title', 'judul', 'name', 'nama', 'item', 'barang', 'room', 'ruang', 'location', 'lokasi', 'complaint', 'keluhan', 'description', 'deskripsi'];
-  for (const key of titleKeys) {
-    if (row[key]) return String(row[key]);
-  }
+  const readable = pickDetailValue(row, [
+    'complaint_description',
+    'borrow_description',
+    'purpose',
+    'keperluan',
+    'description',
+    'deskripsi',
+    'room.name',
+    'item.name',
+    'tool.name',
+    'asset.name',
+    'title',
+    'judul',
+    'name',
+    'nama',
+  ]);
+  if (readable !== undefined) return formatHumanValue(readable);
 
   const firstValue = Object.values(row).find((value) => typeof value === 'string' || typeof value === 'number');
   return firstValue ? String(firstValue) : 'Detail Sarmok';
@@ -235,71 +276,137 @@ const getDetailEntries = (row: any) => {
 };
 
 const getReminderColumns = (kind: SarmokDetailKind) => {
-  const placeLabel = kind === 'toolsLoan' ? 'Barang/Alat' : 'Ruang/Lokasi';
-  const descriptionLabel = kind === 'complaints' ? 'Keluhan' : 'Keperluan';
-  const personLabel = kind === 'complaints' ? 'PIC/Pelapor' : 'Peminjam/PIC';
+  if (kind === 'complaints') {
+    return [
+      {
+        label: 'Dari/Pelapor',
+        minWidth: 170,
+        render: (row: any) => pickHumanValue(row, ['complainant.name', 'reporter.name', 'requester.name', 'user.name', 'user.full_name', 'student.name', 'teacher.name', 'employee.name', 'created_by.name', 'createdBy.name', 'created_by']),
+      },
+      {
+        label: 'Ruang/Lokasi',
+        minWidth: 160,
+        render: (row: any) => pickHumanValue(row, ['room.name', 'room.nama', 'room_name', 'room', 'location.name', 'location', 'lokasi']),
+      },
+      {
+        label: 'Keluhan',
+        minWidth: 330,
+        render: (row: any) => pickHumanValue(row, ['complaint_description', 'complaint', 'keluhan', 'description', 'deskripsi', 'problem', 'issue', 'reason', 'note', 'notes']),
+      },
+      {
+        label: 'Kategori',
+        minWidth: 120,
+        render: (row: any) => pickHumanValue(row, ['category.name', 'category', 'type.name', 'type']),
+      },
+      {
+        label: 'PIC/Tindak Lanjut',
+        minWidth: 170,
+        render: (row: any) => pickHumanValue(row, ['pic.name', 'user_pic.name', 'assignee.name', 'handler.name', 'technician.name', 'user_pic']),
+      },
+      {
+        label: 'Status',
+        minWidth: 110,
+        render: (row: any) => getSarmokStatusLabel(pickDetailValue(row, ['status', 'status_name', 'state'])),
+      },
+      {
+        label: 'Masuk/Update',
+        minWidth: 150,
+        render: (row: any) => formatSarmokDate(pickDetailValue(row, ['updated_at', 'created_at', 'date', 'tanggal'])),
+      },
+    ];
+  }
+
+  if (kind === 'roomReservation') {
+    return [
+      {
+        label: 'Peminjam',
+        minWidth: 170,
+        render: (row: any) => pickHumanValue(row, ['borrower.name', 'requester.name', 'user.name', 'user.full_name', 'teacher.name', 'employee.name', 'student.name', 'created_by.name', 'createdBy.name', 'created_by']),
+      },
+      {
+        label: 'Ruang',
+        minWidth: 160,
+        render: (row: any) => pickHumanValue(row, ['room.name', 'room.nama', 'room_name', 'room', 'location.name', 'location', 'lokasi']),
+      },
+      {
+        label: 'Keperluan',
+        minWidth: 330,
+        render: (row: any) => pickHumanValue(row, ['purpose', 'keperluan', 'borrow_description', 'description', 'deskripsi', 'event_name', 'activity', 'reason', 'note', 'notes']),
+      },
+      {
+        label: 'Jadwal Pakai',
+        minWidth: 180,
+        render: (row: any) => formatSarmokDateRange(row, ['start_at', 'start_date', 'borrow_at', 'borrow_date', 'date_start', 'from', 'tanggal'], ['end_at', 'end_date', 'return_at', 'date_end', 'to']),
+      },
+      {
+        label: 'Penanggung Jawab',
+        minWidth: 170,
+        render: (row: any) => pickHumanValue(row, ['pic.name', 'user_pic.name', 'approver.name', 'approved_by.name', 'handler.name']),
+      },
+      {
+        label: 'Status',
+        minWidth: 120,
+        render: (row: any) => getSarmokStatusLabel(pickDetailValue(row, ['status', 'status_name', 'state', 'approval_status'])),
+      },
+    ];
+  }
 
   return [
     {
-      label: placeLabel,
-      minWidth: 150,
-      render: (row: any) => formatDetailValue(pickDetailValue(row, [
-        'room.name',
-        'room_name',
-        'room',
-        'location',
-        'lokasi',
-        'item.name',
-        'item_name',
-        'tool.name',
-        'tool_name',
-        'asset.name',
-        'name',
-      ])),
-    },
-    {
-      label: descriptionLabel,
-      minWidth: 260,
-      render: (row: any) => formatDetailValue(pickDetailValue(row, [
-        'complaint_description',
-        'description',
-        'deskripsi',
-        'purpose',
-        'keperluan',
-        'reason',
-        'note',
-        'notes',
-      ])),
-    },
-    {
-      label: personLabel,
+      label: 'Peminjam',
       minWidth: 170,
-      render: (row: any) => formatDetailValue(pickDetailValue(row, [
-        'pic.name',
-        'user_pic.name',
-        'user.name',
-        'borrower.name',
-        'created_by.name',
-        'requester.name',
-        'name',
-      ])),
+      render: (row: any) => pickHumanValue(row, ['borrower.name', 'requester.name', 'user.name', 'user.full_name', 'teacher.name', 'employee.name', 'student.name', 'created_by.name', 'createdBy.name', 'created_by']),
+    },
+    {
+      label: 'Alat/Barang',
+      minWidth: 190,
+      render: (row: any) => pickHumanValue(row, ['tool.name', 'tool.nama', 'item.name', 'item.nama', 'asset.name', 'asset.nama', 'goods.name', 'barang.name', 'tool_name', 'item_name', 'asset_name', 'name']),
+    },
+    {
+      label: 'Jumlah',
+      minWidth: 90,
+      render: (row: any) => pickHumanValue(row, ['quantity', 'qty', 'jumlah', 'amount', 'total']),
+    },
+    {
+      label: 'Keperluan',
+      minWidth: 300,
+      render: (row: any) => pickHumanValue(row, ['purpose', 'keperluan', 'borrow_description', 'description', 'deskripsi', 'activity', 'event_name', 'reason', 'note', 'notes']),
+    },
+    {
+      label: 'Jadwal Pinjam',
+      minWidth: 180,
+      render: (row: any) => formatSarmokDateRange(row, ['start_at', 'start_date', 'borrow_at', 'borrow_date', 'date_start', 'from', 'tanggal'], ['return_at', 'returned_at', 'end_at', 'end_date', 'date_end', 'to']),
     },
     {
       label: 'Status',
-      minWidth: 115,
-      render: (row: any) => getSarmokStatusLabel(pickDetailValue(row, ['status', 'status_name', 'state'])),
-    },
-    {
-      label: 'Proses',
-      minWidth: 130,
-      render: (row: any) => formatSarmokDate(pickDetailValue(row, ['process_at', 'processed_at', 'approved_at', 'start_at', 'borrow_at'])),
-    },
-    {
-      label: 'Update',
-      minWidth: 130,
-      render: (row: any) => formatSarmokDate(pickDetailValue(row, ['updated_at', 'created_at', 'date', 'tanggal'])),
+      minWidth: 120,
+      render: (row: any) => getSarmokStatusLabel(pickDetailValue(row, ['status', 'status_name', 'state', 'borrow_status', 'approval_status'])),
     },
   ];
+};
+
+const getDecisionNote = (kind: SarmokDetailKind, row: unknown) => {
+  if (kind === 'complaints') {
+    return [
+      `Lokasi: ${pickHumanValue(row, ['room.name', 'room_name', 'location', 'lokasi'])}`,
+      `Keluhan: ${pickHumanValue(row, ['complaint_description', 'complaint', 'description', 'reason'])}`,
+      `PIC: ${pickHumanValue(row, ['pic.name', 'user_pic.name', 'assignee.name', 'handler.name'])}`,
+    ].join(' | ');
+  }
+
+  if (kind === 'roomReservation') {
+    return [
+      `Peminjam: ${pickHumanValue(row, ['borrower.name', 'requester.name', 'user.name', 'created_by.name'])}`,
+      `Ruang: ${pickHumanValue(row, ['room.name', 'room_name', 'location'])}`,
+      `Keperluan: ${pickHumanValue(row, ['purpose', 'keperluan', 'borrow_description', 'description', 'event_name'])}`,
+    ].join(' | ');
+  }
+
+  return [
+    `Peminjam: ${pickHumanValue(row, ['borrower.name', 'requester.name', 'user.name', 'created_by.name'])}`,
+    `Alat: ${pickHumanValue(row, ['tool.name', 'item.name', 'asset.name', 'tool_name', 'item_name', 'name'])}`,
+    `Keperluan: ${pickHumanValue(row, ['purpose', 'keperluan', 'borrow_description', 'description', 'event_name'])}`,
+  ].join(' | ');
 };
 
 
@@ -2201,7 +2308,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                   )}
 
                   <div style={{ overflowX: 'auto', border: '1px solid var(--border-subtle)', borderRadius: 8, background: 'rgba(255,255,255,0.02)' }}>
-                    <table style={{ width: '100%', minWidth: '960px', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                    <table style={{ width: '100%', minWidth: '1280px', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                       <thead>
                         <tr style={{ background: 'rgba(255,255,255,0.03)' }}>
                           <th style={{ width: 52, padding: '0.75rem 0.7rem', textAlign: 'left', fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border-subtle)' }}>No</th>
@@ -2210,7 +2317,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                               {column.label}
                             </th>
                           ))}
-                          <th style={{ width: 190, padding: '0.75rem 0.7rem', textAlign: 'left', fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border-subtle)' }}>Ringkas</th>
+                          <th style={{ width: 290, padding: '0.75rem 0.7rem', textAlign: 'left', fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border-subtle)' }}>Pertimbangan</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -2223,7 +2330,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                               </td>
                             ))}
                             <td style={{ padding: '0.75rem 0.7rem', verticalAlign: 'top', color: 'var(--text-primary)', fontSize: '0.76rem', lineHeight: 1.45, fontWeight: 700, wordBreak: 'break-word' }}>
-                              {summarizeDetailRow(row)}
+                              {getDecisionNote(sarmokDetailModal.kind, row)}
                             </td>
                           </tr>
                         ))}
