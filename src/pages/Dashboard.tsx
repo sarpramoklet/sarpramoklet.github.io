@@ -277,8 +277,8 @@ const buildSarmokDetailUrl = (endpoint: string, kind: SarmokDetailKind, metricLa
   url.searchParams.set('endDate', endDate);
 
   const apiStatus = getSarmokApiStatusFilter(metricLabel);
-  if (apiStatus) {
-    url.searchParams.set(kind === 'roomReservation' ? 'filter' : 'status', apiStatus);
+  if (apiStatus && kind === 'roomReservation') {
+    url.searchParams.set('filter', apiStatus);
   }
 
   return url.toString();
@@ -316,6 +316,13 @@ const hasAnyDetailValue = (row: unknown, paths: string[]) => {
   });
 };
 
+const isTruthyDetailFlag = (row: unknown, paths: string[]) => {
+  return paths.some((path) => {
+    const value = pickDetailValue(row, [path]);
+    return value === true || value === 1 || value === '1' || normalizeStatusValue(value).includes('verified');
+  });
+};
+
 const ROOM_BORROW_FIELDS = ['room.name', 'room.nama', 'room.number', 'room.code', 'room_id', 'room_name', 'room_number', 'room_code', 'classroom.name', 'classroom', 'space.name', 'space'];
 const TOOL_BORROW_FIELDS = ['tool.name', 'tool_id', 'tool_name', 'item.name', 'item_id', 'item_name', 'asset.name', 'asset_id', 'asset_name', 'goods.name', 'barang.name', 'sarpra_detail_borrow', 'detail_borrow', 'borrow_details', 'tools', 'items', 'assets'];
 
@@ -341,6 +348,7 @@ const isSarmokPendingRow = (row: unknown) => {
   const status = getRowStatusValue(row);
   if (['0', 'pending', 'waiting', 'waiting_confirmation', 'menunggu', 'menunggu_konfirmasi'].includes(status)) return true;
   if (status !== '-') return false;
+  if (isTruthyDetailFlag(row, ['verified_responsibility', 'verified_admin'])) return false;
   return !hasAnyDetailValue(row, ['process_at', 'processed_at', 'approved_at', 'start_at']);
 };
 
@@ -354,6 +362,7 @@ const isSarmokProcessRow = (row: unknown) => {
 const isSarmokActiveRow = (row: unknown) => {
   const status = getRowStatusValue(row);
   if (['1', 'active', 'approved', 'verified', 'terverifikasi', 'aktif'].includes(status)) return true;
+  if (isTruthyDetailFlag(row, ['verified_responsibility', 'verified_admin'])) return true;
   if (status !== '-') return false;
   return hasAnyDetailValue(row, ['process_at', 'processed_at', 'approved_at', 'start_at', 'borrow_at']) && !hasAnyDetailValue(row, ['return_at', 'returned_at', 'finish_at', 'finished_at']);
 };
