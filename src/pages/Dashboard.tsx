@@ -52,6 +52,11 @@ type SarmokComplaintStats = {
   complete: number;
 };
 
+type SarmokRoomStats = {
+  waitingConfirmation: number;
+  activeReservation: number;
+};
+
 type SarmokDetailModal = {
   kind: SarmokDetailKind;
   title: string;
@@ -167,6 +172,16 @@ const normalizeSarmokComplaintStats = (
     inProgress,
     complete,
   };
+};
+
+const normalizeSarmokRoomStats = (
+  payload: unknown,
+  fallback: SarmokRoomStats,
+): SarmokRoomStats => {
+  const waitingConfirmation = pickSarmokCount(payload, ['count_pending', 'countPending', 'pending', 'pending_count']) ?? fallback.waitingConfirmation ?? 0;
+  const activeReservation = pickSarmokCount(payload, ['count_verified', 'countVerified', 'count_active', 'countActive', 'verified', 'active']) ?? fallback.activeReservation ?? 0;
+
+  return { waitingConfirmation, activeReservation };
 };
 
 const formatDetailKey = (key: string) => {
@@ -979,7 +994,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   // Sarmok Dashboard data
   const [mokletService, setMokletService] = useState<{
     complaints: SarmokComplaintStats | null;
-    roomReservation: { waitingConfirmation: number; activeReservation: number } | null;
+    roomReservation: SarmokRoomStats | null;
     toolsLoan: { waitingConfirmation: number; haveNotReturn: number } | null;
     loading: boolean;
     lastUpdated: Date | null;
@@ -1596,9 +1611,34 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           }
         }
 
+        let roomStats = normalizeSarmokRoomStats(null, data.roomReservation);
+        const roomSummaryUrl = buildSarmokDetailUrl(SARMOK_ROOM_DETAIL_API_URL, 'roomReservation', 'All Status');
+        try {
+          const directRoomResp = await fetch(roomSummaryUrl, {
+            method: 'GET',
+            headers: {
+              Authorization: authHeader,
+              Accept: 'application/json',
+            },
+          });
+
+          if (!directRoomResp.ok) throw new Error(`Sarmok room API failed (${directRoomResp.status})`);
+          roomStats = normalizeSarmokRoomStats(await readSarmokRawResponse(directRoomResp), data.roomReservation);
+        } catch (roomDirectError) {
+          try {
+            console.warn('Sarmok room direct fetch failed, trying proxy fallback:', roomDirectError);
+            const proxyUrl = `${FINANCE_API_URL}?proxyUrl=${encodeURIComponent(roomSummaryUrl)}&authHeader=${encodeURIComponent(authHeader)}`;
+            const proxyResp = await fetch(proxyUrl, { headers: { Accept: 'application/json' } });
+            if (!proxyResp.ok) throw new Error(`Sarmok room proxy failed (${proxyResp.status})`);
+            roomStats = normalizeSarmokRoomStats(await readSarmokRawResponse(proxyResp), data.roomReservation);
+          } catch (roomProxyError) {
+            console.warn('Sarmok room summary failed, using dashboard fallback:', roomProxyError);
+          }
+        }
+
         setMokletService({
           complaints: complaintStats,
-          roomReservation: data.roomReservation,
+          roomReservation: roomStats,
           toolsLoan: data.toolsLoan,
           loading: false,
           lastUpdated: new Date(),
