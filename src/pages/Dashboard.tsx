@@ -2934,47 +2934,6 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
             </div>
 
           </div>
-
-          {/* Current Reserved Room Section */}
-          <div style={{ marginTop: '2rem' }}>
-            <h3 style={{ fontSize: '1.1rem', color: 'var(--text-primary)', margin: 0, fontWeight: 700 }}>Current Reserved Room</h3>
-            <p style={{ margin: '0.2rem 0 1rem 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>This page contains list of current reserved time.</p>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {[
-                { name: 'Adi Nurrachman, S.T., M.Kom.', desc: 'TC FLS3N', room: 'Studio Musik', time: '1 April 2026 07:20:28 - 28 April 2026 07:20:28' },
-                { name: 'Liviana Danica Fajarningrum', desc: 'PERSIAPAN FLS3N MENYANYI SOLO', room: 'Aula', time: '8 April 2026 14:00:00 - 30 April 2026 17:00:00' },
-                { name: 'Satria Nugraha Valentsyah', desc: 'Persiapan FLS3N Seni Musik Tradisi', room: 'Laboratorium 4', time: '13 April 2026 07:46:47 - 29 April 2026 07:46:47' },
-                { name: 'Naufal Giga Arrasyid', desc: 'Pembuatan mading perpustakaan oleh pustel 34', room: 'Perpustakaan', time: '23 April 2026 15:30:00 - 30 April 2026 18:30:00' },
-                { name: 'Fanya Arthalita Fauzi', desc: 'Pengerjaan Lomba GameSeed 2026', room: 'Laboratorium 7', time: '23 April 2026 10:00:00 - 30 April 2026 17:00:00' }
-              ].map((item, idx) => (
-                <div key={idx} style={{ 
-                  padding: '1rem', 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center', 
-                  background: 'var(--bg-card)',
-                  borderRadius: '8px',
-                  border: '1px solid var(--border-subtle)',
-                  flexWrap: 'wrap',
-                  gap: '1rem'
-                }}>
-                  <div style={{ flex: '1 1 200px' }}>
-                    <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{item.name}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.3rem', textTransform: 'none' }}>{item.desc}</div>
-                  </div>
-                  <div style={{ flex: '1 1 200px' }}>
-                    <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{item.room}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.3rem' }}>{item.time}</div>
-                  </div>
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <span style={{ padding: '0.3rem 0.6rem', border: '1px solid #10b981', color: '#10b981', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700, whiteSpace: 'nowrap', textTransform: 'uppercase' }}>PIC: APPROVED</span>
-                    <span style={{ padding: '0.3rem 0.6rem', border: '1px solid #10b981', color: '#10b981', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700, whiteSpace: 'nowrap', textTransform: 'uppercase' }}>Admin: APPROVED</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
 
       {classroomMonitorSection}
