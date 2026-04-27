@@ -266,6 +266,44 @@ const pickCreatorName = (row: unknown) => {
   ]);
 };
 
+const pickRoomReservationBorrower = (row: unknown) => {
+  return pickHumanValue(row, [
+    'reservation_by.name',
+    'reservation_by.nama',
+    'reservation_by.full_name',
+    'creator.name',
+    'creator.nama',
+    'user.name',
+    'user.nama',
+    'created_by.name',
+    'createdBy.name',
+    'requester.name',
+    'borrower.name',
+  ]);
+};
+
+const pickRoomReservationName = (row: unknown) => {
+  return pickHumanValue(row, [
+    'room_reservation.name',
+    'room_reservation.nama',
+    'room_reservation.code',
+    'room.name',
+    'room.nama',
+    'room.number',
+    'room.code',
+    'room_name',
+    'room_number',
+    'room_code',
+    'classroom.name',
+    'classroom',
+    'space.name',
+    'space',
+    'location.name',
+    'location',
+    'lokasi',
+  ]);
+};
+
 const formatBorrowItems = (row: unknown) => {
   const direct = pickHumanValue(row, ['tool.name', 'tool.nama', 'item.name', 'item.nama', 'asset.name', 'asset.nama', 'goods.name', 'barang.name', 'tool_name', 'item_name', 'asset_name', 'name']);
   if (direct !== '-') return direct;
@@ -307,9 +345,36 @@ const formatSarmokDate = (value: unknown) => {
   });
 };
 
+const formatSarmokDateLong = (value: unknown) => {
+  const raw = formatDetailValue(value);
+  if (raw === '-') return raw;
+
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return raw;
+
+  return parsed.toLocaleString('id-ID', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+};
+
 const formatSarmokDateRange = (row: unknown, startPaths: string[], endPaths: string[]) => {
   const start = formatSarmokDate(pickDetailValue(row, startPaths));
   const end = formatSarmokDate(pickDetailValue(row, endPaths));
+
+  if (start !== '-' && end !== '-' && start !== end) return `${start} - ${end}`;
+  if (start !== '-') return start;
+  if (end !== '-') return end;
+  return '-';
+};
+
+const formatRoomReservationRange = (row: unknown) => {
+  const start = formatSarmokDateLong(pickDetailValue(row, ['start_date', 'start_at', 'date_start', 'from', 'tanggal']));
+  const end = formatSarmokDateLong(pickDetailValue(row, ['end_date', 'end_at', 'date_end', 'to']));
 
   if (start !== '-' && end !== '-' && start !== end) return `${start} - ${end}`;
   if (start !== '-') return start;
@@ -545,34 +610,29 @@ const getReminderColumns = (kind: SarmokDetailKind) => {
   if (kind === 'roomReservation') {
     return [
       {
-        label: 'Tanggal',
-        minWidth: 150,
-        render: (row: any) => formatSarmokDate(pickDetailValue(row, ['start_date', 'start_at', 'borrow_date', 'borrow_at', 'created_at', 'updated_at', 'tanggal'])),
-      },
-      {
-        label: 'Ruang',
-        minWidth: 160,
-        render: (row: any) => pickHumanValue(row, ['room.name', 'room.nama', 'room.number', 'room.code', 'room_name', 'room_number', 'room_code', 'classroom.name', 'classroom', 'space.name', 'space', 'location.name', 'location', 'lokasi']),
+        label: 'Peminjam',
+        minWidth: 220,
+        render: (row: any) => pickRoomReservationBorrower(row),
       },
       {
         label: 'Keperluan',
-        minWidth: 330,
+        minWidth: 340,
         render: (row: any) => pickHumanValue(row, ['need_description', 'purpose', 'keperluan', 'borrow_description', 'description', 'deskripsi', 'event_name', 'activity', 'reason', 'note', 'notes']),
       },
       {
-        label: 'Peminjam',
-        minWidth: 170,
-        render: (row: any) => pickCreatorName(row),
+        label: 'Ruang',
+        minWidth: 190,
+        render: (row: any) => pickRoomReservationName(row),
       },
       {
-        label: 'Jadwal Pakai',
-        minWidth: 180,
-        render: (row: any) => formatSarmokDateRange(row, ['start_date', 'start_at', 'borrow_at', 'borrow_date', 'date_start', 'from', 'tanggal'], ['end_date', 'end_at', 'return_at', 'date_end', 'to']),
+        label: 'Waktu Reservasi',
+        minWidth: 280,
+        render: (row: any) => formatRoomReservationRange(row),
       },
       {
         label: 'Penanggung Jawab',
         minWidth: 170,
-        render: (row: any) => pickHumanValue(row, ['person_responsibility.name', 'person_responsibility.nama', 'pic.name', 'user_pic.name', 'approver.name', 'approved_by.name', 'handler.name']),
+        render: (row: any) => pickHumanValue(row, ['person_responsibility.name', 'person_responsibility.nama', 'verifier_reservation.name', 'verifier_reservation.nama', 'pic.name', 'user_pic.name', 'approver.name', 'approved_by.name', 'handler.name']),
       },
       {
         label: 'Status',
@@ -632,9 +692,10 @@ const getDecisionNote = (kind: SarmokDetailKind, row: unknown) => {
 
   if (kind === 'roomReservation') {
     return [
-      `Peminjam: ${pickCreatorName(row)}`,
-      `Ruang: ${pickHumanValue(row, ['room.name', 'room_name', 'room_number', 'room_code', 'classroom.name', 'location'])}`,
+      `Peminjam: ${pickRoomReservationBorrower(row)}`,
+      `Ruang: ${pickRoomReservationName(row)}`,
       `Keperluan: ${pickHumanValue(row, ['need_description', 'purpose', 'keperluan', 'borrow_description', 'description', 'event_name'])}`,
+      `Waktu: ${formatRoomReservationRange(row)}`,
     ].join(' | ');
   }
 
