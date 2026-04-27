@@ -3,6 +3,7 @@ import { Plus, Search, Loader2, X, RefreshCw, Edit3, Trash2, Heart } from 'lucid
 import { USERS, getCurrentUser } from '../data/organization';
 import { useProfileThumbByEmail } from '../hooks/useProfileThumbByEmail';
 import { pushActionNotification } from '../utils/actionNotifications';
+import { sendDutyNoteWhatsAppNotification } from '../utils/whatsappNotifications';
 import UserAvatar from '../components/UserAvatar';
 
 // URL Apps Script DB_Sarpramoklet (URL Terbaru)
@@ -259,6 +260,16 @@ const DutyNotes = () => {
         iconKey: isEditing ? 'edit' : formData.type === 'Urgent' ? 'alert' : 'message',
         color: isEditing ? 'var(--accent-blue)' : formData.type === 'Urgent' ? 'var(--accent-rose)' : 'var(--accent-blue)',
         bg: isEditing ? 'var(--accent-blue-ghost)' : formData.type === 'Urgent' ? 'rgba(244, 63, 94, 0.1)' : 'var(--accent-blue-ghost)'
+      });
+
+      void sendDutyNoteWhatsAppNotification({
+        mode: isEditing ? 'updated' : 'created',
+        noteId: recordId,
+        senderName,
+        category: formData.kategori,
+        priority: formData.type,
+        message: submittedAmount,
+        followup: formData.kredit,
       });
       
       setIsModalOpen(false);
