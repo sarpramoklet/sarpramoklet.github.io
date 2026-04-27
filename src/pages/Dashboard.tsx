@@ -43,6 +43,15 @@ const getSarmokBasicAuthHeader = () => {
 
 type SarmokDetailKind = 'complaints' | 'roomReservation' | 'toolsLoan';
 
+type SarmokComplaintStats = {
+  waitingConfirmation: number;
+  onProcess: number;
+  rejected: number;
+  pending: number;
+  inProgress: number;
+  complete: number;
+};
+
 type SarmokDetailModal = {
   kind: SarmokDetailKind;
   title: string;
@@ -109,6 +118,55 @@ const getSarmokDetailSummaryEntries = (payload: unknown) => {
   return Object.entries(unwrapped as Record<string, unknown>).filter(([, value]) => {
     return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
   });
+};
+
+const toSarmokCount = (value: unknown) => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const parsed = Number(value.replace(/[^\d.-]/g, ''));
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return undefined;
+};
+
+const pickSarmokCount = (source: unknown, aliases: string[]) => {
+  const unwrapped = unwrapSarmokDetailPayload(source);
+  if (!isDetailRecord(unwrapped)) return undefined;
+
+  for (const alias of aliases) {
+    const direct = toSarmokCount(unwrapped[alias]);
+    if (direct !== undefined) return direct;
+  }
+
+  const normalizedAliases = aliases.map((alias) => alias.toLowerCase().replace(/[^a-z0-9]/g, ''));
+  for (const [key, value] of Object.entries(unwrapped)) {
+    const normalizedKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (normalizedAliases.includes(normalizedKey)) {
+      const parsed = toSarmokCount(value);
+      if (parsed !== undefined) return parsed;
+    }
+  }
+
+  return undefined;
+};
+
+const normalizeSarmokComplaintStats = (
+  payload: unknown,
+  fallback: { waitingConfirmation: number; onProcess: number },
+): SarmokComplaintStats => {
+  const pending = pickSarmokCount(payload, ['count_pending', 'countPending', 'pending', 'pending_count']) ?? fallback.waitingConfirmation ?? 0;
+  const inProgress = pickSarmokCount(payload, ['count_in_progress', 'countInProgress', 'count_process', 'in_progress', 'inProgress', 'on_process']) ?? fallback.onProcess ?? 0;
+  const complete = pickSarmokCount(payload, ['count_completed', 'count_complete', 'countComplete', 'countCompleted', 'completed', 'complete']) ?? 0;
+  const rejected = pickSarmokCount(payload, ['count_rejected', 'countRejected', 'rejected', 'reject']) ?? 0;
+
+  return {
+    waitingConfirmation: pending,
+    onProcess: inProgress,
+    rejected,
+    pending,
+    inProgress,
+    complete,
+  };
 };
 
 const formatDetailKey = (key: string) => {
@@ -260,9 +318,9 @@ const getCurrentMonthDateRange = () => {
 
 const getSarmokApiStatusFilter = (metricLabel: string) => {
   const normalizedLabel = metricLabel.toLowerCase();
-  if (normalizedLabel.includes('menunggu')) return 'PENDING';
+  if (normalizedLabel.includes('menunggu') || normalizedLabel.includes('pending')) return 'PENDING';
   if (normalizedLabel.includes('aktif') || normalizedLabel.includes('terverifikasi') || normalizedLabel.includes('reservasi')) return 'VERIFIED';
-  if (normalizedLabel.includes('diproses') || normalizedLabel.includes('proses')) return 'PROCESS';
+  if (normalizedLabel.includes('diproses') || normalizedLabel.includes('proses') || normalizedLabel.includes('progress')) return 'PROCESS';
   return '';
 };
 
@@ -294,6 +352,9 @@ const getSarmokStatusLabel = (value: unknown) => {
     process: 'Proses',
     in_progress: 'Proses',
     verified: 'Terverifikasi',
+    rejected: 'Ditolak',
+    reject: 'Ditolak',
+    complete: 'Selesai',
     completed: 'Selesai',
     finished: 'Selesai',
   };
@@ -352,11 +413,22 @@ const isSarmokPendingRow = (row: unknown) => {
   return !hasAnyDetailValue(row, ['process_at', 'processed_at', 'approved_at', 'start_at']);
 };
 
+const isSarmokRejectedRow = (row: unknown) => {
+  const status = getRowStatusValue(row);
+  return ['3', 'rejected', 'reject', 'ditolak'].includes(status) || hasAnyDetailValue(row, ['rejected_at', 'reason_rejected']);
+};
+
 const isSarmokProcessRow = (row: unknown) => {
   const status = getRowStatusValue(row);
   if (['1', 'process', 'processing', 'in_progress', 'on_process', 'proses', 'diproses'].includes(status)) return true;
   if (status !== '-') return false;
   return hasAnyDetailValue(row, ['process_at', 'processed_at', 'start_at']) && !hasAnyDetailValue(row, ['finish_at', 'finished_at', 'completed_at']);
+};
+
+const isSarmokCompleteRow = (row: unknown) => {
+  const status = getRowStatusValue(row);
+  if (['2', 'complete', 'completed', 'done', 'finish', 'finished', 'selesai'].includes(status)) return true;
+  return hasAnyDetailValue(row, ['finish_at', 'finished_at', 'completed_at']);
 };
 
 const isSarmokActiveRow = (row: unknown) => {
@@ -370,8 +442,10 @@ const isSarmokActiveRow = (row: unknown) => {
 const filterSarmokDetailRows = (rows: any[], metricLabel: string) => {
   const normalizedLabel = metricLabel.toLowerCase();
 
-  if (normalizedLabel.includes('menunggu')) return rows.filter(isSarmokPendingRow);
-  if (normalizedLabel.includes('diproses') || normalizedLabel.includes('proses')) return rows.filter(isSarmokProcessRow);
+  if (normalizedLabel.includes('rejected') || normalizedLabel.includes('ditolak')) return rows.filter(isSarmokRejectedRow);
+  if (normalizedLabel.includes('menunggu') || normalizedLabel.includes('pending')) return rows.filter(isSarmokPendingRow);
+  if (normalizedLabel.includes('diproses') || normalizedLabel.includes('proses') || normalizedLabel.includes('progress')) return rows.filter(isSarmokProcessRow);
+  if (normalizedLabel.includes('complete') || normalizedLabel.includes('selesai')) return rows.filter(isSarmokCompleteRow);
   if (normalizedLabel.includes('aktif') || normalizedLabel.includes('terverifikasi') || normalizedLabel.includes('reservasi')) return rows.filter(isSarmokActiveRow);
 
   return rows;
@@ -904,7 +978,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
 
   // Sarmok Dashboard data
   const [mokletService, setMokletService] = useState<{
-    complaints: { waitingConfirmation: number; onProcess: number } | null;
+    complaints: SarmokComplaintStats | null;
     roomReservation: { waitingConfirmation: number; activeReservation: number } | null;
     toolsLoan: { waitingConfirmation: number; haveNotReturn: number } | null;
     loading: boolean;
@@ -1447,6 +1521,18 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       return parseSarmokDashboardBody(await resp.text());
     };
 
+    const readSarmokRawResponse = async (resp: Response) => {
+      const contentType = resp.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) return resp.json();
+
+      const text = await resp.text();
+      try {
+        return JSON.parse(text);
+      } catch {
+        return text;
+      }
+    };
+
     // Fetch Sarmok Dashboard data langsung; proxy hanya fallback jika browser/network menolak.
     const fetchMokletService = async () => {
       const authHeader = getSarmokBasicAuthHeader();
@@ -1486,8 +1572,32 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           data = await readSarmokDashboardResponse(proxyResp);
         }
 
+        let complaintStats = normalizeSarmokComplaintStats(null, data.complaints);
+        try {
+          const directComplaintResp = await fetch(SARMOK_COMPLAINT_DETAIL_API_URL, {
+            method: 'GET',
+            headers: {
+              Authorization: authHeader,
+              Accept: 'application/json',
+            },
+          });
+
+          if (!directComplaintResp.ok) throw new Error(`Sarmok complaint API failed (${directComplaintResp.status})`);
+          complaintStats = normalizeSarmokComplaintStats(await readSarmokRawResponse(directComplaintResp), data.complaints);
+        } catch (complaintDirectError) {
+          try {
+            console.warn('Sarmok complaint direct fetch failed, trying proxy fallback:', complaintDirectError);
+            const proxyUrl = `${FINANCE_API_URL}?proxyUrl=${encodeURIComponent(SARMOK_COMPLAINT_DETAIL_API_URL)}&authHeader=${encodeURIComponent(authHeader)}`;
+            const proxyResp = await fetch(proxyUrl, { headers: { Accept: 'application/json' } });
+            if (!proxyResp.ok) throw new Error(`Sarmok complaint proxy failed (${proxyResp.status})`);
+            complaintStats = normalizeSarmokComplaintStats(await readSarmokRawResponse(proxyResp), data.complaints);
+          } catch (complaintProxyError) {
+            console.warn('Sarmok complaint summary failed, using dashboard fallback:', complaintProxyError);
+          }
+        }
+
         setMokletService({
-          complaints: data.complaints,
+          complaints: complaintStats,
           roomReservation: data.roomReservation,
           toolsLoan: data.toolsLoan,
           loading: false,
@@ -2615,15 +2725,22 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
               {mokletService.loading && !mokletService.complaints ? (
                 <div style={{ display: 'flex', justifyContent: 'center', padding: '1rem' }}><Loader2 size={20} className="animate-spin" color="#f97316" /></div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', opacity: mokletService.loading ? 0.5 : 1, transition: 'opacity 0.2s' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Menunggu Konfirmasi</span>
-                    {renderSarmokMetricButton(mokletService.complaints?.waitingConfirmation ?? '-', '#f97316', 'complaints', 'Pengaduan', 'Menunggu Konfirmasi', SARMOK_COMPLAINT_DETAIL_API_URL)}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '0.6rem', opacity: mokletService.loading ? 0.5 : 1, transition: 'opacity 0.2s' }}>
+                  <div style={{ padding: '0.55rem 0.6rem', border: '1px solid rgba(248,113,113,0.28)', borderRadius: 8, background: 'rgba(248,113,113,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem' }}>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#fb7185', textTransform: 'uppercase' }}>Rejected</span>
+                    {renderSarmokMetricButton(mokletService.complaints?.rejected ?? '-', '#fb7185', 'complaints', 'Pengaduan', 'Rejected', SARMOK_COMPLAINT_DETAIL_API_URL)}
                   </div>
-                  <div style={{ height: '1px', background: 'var(--border-subtle)' }} />
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Sedang Diproses</span>
-                    {renderSarmokMetricButton(mokletService.complaints?.onProcess ?? '-', '#fb923c', 'complaints', 'Pengaduan', 'Sedang Diproses', SARMOK_COMPLAINT_DETAIL_API_URL)}
+                  <div style={{ padding: '0.55rem 0.6rem', border: '1px solid rgba(249,115,22,0.28)', borderRadius: 8, background: 'rgba(249,115,22,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem' }}>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#f97316', textTransform: 'uppercase' }}>Pending</span>
+                    {renderSarmokMetricButton(mokletService.complaints?.pending ?? '-', '#f97316', 'complaints', 'Pengaduan', 'Pending', SARMOK_COMPLAINT_DETAIL_API_URL)}
+                  </div>
+                  <div style={{ padding: '0.55rem 0.6rem', border: '1px solid rgba(59,130,246,0.28)', borderRadius: 8, background: 'rgba(59,130,246,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem' }}>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#3b82f6', textTransform: 'uppercase' }}>In Progress</span>
+                    {renderSarmokMetricButton(mokletService.complaints?.inProgress ?? '-', '#3b82f6', 'complaints', 'Pengaduan', 'In Progress', SARMOK_COMPLAINT_DETAIL_API_URL)}
+                  </div>
+                  <div style={{ padding: '0.55rem 0.6rem', border: '1px solid rgba(34,197,94,0.28)', borderRadius: 8, background: 'rgba(34,197,94,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem' }}>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#22c55e', textTransform: 'uppercase' }}>Complete</span>
+                    {renderSarmokMetricButton(mokletService.complaints?.complete ?? '-', '#22c55e', 'complaints', 'Pengaduan', 'Complete', SARMOK_COMPLAINT_DETAIL_API_URL)}
                   </div>
                 </div>
               )}
