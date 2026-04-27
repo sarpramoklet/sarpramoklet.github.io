@@ -26,7 +26,7 @@ const SECTION_ALIASES = {
 const FIELD_ALIASES = {
   waitingConfirmation: ['waitingConfirmation', 'waiting_confirmation', 'waiting', 'pending', 'pendingConfirmation', 'menungguKonfirmasi', 'menunggu_konfirmasi'],
   onProcess: ['onProcess', 'on_process', 'inProcess', 'in_process', 'processing', 'inProgress', 'in_progress', 'diproses', 'sedangDiproses', 'sedang_diproses'],
-  activeReservation: ['activeReservation', 'active_reservation', 'active', 'aktif', 'reservationActive', 'reservation_active'],
+  activeReservation: ['activeReservation', 'active_reservation', 'active', 'aktif', 'reservationActive', 'reservation_active', 'approved', 'disetujui', 'ongoing', 'onGoing', 'on_going', 'sedangBerlangsung', 'sedang_berlangsung'],
   haveNotReturn: ['haveNotReturn', 'have_not_return', 'notReturn', 'not_return', 'notReturned', 'not_returned', 'verified', 'verifiedLoan', 'verifiedLoans', 'approved', 'activeLoan', 'activeLoans', 'terverifikasi', 'belumKembali', 'belum_kembali', 'belumDikembalikan', 'belum_dikembalikan'],
 };
 
@@ -217,7 +217,7 @@ export const normalizeSarmokDashboardText = (text: string): SarmokDashboardData 
     },
     roomReservation: {
       waitingConfirmation: findTextValue(roomSection, 'Waiting for Confirmation') || findTextValue(roomSection, 'Menunggu Konfirmasi'),
-      activeReservation: findTextValue(roomSection, 'Active Reservation') || findTextValue(roomSection, 'Reservasi Aktif'),
+      activeReservation: findTextValue(roomSection, 'Active Reservation') || findTextValue(roomSection, 'Reservasi Aktif') || findTextValue(roomSection, 'Sedang Berlangsung') || findTextValue(roomSection, 'Disetujui'),
     },
     toolsLoan: {
       waitingConfirmation: findTextValue(toolsSection, 'Waiting for Confirmation') || findTextValue(toolsSection, 'Menunggu Konfirmasi'),
