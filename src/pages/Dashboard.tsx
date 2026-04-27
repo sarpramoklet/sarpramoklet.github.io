@@ -55,6 +55,7 @@ type SarmokComplaintStats = {
 type SarmokRoomStats = {
   completedReservation: number;
   activeReservation: number;
+  inUseReservation: number;
 };
 
 type SarmokDetailModal = {
@@ -176,12 +177,16 @@ const normalizeSarmokComplaintStats = (
 
 const normalizeSarmokRoomStats = (
   payload: unknown,
-  fallback: { waitingConfirmation?: number; completedReservation?: number; activeReservation: number },
+  fallback: { waitingConfirmation?: number; completedReservation?: number; activeReservation: number; inUseReservation?: number },
 ): SarmokRoomStats => {
   const completedReservation = pickSarmokCount(payload, ['count_completed', 'countComplete', 'count_completed_reservation', 'count_done', 'completed', 'complete', 'done', 'finished', 'count_all', 'countAll']) ?? fallback.completedReservation ?? fallback.waitingConfirmation ?? 0;
   const activeReservation = pickSarmokCount(payload, ['count_verified', 'countVerified', 'count_approved', 'countApproved', 'count_active', 'countActive', 'count_ongoing', 'countOngoing', 'verified', 'approved', 'active', 'ongoing', 'sedang_berlangsung']) ?? fallback.activeReservation ?? 0;
+  const inUseReservation = pickSarmokCount(payload, ['count_in_use', 'countInUse', 'count_using', 'countUsing', 'count_current', 'countCurrent', 'in_use', 'inUse', 'using', 'current', 'sedang_dipakai'])
+    ?? normalizeSarmokDetailRows(payload).filter(isSarmokRoomInUseRow).length
+    ?? fallback.inUseReservation
+    ?? 0;
 
-  return { completedReservation, activeReservation };
+  return { completedReservation, activeReservation, inUseReservation };
 };
 
 const formatDetailKey = (key: string) => {
@@ -399,7 +404,7 @@ const getCurrentMonthDateRange = () => {
 const getSarmokApiStatusFilter = (metricLabel: string) => {
   const normalizedLabel = metricLabel.toLowerCase();
   if (normalizedLabel.includes('menunggu') || normalizedLabel.includes('pending')) return 'PENDING';
-  if (normalizedLabel.includes('aktif') || normalizedLabel.includes('terverifikasi') || normalizedLabel.includes('disetujui') || normalizedLabel.includes('berlangsung') || normalizedLabel.includes('reservasi')) return 'VERIFIED';
+  if (normalizedLabel.includes('aktif') || normalizedLabel.includes('terverifikasi') || normalizedLabel.includes('disetujui') || normalizedLabel.includes('berlangsung') || normalizedLabel.includes('dipakai') || normalizedLabel.includes('reservasi')) return 'VERIFIED';
   if (normalizedLabel.includes('diproses') || normalizedLabel.includes('proses') || normalizedLabel.includes('progress')) return 'PROCESS';
   if (normalizedLabel.includes('complete') || normalizedLabel.includes('selesai')) return 'COMPLETED';
   return '';
@@ -461,8 +466,17 @@ const hasAnyDetailValue = (row: unknown, paths: string[]) => {
 const isTruthyDetailFlag = (row: unknown, paths: string[]) => {
   return paths.some((path) => {
     const value = pickDetailValue(row, [path]);
-    return value === true || value === 1 || value === '1' || normalizeStatusValue(value).includes('verified');
+    const normalized = normalizeStatusValue(value);
+    return value === true || value === 1 || value === '1' || normalized.includes('verified') || normalized.includes('approved');
   });
+};
+
+const parseSarmokDetailDate = (value: unknown) => {
+  const raw = formatDetailValue(value);
+  if (raw === '-') return null;
+
+  const parsed = new Date(raw);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
 const ROOM_BORROW_FIELDS = ['room.name', 'room.nama', 'room.number', 'room.code', 'room_id', 'room_name', 'room_number', 'room_code', 'classroom.name', 'classroom', 'space.name', 'space'];
@@ -520,11 +534,25 @@ const isSarmokActiveRow = (row: unknown) => {
   return hasAnyDetailValue(row, ['process_at', 'processed_at', 'approved_at', 'start_at', 'borrow_at']) && !hasAnyDetailValue(row, ['return_at', 'returned_at', 'finish_at', 'finished_at']);
 };
 
+const isSarmokRoomInUseRow = (row: unknown) => {
+  if (!isSarmokActiveRow(row)) return false;
+
+  const start = parseSarmokDetailDate(pickDetailValue(row, ['start_date', 'start_at', 'date_start', 'from', 'tanggal']));
+  const end = parseSarmokDetailDate(pickDetailValue(row, ['end_date', 'end_at', 'date_end', 'to']));
+  const now = new Date();
+
+  if (start && end) return start <= now && now <= end;
+  if (start) return start <= now;
+  if (end) return now <= end;
+  return false;
+};
+
 const filterSarmokDetailRows = (rows: any[], metricLabel: string) => {
   const normalizedLabel = metricLabel.toLowerCase();
 
   if (normalizedLabel.includes('rejected') || normalizedLabel.includes('ditolak')) return rows.filter(isSarmokRejectedRow);
   if (normalizedLabel.includes('menunggu') || normalizedLabel.includes('pending')) return rows.filter(isSarmokPendingRow);
+  if (normalizedLabel.includes('dipakai')) return rows.filter(isSarmokRoomInUseRow);
   if (normalizedLabel.includes('diproses') || normalizedLabel.includes('proses') || normalizedLabel.includes('progress')) return rows.filter(isSarmokProcessRow);
   if (normalizedLabel.includes('complete') || normalizedLabel.includes('selesai')) return rows.filter(isSarmokCompleteRow);
   if (normalizedLabel.includes('aktif') || normalizedLabel.includes('terverifikasi') || normalizedLabel.includes('disetujui') || normalizedLabel.includes('berlangsung') || normalizedLabel.includes('reservasi')) return rows.filter(isSarmokActiveRow);
@@ -2869,6 +2897,11 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Sedang Berlangsung</span>
                     {renderSarmokMetricButton(mokletService.roomReservation?.activeReservation ?? '-', '#10b981', 'roomReservation', 'Peminjaman Ruang', 'Sedang Berlangsung', SARMOK_ROOM_DETAIL_API_URL)}
+                  </div>
+                  <div style={{ height: '1px', background: 'var(--border-subtle)' }} />
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Sedang Dipakai</span>
+                    {renderSarmokMetricButton(mokletService.roomReservation?.inUseReservation ?? '-', '#14b8a6', 'roomReservation', 'Peminjaman Ruang', 'Sedang Dipakai', SARMOK_ROOM_DETAIL_API_URL)}
                   </div>
                 </div>
               )}
