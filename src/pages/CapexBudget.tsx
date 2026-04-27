@@ -24,6 +24,7 @@ interface BudgetItem {
 
 const BUDGET_MASTER: BudgetItem[] = [
   { id: 'CAPEX-1232101', akun: '1232101', deskripsi: 'Gedung dan Bangunan',   anggaran: 3128087702 },
+  { id: 'CAPEX-1232201', akun: '1232201', deskripsi: 'Sarana dan Prasarana Umum', anggaran: 0       },
   { id: 'CAPEX-1233101', akun: '1233101', deskripsi: 'SarPen Laboratorium',    anggaran: 700576820  },
   { id: 'CAPEX-1233201', akun: '1233201', deskripsi: 'Sarana Pendidikan',      anggaran: 731701609  },
   { id: 'CAPEX-1234101', akun: '1234101', deskripsi: 'Inventaris Kantor',      anggaran: 2885730    },
@@ -45,6 +46,7 @@ interface RealisasiEntry {
 
 const ACCOUNT_ICONS: Record<string, any> = {
   '1232101': Building2,
+  '1232201': Briefcase,
   '1233101': FlaskConical,
   '1233201': BookOpen,
   '1234101': Monitor,
@@ -53,6 +55,7 @@ const ACCOUNT_ICONS: Record<string, any> = {
 };
 const ACCOUNT_COLORS: Record<string, string> = {
   '1232101': 'var(--accent-blue)',
+  '1232201': '#14b8a6',
   '1233101': 'var(--accent-violet)',
   '1233201': 'var(--accent-emerald)',
   '1234101': 'var(--accent-rose)',
