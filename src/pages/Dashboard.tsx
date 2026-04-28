@@ -1831,11 +1831,10 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       const detailRows = normalizeSarmokDetailRows(payload);
       const kindRows = filterSarmokRowsByKind(detailRows, kind);
       const filteredRows = filterSarmokDetailRows(kindRows, metricLabel);
-      const displayRows = filteredRows.length > 0 ? filteredRows : kindRows;
 
       setSarmokDetailModal({
         ...initialModal,
-        rows: displayRows,
+        rows: filteredRows,
         raw: payload,
         loading: false,
       });
@@ -2697,11 +2696,6 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
               ) : sarmokDetailModal.rows.length === 0 ? (
                 <div style={{ padding: '1.25rem', textAlign: 'center', color: 'var(--text-secondary)', border: '1px dashed var(--border-subtle)', borderRadius: 8 }}>
                   Tidak ada data detail dari API untuk status ini.
-                  {sarmokDetailModal.raw !== null && (
-                    <pre style={{ marginTop: '0.75rem', whiteSpace: 'pre-wrap', textAlign: 'left', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                      {formatDetailValue(sarmokDetailModal.raw)}
-                    </pre>
-                  )}
                 </div>
               ) : (
                 <div style={{ display: 'grid', gap: '0.85rem' }}>
