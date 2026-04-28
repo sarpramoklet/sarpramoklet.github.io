@@ -53,7 +53,7 @@ type SarmokComplaintStats = {
 };
 
 type SarmokRoomStats = {
-  completedReservation: number;
+  rejectedReservation: number;
   activeReservation: number;
   inUseReservation: number;
 };
@@ -186,16 +186,16 @@ const normalizeSarmokComplaintStats = (
 
 const normalizeSarmokRoomStats = (
   payload: unknown,
-  fallback: { waitingConfirmation?: number; completedReservation?: number; activeReservation: number; inUseReservation?: number },
+  fallback: { waitingConfirmation?: number; rejectedReservation?: number; activeReservation: number; inUseReservation?: number },
 ): SarmokRoomStats => {
-  const completedReservation = pickSarmokCount(payload, ['count_completed', 'countComplete', 'count_completed_reservation', 'count_done', 'completed', 'complete', 'done', 'finished', 'count_all', 'countAll']) ?? fallback.completedReservation ?? fallback.waitingConfirmation ?? 0;
+  const rejectedReservation = pickSarmokCount(payload, ['count_rejected', 'countRejected', 'count_rejected_reservation', 'rejected', 'reject', 'ditolak']) ?? fallback.rejectedReservation ?? 0;
   const activeReservation = pickSarmokCount(payload, ['count_verified', 'countVerified', 'count_approved', 'countApproved', 'count_active', 'countActive', 'count_ongoing', 'countOngoing', 'verified', 'approved', 'active', 'ongoing', 'sedang_berlangsung']) ?? fallback.activeReservation ?? 0;
   const inUseReservation = pickSarmokCount(payload, ['count_in_use', 'countInUse', 'count_using', 'countUsing', 'count_current', 'countCurrent', 'in_use', 'inUse', 'using', 'current', 'sedang_dipakai'])
     ?? normalizeSarmokDetailRows(payload).filter(isSarmokRoomInUseRow).length
     ?? fallback.inUseReservation
     ?? 0;
 
-  return { completedReservation, activeReservation, inUseReservation };
+  return { rejectedReservation, activeReservation, inUseReservation };
 };
 
 const normalizeSarmokToolsStats = (
@@ -431,6 +431,7 @@ const getCurrentMonthDateRange = () => {
 
 const getSarmokApiStatusFilter = (metricLabel: string) => {
   const normalizedLabel = metricLabel.toLowerCase();
+  if (normalizedLabel.includes('rejected') || normalizedLabel.includes('ditolak')) return 'REJECTED';
   if (normalizedLabel.includes('menunggu') || normalizedLabel.includes('pending')) return 'PENDING';
   if (normalizedLabel.includes('aktif') || normalizedLabel.includes('terverifikasi') || normalizedLabel.includes('disetujui') || normalizedLabel.includes('berlangsung') || normalizedLabel.includes('dipakai') || normalizedLabel.includes('reservasi')) return 'VERIFIED';
   if (normalizedLabel.includes('diproses') || normalizedLabel.includes('proses') || normalizedLabel.includes('progress')) return 'PROCESS';
@@ -2903,8 +2904,8 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', opacity: mokletService.loading ? 0.5 : 1, transition: 'opacity 0.2s' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Selesai</span>
-                    {renderSarmokMetricButton(mokletService.roomReservation?.completedReservation ?? '-', '#6b7280', 'roomReservation', 'Peminjaman Ruang', 'Selesai', SARMOK_ROOM_DETAIL_API_URL)}
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Ditolak</span>
+                    {renderSarmokMetricButton(mokletService.roomReservation?.rejectedReservation ?? '-', '#fb7185', 'roomReservation', 'Peminjaman Ruang', 'Ditolak', SARMOK_ROOM_DETAIL_API_URL)}
                   </div>
                   <div style={{ height: '1px', background: 'var(--border-subtle)' }} />
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
