@@ -1052,33 +1052,6 @@ const resolveDutyNoteUser = (note: any) => {
   });
 };
 
-const wrapChartLabel = (value: string, maxCharsPerLine = 28) => {
-  const words = String(value || '').trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return ['-'];
-
-  const lines: string[] = [];
-  let currentLine = '';
-
-  words.forEach((word) => {
-    if (!currentLine) {
-      currentLine = word;
-      return;
-    }
-
-    const candidate = `${currentLine} ${word}`;
-    if (candidate.length <= maxCharsPerLine) {
-      currentLine = candidate;
-      return;
-    }
-
-    lines.push(currentLine);
-    currentLine = word;
-  });
-
-  if (currentLine) lines.push(currentLine);
-  return lines;
-};
-
 const getCapexProgressColor = (progress: number) => {
   if (progress >= 100) return '#10b981';
   if (progress >= 75) return '#22c55e';
@@ -1147,25 +1120,18 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
     .sort((a, b) => b.progress - a.progress)
     .map((p, i) => {
       const numberedNama = `${i + 1}. ${p.nama}`;
-      const wrappedNama = wrapChartLabel(numberedNama, 30);
 
       return {
         ...p,
         numberedNama,
-        wrappedNama,
       };
     });
   const profileThumbByEmail = useProfileThumbByEmail();
-  const capexLabelLineMap = new Map(sortedCapexProjects.map((project) => [project.numberedNama, project.wrappedNama]));
   const capexAverageProgress = sortedCapexProjects.length > 0
     ? sortedCapexProjects.reduce((sum, project) => sum + (Number(project.progress) || 0), 0) / sortedCapexProjects.length
     : 0;
   const capexCompletedProjects = sortedCapexProjects.filter((project) => (Number(project.progress) || 0) >= 100).length;
   const capexPriorityProjects = sortedCapexProjects.filter((project) => (Number(project.progress) || 0) < 50).length;
-  const capexChartHeight = Math.max(
-    360,
-    sortedCapexProjects.reduce((sum, project) => sum + 34 + ((project.wrappedNama?.length || 1) - 1) * 18, 0)
-  );
 
   const [motivationIndex, setMotivationIndex] = useState(0);
   useEffect(() => {
@@ -3225,14 +3191,14 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                 </div>
               </div>
 
-              <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+              <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', minWidth: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: '0.95rem' }}>
                   <div>
                     <div style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                      Grafik progres pekerjaan CAPEX
+                      Ringkasan progres CAPEX
                     </div>
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '0.15rem', lineHeight: 1.5 }}>
-                      Judul proyek dibuat bernomor dan dibungkus ke beberapa baris agar tidak terpotong.
+                      Daftar proyek dibuat ringkas agar judul panjang tetap terbaca.
                     </div>
                   </div>
                   <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
@@ -3240,54 +3206,47 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                   </span>
                 </div>
 
-                <div style={{ width: '100%', height: `${capexChartHeight}px` }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={sortedCapexProjects} layout="vertical" margin={{ left: 20, right: 42, top: 12, bottom: 8 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" horizontal={false} />
-                      <XAxis type="number" domain={[0, 100]} stroke="var(--text-muted)" fontSize={11} tickFormatter={(value) => `${value}%`} />
-                      <YAxis
-                        dataKey="numberedNama"
-                        type="category"
-                        width={320}
-                        stroke="var(--text-muted)"
-                        tickLine={false}
-                        axisLine={false}
-                        interval={0}
-                        tick={({ x, y, payload }: any) => {
-                          const lines = capexLabelLineMap.get(payload.value) || [String(payload.value || '-')];
-                          const firstLineOffset = ((lines.length - 1) * 14) / 2;
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem', maxHeight: '520px', overflowY: 'auto', paddingRight: '0.25rem' }}>
+                  {sortedCapexProjects.map((project) => {
+                    const progress = Math.max(0, Math.min(100, Number(project.progress) || 0));
+                    const progressColor = getCapexProgressColor(progress);
 
-                          return (
-                            <g transform={`translate(${x},${y})`}>
-                              <text x={-8} y={0} textAnchor="end" fill="var(--text-secondary)" fontSize={11}>
-                                {lines.map((line: string, index: number) => (
-                                  <tspan key={`${payload.value}-${index}`} x={-8} dy={index === 0 ? -firstLineOffset : 14}>
-                                    {line}
-                                  </tspan>
-                                ))}
-                              </text>
-                            </g>
-                          );
+                    return (
+                      <div
+                        key={project.id || project.numberedNama}
+                        style={{
+                          padding: '0.78rem 0.85rem',
+                          borderRadius: '12px',
+                          background: 'rgba(255,255,255,0.03)',
+                          border: '1px solid var(--border-subtle)',
                         }}
-                      />
-                      <RechartsTooltip
-                        formatter={(value: any) => [`${Math.round(Number(value) || 0)}%`, 'Progres']}
-                        labelFormatter={(label) => String(label || '')}
-                        contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-focus)', borderRadius: '8px', fontSize: '0.8rem' }}
-                      />
-                      <Bar dataKey="progress" radius={[0, 6, 6, 0]} barSize={24}>
-                        {sortedCapexProjects.map((project, idx) => (
-                          <Cell key={`cell-${idx}`} fill={getCapexProgressColor(Number(project.progress) || 0)} />
-                        ))}
-                        <LabelList
-                          dataKey="progress"
-                          position="right"
-                          formatter={(value: any) => `${Math.round(Number(value) || 0)}%`}
-                          style={{ fill: 'var(--text-primary)', fontSize: 11, fontWeight: 700 }}
-                        />
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.85rem', alignItems: 'flex-start' }}>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.45, overflowWrap: 'anywhere' }}>
+                              {project.numberedNama}
+                            </div>
+                            <div style={{ marginTop: '0.2rem', fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                              {project.unit || project.Unit || 'Sarpras'}
+                            </div>
+                          </div>
+                          <span style={{ flex: '0 0 auto', fontSize: '0.78rem', fontWeight: 800, color: progressColor }}>
+                            {Math.round(progress)}%
+                          </span>
+                        </div>
+                        <div style={{ marginTop: '0.65rem', height: '8px', borderRadius: 999, background: 'rgba(148,163,184,0.16)', overflow: 'hidden' }}>
+                          <div
+                            style={{
+                              width: `${progress}%`,
+                              height: '100%',
+                              borderRadius: 999,
+                              background: progressColor,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
