@@ -58,6 +58,11 @@ type SarmokRoomStats = {
   inUseReservation: number;
 };
 
+type SarmokToolsStats = {
+  waitingConfirmation: number;
+  haveNotReturn: number;
+};
+
 type SarmokDetailModal = {
   kind: SarmokDetailKind;
   title: string;
@@ -137,19 +142,23 @@ const toSarmokCount = (value: unknown) => {
 
 const pickSarmokCount = (source: unknown, aliases: string[]) => {
   const unwrapped = unwrapSarmokDetailPayload(source);
-  if (!isDetailRecord(unwrapped)) return undefined;
+  const records = [source, unwrapped].filter(isDetailRecord);
 
-  for (const alias of aliases) {
-    const direct = toSarmokCount(unwrapped[alias]);
-    if (direct !== undefined) return direct;
+  for (const record of records) {
+    for (const alias of aliases) {
+      const direct = toSarmokCount(record[alias]);
+      if (direct !== undefined) return direct;
+    }
   }
 
   const normalizedAliases = aliases.map((alias) => alias.toLowerCase().replace(/[^a-z0-9]/g, ''));
-  for (const [key, value] of Object.entries(unwrapped)) {
-    const normalizedKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
-    if (normalizedAliases.includes(normalizedKey)) {
-      const parsed = toSarmokCount(value);
-      if (parsed !== undefined) return parsed;
+  for (const record of records) {
+    for (const [key, value] of Object.entries(record)) {
+      const normalizedKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (normalizedAliases.includes(normalizedKey)) {
+        const parsed = toSarmokCount(value);
+        if (parsed !== undefined) return parsed;
+      }
     }
   }
 
@@ -187,6 +196,25 @@ const normalizeSarmokRoomStats = (
     ?? 0;
 
   return { completedReservation, activeReservation, inUseReservation };
+};
+
+const normalizeSarmokToolsStats = (
+  payload: unknown,
+  fallback: SarmokToolsStats,
+): SarmokToolsStats => {
+  const rows = filterSarmokRowsByKind(normalizeSarmokDetailRows(payload), 'toolsLoan');
+  const pendingRowsCount = payload === null || payload === undefined ? undefined : rows.filter(isSarmokPendingRow).length;
+  const activeRowsCount = payload === null || payload === undefined ? undefined : rows.filter(isSarmokActiveRow).length;
+  const waitingConfirmation = pickSarmokCount(payload, ['count_pending', 'countPending', 'pending', 'pending_count', 'waitingConfirmation', 'waiting_confirmation'])
+    ?? pendingRowsCount
+    ?? fallback.waitingConfirmation
+    ?? 0;
+  const haveNotReturn = pickSarmokCount(payload, ['count_verified', 'countVerified', 'count_approved', 'countApproved', 'count_active', 'countActive', 'count_not_returned', 'countNotReturned', 'verified', 'approved', 'active', 'haveNotReturn', 'have_not_return'])
+    ?? activeRowsCount
+    ?? fallback.haveNotReturn
+    ?? 0;
+
+  return { waitingConfirmation, haveNotReturn };
 };
 
 const formatDetailKey = (key: string) => {
@@ -1085,7 +1113,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   const [mokletService, setMokletService] = useState<{
     complaints: SarmokComplaintStats | null;
     roomReservation: SarmokRoomStats | null;
-    toolsLoan: { waitingConfirmation: number; haveNotReturn: number } | null;
+    toolsLoan: SarmokToolsStats | null;
     loading: boolean;
     lastUpdated: Date | null;
     error: boolean;
@@ -1726,10 +1754,35 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           }
         }
 
+        let toolsStats = normalizeSarmokToolsStats(null, data.toolsLoan);
+        const toolsSummaryUrl = buildSarmokDetailUrl(SARMOK_BORROW_DETAIL_API_URL, 'toolsLoan', 'All Status');
+        try {
+          const directToolsResp = await fetch(toolsSummaryUrl, {
+            method: 'GET',
+            headers: {
+              Authorization: authHeader,
+              Accept: 'application/json',
+            },
+          });
+
+          if (!directToolsResp.ok) throw new Error(`Sarmok tools API failed (${directToolsResp.status})`);
+          toolsStats = normalizeSarmokToolsStats(await readSarmokRawResponse(directToolsResp), data.toolsLoan);
+        } catch (toolsDirectError) {
+          try {
+            console.warn('Sarmok tools direct fetch failed, trying proxy fallback:', toolsDirectError);
+            const proxyUrl = `${FINANCE_API_URL}?proxyUrl=${encodeURIComponent(toolsSummaryUrl)}&authHeader=${encodeURIComponent(authHeader)}`;
+            const proxyResp = await fetch(proxyUrl, { headers: { Accept: 'application/json' } });
+            if (!proxyResp.ok) throw new Error(`Sarmok tools proxy failed (${proxyResp.status})`);
+            toolsStats = normalizeSarmokToolsStats(await readSarmokRawResponse(proxyResp), data.toolsLoan);
+          } catch (toolsProxyError) {
+            console.warn('Sarmok tools summary failed, using dashboard fallback:', toolsProxyError);
+          }
+        }
+
         setMokletService({
           complaints: complaintStats,
           roomReservation: roomStats,
-          toolsLoan: data.toolsLoan,
+          toolsLoan: toolsStats,
           loading: false,
           lastUpdated: new Date(),
           error: false,
