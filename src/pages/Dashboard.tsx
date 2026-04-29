@@ -4026,17 +4026,49 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                   <div style={{ display: 'grid', gap: '0.85rem' }}>
                     {items.map((item: any, idx) => {
                       const expanded = expandDetailRecord(item);
-                      const name = pickHumanValue(expanded, [
-                        'asset.name', 'asset.nama', 'asset.title', 'asset.label',
-                        'asset_id.name', 'asset_id.nama', 'asset_id.title', 'asset_id.label',
-                        'item.asset.name', 'item.asset.nama', 'label.asset.name', 'label.asset.nama',
-                        'label.procurement.asset.name', 'label.procurement.asset.nama',
-                        'label.item.asset.name', 'label.item.name', 'procurement.name', 'procurement.nama',
-                        'procurements.name', 'procurements.nama', 'procurements.asset.name', 'procurements.asset.nama',
-                        'procurement.asset.name', 'procurement.asset.nama', 'sarpra.name', 'sarpra.nama',
-                        'sarpra_item.name', 'sarpra_item.nama', 'item.name', 'item.nama', 'item_id.name', 'item_id.nama',
-                        'tool.name', 'tool.nama', 'tool_id.name', 'tool_id.nama', 'goods.name', 'barang.name', 'name', 'nama'
+                      const expandedAny = expanded as any;
+                      
+                      let name = pickHumanValue(expanded, [
+                        'asset.name', 'asset.nama', 'item.asset.name', 'item.asset.nama',
+                        'label.asset.name', 'label.asset.nama', 'label.procurement.asset.name', 'label.procurement.asset.nama',
+                        'procurement.asset.name', 'procurement.asset.nama', 'procurements.asset.name', 'procurements.asset.nama',
+                        'item.name', 'item.nama', 'tool.name', 'tool.nama', 'sarpra_item.name', 'sarpra_item.nama',
+                        'name', 'nama', 'asset.title', 'asset.label', 'title'
                       ]);
+
+                      // If name is just a number/ID, try to find a better one deeper
+                      if (name === '-' || /^\d+$/.test(name)) {
+                        const findBetterName = (obj: any): string | null => {
+                          if (!obj || typeof obj !== 'object') return null;
+                          if (Array.isArray(obj)) {
+                            for (const item of obj) {
+                              const found = findBetterName(item);
+                              if (found) return found;
+                            }
+                            return null;
+                          }
+                          
+                          // Check direct properties first (prioritize asset/item/label)
+                          for (const key of ['asset', 'item', 'label', 'procurement', 'sarpra']) {
+                            if (obj[key]) {
+                              const found = findBetterName(obj[key]);
+                              if (found) return found;
+                            }
+                          }
+
+                          const n = obj.name || obj.nama || obj.title || obj.label;
+                          if (typeof n === 'string' && n.length > 2 && !/^\d+$/.test(n)) return n;
+                          
+                          for (const v of Object.values(obj)) {
+                            const found = findBetterName(v);
+                            if (found) return found;
+                          }
+                          return null;
+                        };
+                        const better = findBetterName(expanded);
+                        if (better) name = better;
+                      }
+
                       const qty = pickHumanValue(expanded, [
                         'quantity', 'qty', 'jumlah', 'amount', 'total', 
                         'item.quantity', 'item.qty', 'item.jumlah',
@@ -4045,8 +4077,8 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                         'label.procurement.asset.quantity'
                       ]);
 
-                      const displayName = name !== '-' ? name : (expanded.asset_id || expanded.id || 'Item Tanpa Nama');
-                      const displayQty = qty !== '-' ? qty : (expanded.quantity || expanded.qty || expanded.jumlah || '-');
+                      const displayName = name !== '-' ? name : (expandedAny.asset_id || expandedAny.id || 'Item Tanpa Nama');
+                      const displayQty = qty !== '-' ? qty : (expandedAny.quantity || expandedAny.qty || expandedAny.jumlah || '-');
                       
                       return (
                         <div key={idx} style={{ 
