@@ -3969,8 +3969,8 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
             position: 'fixed',
             inset: 0,
             zIndex: 2300,
-            background: 'rgba(2,6,23,0.6)',
-            backdropFilter: 'blur(12px)',
+            background: 'rgba(2,6,23,0.75)',
+            backdropFilter: 'blur(16px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -3981,60 +3981,104 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
             className="glass-panel"
             onClick={(event) => event.stopPropagation()}
             style={{
-              width: 'min(720px, 100%)',
-              maxHeight: 'min(850px, 90vh)',
+              width: 'min(500px, 100%)',
+              maxHeight: 'min(700px, 90vh)',
               overflow: 'hidden',
               display: 'flex',
               flexDirection: 'column',
               background: 'var(--bg-secondary)',
               border: '1px solid var(--border-focus)',
-              boxShadow: '0 32px 100px rgba(0,0,0,0.5)',
+              boxShadow: '0 32px 100px rgba(0,0,0,0.6)',
+              borderRadius: '24px'
             }}
           >
-            <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.02)' }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1rem', color: 'var(--text-primary)' }}>Detail Data Lengkap</h3>
-                <p style={{ margin: '0.15rem 0 0', fontSize: '0.72rem', color: 'var(--text-muted)' }}>Melihat seluruh field mentah dari API</p>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <Briefcase size={18} color={sarmokDetailModal?.accent || 'var(--accent-blue)'} /> Daftar Item Dipinjam
+                </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setSarmokRowDetailModal(null)}
                 className="btn btn-outline"
-                style={{ width: 32, height: 32, padding: 0, borderRadius: '50%' }}
+                style={{ width: 32, height: 32, padding: 0, borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }}
               >
                 <X size={14} />
               </button>
             </div>
-            <div style={{ padding: '1.25rem', overflowY: 'auto', flex: 1 }}>
-              <div style={{ display: 'grid', gap: '1.2rem' }}>
-                <div style={{ padding: '0.9rem', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: sarmokDetailModal?.accent || 'var(--accent-blue)', marginBottom: '0.6rem' }}>
-                    {summarizeDetailRow(sarmokRowDetailModal)}
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '0.85rem' }}>
-                    {getDetailEntries(sarmokRowDetailModal).map(([key, value]) => (
-                      <div key={key} style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{formatDetailKey(key)}</div>
-                        <div style={{ 
-                          marginTop: '0.2rem', 
-                          fontSize: '0.78rem', 
-                          color: 'var(--text-secondary)', 
-                          lineHeight: 1.5, 
-                          wordBreak: 'break-word',
-                          background: 'rgba(0,0,0,0.15)',
-                          padding: '0.4rem 0.6rem',
-                          borderRadius: '6px'
+            
+            <div style={{ padding: '1.5rem', overflowY: 'auto', flex: 1 }}>
+              {(() => {
+                const items = getDetailCollection(sarmokRowDetailModal, ['SARPRA DETAIL BORROW', 'sarpra_detail_borrow', 'items', 'tools', 'assets', 'procurements']);
+                
+                if (items.length === 0) {
+                  return (
+                    <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.02)', borderRadius: '16px', border: '1px dashed var(--border-subtle)' }}>
+                      Tidak ada detail item (SARPRA DETAIL BORROW) ditemukan untuk data ini.
+                    </div>
+                  );
+                }
+
+                return (
+                  <div style={{ display: 'grid', gap: '0.85rem' }}>
+                    {items.map((item: any, idx) => {
+                      const expanded = expandDetailRecord(item);
+                      const name = pickHumanValue(expanded, ['name', 'nama', 'asset.name', 'label.asset.name', 'label.procurement.asset.name', 'title']);
+                      const qty = pickHumanValue(expanded, ['quantity', 'qty', 'jumlah', 'amount', 'item.asset.quantity']);
+                      
+                      return (
+                        <div key={idx} style={{ 
+                          padding: '1rem 1.2rem', 
+                          borderRadius: '16px', 
+                          background: 'rgba(255,255,255,0.03)', 
+                          border: '1px solid var(--border-subtle)',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          gap: '1rem',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
                         }}>
-                          {formatDetailValue(value)}
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.2rem' }}>Nama Alat/Barang</div>
+                            <div style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.3 }}>{name}</div>
+                          </div>
+                          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.2rem' }}>Jumlah</div>
+                            <div style={{ fontSize: '1.1rem', fontWeight: 900, color: sarmokDetailModal?.accent || 'var(--accent-blue)' }}>{qty}</div>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
+                );
+              })()}
+
+              <details style={{ marginTop: '1.5rem', border: '1px solid var(--border-subtle)', borderRadius: '12px', background: 'rgba(255,255,255,0.01)' }}>
+                <summary style={{ padding: '0.75rem 1rem', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', userSelect: 'none' }}>
+                  Field Mentah Lainnya
+                </summary>
+                <div style={{ padding: '1rem', display: 'grid', gridTemplateColumns: '1fr', gap: '0.75rem' }}>
+                   {getDetailEntries(sarmokRowDetailModal).map(([key, value]) => (
+                    <div key={key} style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{formatDetailKey(key)}</div>
+                      <div style={{ 
+                        marginTop: '0.15rem', 
+                        fontSize: '0.72rem', 
+                        color: 'var(--text-secondary)', 
+                        background: 'rgba(0,0,0,0.1)',
+                        padding: '0.35rem 0.5rem',
+                        borderRadius: '4px',
+                        wordBreak: 'break-word'
+                      }}>{formatDetailValue(value)}</div>
+                    </div>
+                  ))}
                 </div>
-              </div>
+              </details>
             </div>
-            <div style={{ padding: '1rem 1.25rem', borderTop: '1px solid var(--border-subtle)', textAlign: 'right' }}>
-              <button className="btn btn-primary" onClick={() => setSarmokRowDetailModal(null)} style={{ fontSize: '0.75rem' }}>Tutup</button>
+            
+            <div style={{ padding: '1.25rem 1.5rem', borderTop: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.02)', textAlign: 'right' }}>
+              <button className="btn btn-primary" onClick={() => setSarmokRowDetailModal(null)} style={{ padding: '0.6rem 1.5rem', borderRadius: '12px' }}>Tutup</button>
             </div>
           </div>
         </div>
