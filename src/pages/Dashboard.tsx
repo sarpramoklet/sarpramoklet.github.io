@@ -4026,8 +4026,27 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                   <div style={{ display: 'grid', gap: '0.85rem' }}>
                     {items.map((item: any, idx) => {
                       const expanded = expandDetailRecord(item);
-                      const name = pickHumanValue(expanded, ['name', 'nama', 'asset.name', 'label.name', 'item.name', 'item.asset.name', 'label.asset.name', 'label.procurement.asset.name', 'title']);
-                      const qty = pickHumanValue(expanded, ['quantity', 'qty', 'jumlah', 'item.quantity', 'item.asset.quantity', 'label.quantity', 'amount', 'total']);
+                      const name = pickHumanValue(expanded, [
+                        'asset.name', 'asset.nama', 'asset.title', 'asset.label',
+                        'asset_id.name', 'asset_id.nama', 'asset_id.title', 'asset_id.label',
+                        'item.asset.name', 'item.asset.nama', 'label.asset.name', 'label.asset.nama',
+                        'label.procurement.asset.name', 'label.procurement.asset.nama',
+                        'label.item.asset.name', 'label.item.name', 'procurement.name', 'procurement.nama',
+                        'procurements.name', 'procurements.nama', 'procurements.asset.name', 'procurements.asset.nama',
+                        'procurement.asset.name', 'procurement.asset.nama', 'sarpra.name', 'sarpra.nama',
+                        'sarpra_item.name', 'sarpra_item.nama', 'item.name', 'item.nama', 'item_id.name', 'item_id.nama',
+                        'tool.name', 'tool.nama', 'tool_id.name', 'tool_id.nama', 'goods.name', 'barang.name', 'name', 'nama'
+                      ]);
+                      const qty = pickHumanValue(expanded, [
+                        'quantity', 'qty', 'jumlah', 'amount', 'total', 
+                        'item.quantity', 'item.qty', 'item.jumlah',
+                        'item.asset.quantity', 'item.asset.qty', 'item.asset.jumlah',
+                        'label.quantity', 'label.qty', 'label.jumlah',
+                        'label.procurement.asset.quantity'
+                      ]);
+
+                      const displayName = name !== '-' ? name : (expanded.asset_id || expanded.id || 'Item Tanpa Nama');
+                      const displayQty = qty !== '-' ? qty : (expanded.quantity || expanded.qty || expanded.jumlah || '-');
                       
                       return (
                         <div key={idx} style={{ 
@@ -4043,11 +4062,11 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                         }}>
                           <div style={{ minWidth: 0 }}>
                             <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.2rem' }}>Nama Alat/Barang</div>
-                            <div style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.3 }}>{name}</div>
+                            <div style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.3 }}>{displayName}</div>
                           </div>
                           <div style={{ textAlign: 'right', flexShrink: 0 }}>
                             <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.2rem' }}>Jumlah</div>
-                            <div style={{ fontSize: '1.1rem', fontWeight: 900, color: sarmokDetailModal?.accent || 'var(--accent-blue)' }}>{qty}</div>
+                            <div style={{ fontSize: '1.1rem', fontWeight: 900, color: sarmokDetailModal?.accent || 'var(--accent-blue)' }}>{displayQty}</div>
                           </div>
                         </div>
                       );
