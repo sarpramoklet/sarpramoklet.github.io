@@ -267,19 +267,62 @@ const pickHumanValue = (row: unknown, paths: string[]) => {
   return formatHumanValue(pickDetailValue(row, paths));
 };
 
-const parseMaybeJsonRecord = (value: unknown) => {
-  if (isDetailRecord(value)) return value;
+const parseMaybeJsonValue = (value: unknown): unknown => {
+  if (isDetailRecord(value) || Array.isArray(value)) return value;
   if (typeof value !== 'string') return null;
 
   const trimmed = value.trim();
-  if (!trimmed.startsWith('{') || !trimmed.endsWith('}')) return null;
+  if (!((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']')))) return null;
 
   try {
     const parsed = JSON.parse(trimmed);
-    return isDetailRecord(parsed) ? parsed : null;
+    return typeof parsed === 'string' ? parseMaybeJsonValue(parsed) ?? parsed : parsed;
   } catch {
     return null;
   }
+};
+
+const parseMaybeJsonRecord = (value: unknown) => {
+  const parsed = parseMaybeJsonValue(value);
+  return isDetailRecord(parsed) ? parsed : null;
+};
+
+const getDetailCollection = (row: unknown, paths: string[]) => {
+  const raw = pickDetailValue(row, paths);
+  const parsed = parseMaybeJsonValue(raw) ?? raw;
+
+  if (Array.isArray(parsed)) return parsed;
+  if (isDetailRecord(parsed)) return [parsed];
+
+  const aliases = new Set(paths.map((path) => {
+    const parts = path.split('.');
+    return parts[parts.length - 1];
+  }));
+  const visited = new WeakSet<object>();
+  const findNestedCollection = (value: unknown, allowDirectCollection = false): unknown[] => {
+    const normalized = parseMaybeJsonValue(value) ?? value;
+    if (Array.isArray(normalized)) return allowDirectCollection ? normalized : [];
+    if (!isDetailRecord(normalized) || visited.has(normalized)) return [];
+    if (allowDirectCollection) return [normalized];
+
+    visited.add(normalized);
+
+    for (const [key, child] of Object.entries(normalized)) {
+      if (aliases.has(key)) {
+        const found = findNestedCollection(child, true);
+        if (found.length > 0) return found;
+      }
+    }
+
+    for (const child of Object.values(normalized)) {
+      const found = findNestedCollection(child, false);
+      if (found.length > 0) return found;
+    }
+
+    return [];
+  };
+
+  return findNestedCollection(row);
 };
 
 const formatAssetDescription = (value: unknown) => {
@@ -366,11 +409,12 @@ const formatBorrowItems = (row: unknown) => {
   const direct = pickHumanValue(row, ['tool.name', 'tool.nama', 'item.name', 'item.nama', 'asset.name', 'asset.nama', 'goods.name', 'barang.name', 'procurement.name', 'procurement.asset.name', 'tool_name', 'item_name', 'asset_name', 'name']);
   if (direct !== '-') return direct;
 
-  const details = pickDetailValue(row, ['procurements', 'sarpra_detail_borrow', 'detail_borrow', 'borrow_details', 'details', 'items', 'tools', 'assets']);
-  if (!Array.isArray(details) || details.length === 0) return '-';
+  const details = getDetailCollection(row, ['procurements', 'sarpra_detail_borrow', 'detail_borrow', 'borrow_details', 'details', 'items', 'tools', 'assets']);
+  if (details.length === 0) return '-';
 
   return details.map((detail) => {
-    const itemName = pickHumanValue(detail, [
+    const normalizedDetail = parseMaybeJsonValue(detail) ?? detail;
+    const itemName = pickHumanValue(normalizedDetail, [
       'asset.name',
       'asset.nama',
       'asset.title',
@@ -390,8 +434,8 @@ const formatBorrowItems = (row: unknown) => {
       'name',
       'nama',
     ]);
-    const qty = pickHumanValue(detail, ['quantity', 'qty', 'jumlah', 'amount', 'total']);
-    const assetDescription = formatAssetDescription(pickDetailValue(detail, ['asset.description', 'description', 'asset.deskripsi', 'deskripsi']));
+    const qty = pickHumanValue(normalizedDetail, ['quantity', 'qty', 'jumlah', 'amount', 'total']);
+    const assetDescription = formatAssetDescription(pickDetailValue(normalizedDetail, ['asset.description', 'description', 'asset.deskripsi', 'deskripsi']));
     const readableName = assetDescription && itemName === '-' ? assetDescription : itemName;
     return qty !== '-' ? `${readableName} (${qty})` : readableName;
   }).filter((item) => item !== '-').join(', ') || '-';
@@ -401,11 +445,11 @@ const formatBorrowQuantity = (row: unknown) => {
   const direct = pickHumanValue(row, ['quantity', 'qty', 'jumlah', 'amount', 'total']);
   if (direct !== '-') return direct;
 
-  const details = pickDetailValue(row, ['procurements', 'sarpra_detail_borrow', 'detail_borrow', 'borrow_details', 'details', 'items', 'tools', 'assets']);
-  if (!Array.isArray(details) || details.length === 0) return '-';
+  const details = getDetailCollection(row, ['procurements', 'sarpra_detail_borrow', 'detail_borrow', 'borrow_details', 'details', 'items', 'tools', 'assets']);
+  if (details.length === 0) return '-';
 
   const quantities = details
-    .map((detail) => pickHumanValue(detail, ['quantity', 'qty', 'jumlah', 'amount', 'total']))
+    .map((detail) => pickHumanValue(parseMaybeJsonValue(detail) ?? detail, ['quantity', 'qty', 'jumlah', 'amount', 'total']))
     .filter((quantity) => quantity !== '-');
 
   return quantities.join(', ') || '-';
