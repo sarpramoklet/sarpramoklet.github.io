@@ -287,6 +287,23 @@ const parseMaybeJsonRecord = (value: unknown) => {
   return isDetailRecord(parsed) ? parsed : null;
 };
 
+const expandDetailRecord = (detail: unknown) => {
+  const normalized = parseMaybeJsonValue(detail) ?? detail;
+  if (isDetailRecord(normalized)) {
+    const expanded = { ...normalized };
+    for (const key of ['asset_id', 'tool_id', 'item_id', 'asset', 'tool', 'item', 'goods', 'barang', 'procurement', 'procurements']) {
+      if (typeof expanded[key] === 'string' && (expanded[key].startsWith('{') || expanded[key].startsWith('['))) {
+        const parsed = parseMaybeJsonValue(expanded[key]);
+        if (parsed !== null) {
+          expanded[key] = parsed;
+        }
+      }
+    }
+    return expanded;
+  }
+  return normalized;
+};
+
 const getDetailCollection = (row: unknown, paths: string[]) => {
   const raw = pickDetailValue(row, paths);
   const parsed = parseMaybeJsonValue(raw) ?? raw;
@@ -406,7 +423,8 @@ const pickRoomReservationName = (row: unknown) => {
 };
 
 const formatBorrowItems = (row: unknown) => {
-  const direct = pickHumanValue(row, [
+  const expandedRow = expandDetailRecord(row);
+  const direct = pickHumanValue(expandedRow, [
     'tool.name', 'tool.nama', 'tool_id.name', 'tool_id.nama',
     'item.name', 'item.nama', 'item_id.name', 'item_id.nama',
     'asset.name', 'asset.nama', 'asset_id.name', 'asset_id.nama',
@@ -414,11 +432,11 @@ const formatBorrowItems = (row: unknown) => {
   ]);
   if (direct !== '-') return direct;
 
-  const details = getDetailCollection(row, ['procurements', 'sarpra_detail_borrow', 'sarpra_detail_borrows', 'detail_borrow', 'detail_borrows', 'borrow_details', 'details', 'items', 'tools', 'assets']);
+  const details = getDetailCollection(expandedRow, ['procurements', 'sarpra_detail_borrow', 'sarpra_detail_borrows', 'detail_borrow', 'detail_borrows', 'borrow_details', 'details', 'items', 'tools', 'assets']);
   if (details.length === 0) return '-';
 
   return details.map((detail) => {
-    const normalizedDetail = parseMaybeJsonValue(detail) ?? detail;
+    const normalizedDetail = expandDetailRecord(detail);
     const itemName = pickHumanValue(normalizedDetail, [
       'asset.name',
       'asset.nama',
@@ -465,14 +483,15 @@ const formatBorrowItems = (row: unknown) => {
 };
 
 const formatBorrowQuantity = (row: unknown) => {
-  const direct = pickHumanValue(row, ['quantity', 'qty', 'jumlah', 'amount', 'total']);
+  const expandedRow = expandDetailRecord(row);
+  const direct = pickHumanValue(expandedRow, ['quantity', 'qty', 'jumlah', 'amount', 'total']);
   if (direct !== '-') return direct;
 
-  const details = getDetailCollection(row, ['procurements', 'sarpra_detail_borrow', 'sarpra_detail_borrows', 'detail_borrow', 'detail_borrows', 'borrow_details', 'details', 'items', 'tools', 'assets']);
+  const details = getDetailCollection(expandedRow, ['procurements', 'sarpra_detail_borrow', 'sarpra_detail_borrows', 'detail_borrow', 'detail_borrows', 'borrow_details', 'details', 'items', 'tools', 'assets']);
   if (details.length === 0) return '-';
 
   const quantities = details
-    .map((detail) => pickHumanValue(parseMaybeJsonValue(detail) ?? detail, [
+    .map((detail) => pickHumanValue(expandDetailRecord(detail), [
       'quantity', 'qty', 'jumlah', 'amount', 'total', 
       'procurement.quantity', 'procurement.qty', 'procurements.quantity', 'procurements.qty',
       'asset_id.quantity', 'asset_id.qty', 'asset_id.jumlah',
