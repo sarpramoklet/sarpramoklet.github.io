@@ -4024,8 +4024,8 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                   <div style={{ display: 'grid', gap: '0.85rem' }}>
                     {items.map((item: any, idx) => {
                       const expanded = expandDetailRecord(item);
-                      const name = pickHumanValue(expanded, ['name', 'nama', 'asset.name', 'label.asset.name', 'label.procurement.asset.name', 'title']);
-                      const qty = pickHumanValue(expanded, ['quantity', 'qty', 'jumlah', 'amount', 'item.asset.quantity']);
+                      const name = pickHumanValue(expanded, ['name', 'nama', 'asset.name', 'label.name', 'item.name', 'item.asset.name', 'label.asset.name', 'label.procurement.asset.name', 'title']);
+                      const qty = pickHumanValue(expanded, ['quantity', 'qty', 'jumlah', 'item.quantity', 'item.asset.quantity', 'label.quantity', 'amount', 'total']);
                       
                       return (
                         <div key={idx} style={{ 
