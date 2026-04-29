@@ -291,7 +291,7 @@ const expandDetailRecord = (detail: unknown) => {
   const normalized = parseMaybeJsonValue(detail) ?? detail;
   if (isDetailRecord(normalized)) {
     const expanded = { ...normalized };
-    for (const key of ['asset_id', 'tool_id', 'item_id', 'asset', 'tool', 'item', 'goods', 'barang', 'procurement', 'procurements']) {
+    for (const key of ['asset_id', 'tool_id', 'item_id', 'asset', 'tool', 'item', 'goods', 'barang', 'procurement', 'procurements', 'label']) {
       if (typeof expanded[key] === 'string' && (expanded[key].startsWith('{') || expanded[key].startsWith('['))) {
         const parsed = parseMaybeJsonValue(expanded[key]);
         if (parsed !== null) {
@@ -478,12 +478,22 @@ const formatBorrowItems = (row: unknown) => {
       'asset_id.nama',
       'asset_id.title',
       'asset_id.label',
+      'item.asset.name',
+      'item.asset.nama',
+      'label.asset.name',
+      'label.asset.nama',
+      'label.procurement.asset.name',
+      'label.procurement.asset.nama',
+      'label.item.asset.name',
+      'label.item.name',
       'procurement.name',
       'procurement.nama',
       'procurements.name',
       'procurements.nama',
       'procurements.asset.name',
       'procurements.asset.nama',
+      'procurement.asset.name',
+      'procurement.asset.nama',
       'sarpra.name',
       'sarpra.nama',
       'sarpra_item.name',
@@ -503,6 +513,10 @@ const formatBorrowItems = (row: unknown) => {
     ]);
     const qty = pickHumanValue(normalizedDetail, [
       'quantity', 'qty', 'jumlah', 'amount', 'total', 
+      'item.quantity', 'item.qty', 'item.jumlah',
+      'item.asset.quantity', 'item.asset.qty',
+      'label.quantity', 'label.qty', 'label.jumlah',
+      'label.procurement.quantity', 'label.procurement.qty',
       'procurement.quantity', 'procurement.qty', 'procurements.quantity', 'procurements.qty',
       'asset_id.quantity', 'asset_id.qty', 'asset_id.jumlah',
       'item_id.quantity', 'item_id.qty', 'item_id.jumlah',
@@ -525,6 +539,10 @@ const formatBorrowQuantity = (row: unknown) => {
   const quantities = details
     .map((detail) => pickHumanValue(expandDetailRecord(detail), [
       'quantity', 'qty', 'jumlah', 'amount', 'total', 
+      'item.quantity', 'item.qty', 'item.jumlah',
+      'item.asset.quantity', 'item.asset.qty',
+      'label.quantity', 'label.qty', 'label.jumlah',
+      'label.procurement.quantity', 'label.procurement.qty',
       'procurement.quantity', 'procurement.qty', 'procurements.quantity', 'procurements.qty',
       'asset_id.quantity', 'asset_id.qty', 'asset_id.jumlah',
       'item_id.quantity', 'item_id.qty', 'item_id.jumlah',
