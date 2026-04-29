@@ -304,6 +304,54 @@ const expandDetailRecord = (detail: unknown) => {
   return normalized;
 };
 
+const extractItemsBySignature = (row: unknown): { name: string, qty: number }[] => {
+  const items: { name: string, qty: number }[] = [];
+  const visited = new WeakSet();
+
+  const search = (obj: unknown) => {
+    let parsed = parseMaybeJsonValue(obj) ?? obj;
+    
+    if (typeof parsed === 'string') {
+      const matchName = parsed.match(/"name"\s*:\s*"([^"]+)"/i);
+      const matchQty = parsed.match(/"quantity"\s*:\s*(\d+)/i);
+      const matchAssetId = parsed.match(/"asset_id"/i) || parsed.match(/"procurement_id"/i);
+      if (matchName && matchAssetId) {
+        items.push({ name: matchName[1], qty: matchQty ? Number(matchQty[1]) : 1 });
+        return;
+      }
+    }
+
+    if (!isDetailRecord(parsed)) {
+      if (Array.isArray(parsed)) parsed.forEach(search);
+      return;
+    }
+
+    if (visited.has(parsed)) return;
+    visited.add(parsed);
+
+    const hasItemSignature = parsed.asset_id !== undefined || parsed.date_of_procurement !== undefined || parsed.item_id !== undefined || parsed.tool_id !== undefined || parsed.condition !== undefined || parsed.procurement_id !== undefined;
+    const hasName = parsed.name || parsed.nama || parsed.title || parsed.asset_name || parsed.item_name;
+    
+    if (hasItemSignature && hasName && typeof hasName === 'string') {
+      const qty = Number(parsed.quantity || parsed.qty || parsed.jumlah) || 1;
+      if (!parsed.email && !parsed.password && !parsed.role) {
+        items.push({ name: hasName, qty });
+      }
+    }
+
+    Object.values(parsed).forEach(search);
+  };
+
+  search(row);
+  
+  const uniqueItems = new Map<string, number>();
+  items.forEach(item => {
+    uniqueItems.set(item.name, Math.max(uniqueItems.get(item.name) || 0, item.qty));
+  });
+  
+  return Array.from(uniqueItems.entries()).map(([name, qty]) => ({ name, qty }));
+};
+
 const getDetailCollection = (row: unknown, paths: string[]) => {
   const raw = pickDetailValue(row, paths);
   const parsed = parseMaybeJsonValue(raw) ?? raw;
@@ -455,6 +503,11 @@ const pickRoomReservationName = (row: unknown) => {
 };
 
 const formatBorrowItems = (row: unknown) => {
+  const signatureItems = extractItemsBySignature(row);
+  if (signatureItems.length > 0) {
+    return signatureItems.map(i => i.qty !== 1 ? `${i.name} (${i.qty})` : i.name).join(', ');
+  }
+
   const expandedRow = expandDetailRecord(row);
   const direct = pickHumanValue(expandedRow, [
     'tool.name', 'tool.nama', 'tool_id.name', 'tool_id.nama',
@@ -529,6 +582,11 @@ const formatBorrowItems = (row: unknown) => {
 };
 
 const formatBorrowQuantity = (row: unknown) => {
+  const signatureItems = extractItemsBySignature(row);
+  if (signatureItems.length > 0) {
+    return signatureItems.map(i => i.qty).join(', ');
+  }
+
   const expandedRow = expandDetailRecord(row);
   const direct = pickHumanValue(expandedRow, ['quantity', 'qty', 'jumlah', 'amount', 'total']);
   if (direct !== '-') return direct;
