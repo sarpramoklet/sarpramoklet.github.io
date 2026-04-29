@@ -406,7 +406,12 @@ const pickRoomReservationName = (row: unknown) => {
 };
 
 const formatBorrowItems = (row: unknown) => {
-  const direct = pickHumanValue(row, ['tool.name', 'tool.nama', 'item.name', 'item.nama', 'asset.name', 'asset.nama', 'goods.name', 'barang.name', 'procurement.name', 'procurement.asset.name', 'procurements.name', 'procurements.asset.name', 'tool_name', 'item_name', 'asset_name', 'name']);
+  const direct = pickHumanValue(row, [
+    'tool.name', 'tool.nama', 'tool_id.name', 'tool_id.nama',
+    'item.name', 'item.nama', 'item_id.name', 'item_id.nama',
+    'asset.name', 'asset.nama', 'asset_id.name', 'asset_id.nama',
+    'goods.name', 'barang.name', 'procurement.name', 'procurement.asset.name', 'procurements.name', 'procurements.asset.name', 'tool_name', 'item_name', 'asset_name', 'name'
+  ]);
   if (direct !== '-') return direct;
 
   const details = getDetailCollection(row, ['procurements', 'sarpra_detail_borrow', 'sarpra_detail_borrows', 'detail_borrow', 'detail_borrows', 'borrow_details', 'details', 'items', 'tools', 'assets']);
@@ -419,6 +424,10 @@ const formatBorrowItems = (row: unknown) => {
       'asset.nama',
       'asset.title',
       'asset.label',
+      'asset_id.name',
+      'asset_id.nama',
+      'asset_id.title',
+      'asset_id.label',
       'procurement.name',
       'procurement.nama',
       'procurements.name',
@@ -431,15 +440,25 @@ const formatBorrowItems = (row: unknown) => {
       'sarpra_item.nama',
       'item.name',
       'item.nama',
+      'item_id.name',
+      'item_id.nama',
       'tool.name',
       'tool.nama',
+      'tool_id.name',
+      'tool_id.nama',
       'goods.name',
       'barang.name',
       'name',
       'nama',
     ]);
-    const qty = pickHumanValue(normalizedDetail, ['quantity', 'qty', 'jumlah', 'amount', 'total', 'procurement.quantity', 'procurement.qty', 'procurements.quantity', 'procurements.qty']);
-    const assetDescription = formatAssetDescription(pickDetailValue(normalizedDetail, ['asset.description', 'description', 'asset.deskripsi', 'deskripsi', 'procurement.description', 'procurements.description', 'procurement.asset.description', 'procurements.asset.description']));
+    const qty = pickHumanValue(normalizedDetail, [
+      'quantity', 'qty', 'jumlah', 'amount', 'total', 
+      'procurement.quantity', 'procurement.qty', 'procurements.quantity', 'procurements.qty',
+      'asset_id.quantity', 'asset_id.qty', 'asset_id.jumlah',
+      'item_id.quantity', 'item_id.qty', 'item_id.jumlah',
+      'tool_id.quantity', 'tool_id.qty', 'tool_id.jumlah'
+    ]);
+    const assetDescription = formatAssetDescription(pickDetailValue(normalizedDetail, ['asset.description', 'description', 'asset.deskripsi', 'deskripsi', 'procurement.description', 'procurements.description', 'procurement.asset.description', 'procurements.asset.description', 'asset_id.description', 'asset_id.deskripsi']));
     const readableName = assetDescription && itemName === '-' ? assetDescription : itemName;
     return qty !== '-' ? `${readableName} (${qty})` : readableName;
   }).filter((item) => item !== '-').join(', ') || '-';
@@ -453,7 +472,13 @@ const formatBorrowQuantity = (row: unknown) => {
   if (details.length === 0) return '-';
 
   const quantities = details
-    .map((detail) => pickHumanValue(parseMaybeJsonValue(detail) ?? detail, ['quantity', 'qty', 'jumlah', 'amount', 'total', 'procurement.quantity', 'procurement.qty', 'procurements.quantity', 'procurements.qty']))
+    .map((detail) => pickHumanValue(parseMaybeJsonValue(detail) ?? detail, [
+      'quantity', 'qty', 'jumlah', 'amount', 'total', 
+      'procurement.quantity', 'procurement.qty', 'procurements.quantity', 'procurements.qty',
+      'asset_id.quantity', 'asset_id.qty', 'asset_id.jumlah',
+      'item_id.quantity', 'item_id.qty', 'item_id.jumlah',
+      'tool_id.quantity', 'tool_id.qty', 'tool_id.jumlah'
+    ]))
     .filter((quantity) => quantity !== '-');
 
   return quantities.join(', ') || '-';
