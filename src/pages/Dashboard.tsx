@@ -1294,6 +1294,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
     error: false,
   });
   const [sarmokDetailModal, setSarmokDetailModal] = useState<SarmokDetailModal | null>(null);
+  const [sarmokRowDetailModal, setSarmokRowDetailModal] = useState<any | null>(null);
 
   const [wifiData, setWifiData] = useState<any[]>([]);
   const [wifiLoading, setWifiLoading] = useState(false);
@@ -2920,7 +2921,17 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                       </thead>
                       <tbody>
                         {sarmokDetailModal.rows.map((row, index) => (
-                          <tr key={index} style={{ borderBottom: index === sarmokDetailModal.rows.length - 1 ? 'none' : '1px solid var(--border-subtle)' }}>
+                          <tr 
+                            key={index} 
+                            onClick={() => setSarmokRowDetailModal(row)}
+                            style={{ 
+                              borderBottom: index === sarmokDetailModal.rows.length - 1 ? 'none' : '1px solid var(--border-subtle)',
+                              cursor: 'pointer',
+                              transition: 'background 0.2s'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                          >
                             <td style={{ padding: '0.75rem 0.7rem', verticalAlign: 'top', color: sarmokDetailModal.accent, fontSize: '0.76rem', fontWeight: 800 }}>#{index + 1}</td>
                             {getReminderColumns(sarmokDetailModal.kind).map((column) => (
                               <td key={column.label} style={{ padding: '0.75rem 0.7rem', verticalAlign: 'top', color: 'var(--text-secondary)', fontSize: '0.76rem', lineHeight: 1.45, wordBreak: 'break-word' }}>
@@ -3949,6 +3960,85 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         </div>
       </div>
 
+      {sarmokRowDetailModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setSarmokRowDetailModal(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 2300,
+            background: 'rgba(2,6,23,0.6)',
+            backdropFilter: 'blur(12px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1.25rem 1rem',
+          }}
+        >
+          <div
+            className="glass-panel"
+            onClick={(event) => event.stopPropagation()}
+            style={{
+              width: 'min(720px, 100%)',
+              maxHeight: 'min(850px, 90vh)',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--border-focus)',
+              boxShadow: '0 32px 100px rgba(0,0,0,0.5)',
+            }}
+          >
+            <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1rem', color: 'var(--text-primary)' }}>Detail Data Lengkap</h3>
+                <p style={{ margin: '0.15rem 0 0', fontSize: '0.72rem', color: 'var(--text-muted)' }}>Melihat seluruh field mentah dari API</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSarmokRowDetailModal(null)}
+                className="btn btn-outline"
+                style={{ width: 32, height: 32, padding: 0, borderRadius: '50%' }}
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <div style={{ padding: '1.25rem', overflowY: 'auto', flex: 1 }}>
+              <div style={{ display: 'grid', gap: '1.2rem' }}>
+                <div style={{ padding: '0.9rem', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: sarmokDetailModal?.accent || 'var(--accent-blue)', marginBottom: '0.6rem' }}>
+                    {summarizeDetailRow(sarmokRowDetailModal)}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '0.85rem' }}>
+                    {getDetailEntries(sarmokRowDetailModal).map(([key, value]) => (
+                      <div key={key} style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{formatDetailKey(key)}</div>
+                        <div style={{ 
+                          marginTop: '0.2rem', 
+                          fontSize: '0.78rem', 
+                          color: 'var(--text-secondary)', 
+                          lineHeight: 1.5, 
+                          wordBreak: 'break-word',
+                          background: 'rgba(0,0,0,0.15)',
+                          padding: '0.4rem 0.6rem',
+                          borderRadius: '6px'
+                        }}>
+                          {formatDetailValue(value)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div style={{ padding: '1rem 1.25rem', borderTop: '1px solid var(--border-subtle)', textAlign: 'right' }}>
+              <button className="btn btn-primary" onClick={() => setSarmokRowDetailModal(null)} style={{ fontSize: '0.75rem' }}>Tutup</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
