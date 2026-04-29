@@ -3968,13 +3968,14 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           style={{
             position: 'fixed',
             inset: 0,
-            zIndex: 2300,
-            background: 'rgba(2,6,23,0.75)',
-            backdropFilter: 'blur(16px)',
+            zIndex: 9999,
+            background: 'rgba(2,6,23,0.85)',
+            backdropFilter: 'blur(20px)',
             display: 'flex',
-            alignItems: 'center',
+            alignItems: 'flex-start',
             justifyContent: 'center',
-            padding: '1.25rem 1rem',
+            padding: '2rem 1rem',
+            overflowY: 'auto'
           }}
         >
           <div
@@ -3982,7 +3983,8 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
             onClick={(event) => event.stopPropagation()}
             style={{
               width: 'min(500px, 100%)',
-              maxHeight: 'min(700px, 90vh)',
+              marginTop: '5vh',
+              maxHeight: 'none',
               overflow: 'hidden',
               display: 'flex',
               flexDirection: 'column',
