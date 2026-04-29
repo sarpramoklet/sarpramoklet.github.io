@@ -316,14 +316,29 @@ const getDetailCollection = (row: unknown, paths: string[]) => {
     return parts[parts.length - 1];
   }));
   const visited = new WeakSet<object>();
+
+  const isLikelyItem = (obj: unknown) => {
+    const parsedObj = parseMaybeJsonValue(obj) ?? obj;
+    if (!isDetailRecord(parsedObj)) return false;
+    return parsedObj.asset_id !== undefined || parsedObj.item_id !== undefined || parsedObj.tool_id !== undefined || parsedObj.goods_id !== undefined;
+  };
+
   const findNestedCollection = (value: unknown, allowDirectCollection = false): unknown[] => {
     const normalized = parseMaybeJsonValue(value) ?? value;
-    if (Array.isArray(normalized)) return allowDirectCollection ? normalized : [];
+    
+    if (Array.isArray(normalized)) {
+      if (allowDirectCollection || normalized.some(isLikelyItem)) {
+        return normalized;
+      }
+      return [];
+    }
+
     if (!isDetailRecord(normalized) || visited.has(normalized)) return [];
     if (allowDirectCollection) return [normalized];
 
     visited.add(normalized);
 
+    // 1. Check known aliases
     for (const [key, child] of Object.entries(normalized)) {
       if (aliases.has(key)) {
         const found = findNestedCollection(child, true);
@@ -331,6 +346,23 @@ const getDetailCollection = (row: unknown, paths: string[]) => {
       }
     }
 
+    // 2. Aggressive search for arrays containing item-like objects
+    for (const child of Object.values(normalized)) {
+      const parsedChild = parseMaybeJsonValue(child) ?? child;
+      if (Array.isArray(parsedChild) && parsedChild.some(isLikelyItem)) {
+        return parsedChild;
+      }
+    }
+
+    // 3. Aggressive search for item-like objects
+    for (const child of Object.values(normalized)) {
+      const parsedChild = parseMaybeJsonValue(child) ?? child;
+      if (isLikelyItem(parsedChild)) {
+        return [parsedChild];
+      }
+    }
+
+    // 4. Recurse
     for (const child of Object.values(normalized)) {
       const found = findNestedCollection(child, false);
       if (found.length > 0) return found;
