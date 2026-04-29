@@ -4069,7 +4069,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                         if (better) name = better;
                       }
 
-                      const qty = pickHumanValue(expanded, [
+                      let qty = pickHumanValue(expanded, [
                         'quantity', 'qty', 'jumlah', 'amount', 'total', 
                         'item.quantity', 'item.qty', 'item.jumlah',
                         'item.asset.quantity', 'item.asset.qty', 'item.asset.jumlah',
@@ -4077,8 +4077,33 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                         'label.procurement.asset.quantity'
                       ]);
 
+                      // If qty is still '-', search recursively
+                      if (qty === '-') {
+                        const findBetterQty = (obj: any): any => {
+                          if (!obj || typeof obj !== 'object') return null;
+                          if (Array.isArray(obj)) {
+                            for (const item of obj) {
+                              const found = findBetterQty(item);
+                              if (found !== null) return found;
+                            }
+                            return null;
+                          }
+
+                          const q = obj.quantity ?? obj.qty ?? obj.jumlah ?? obj.amount ?? obj.total;
+                          if (q !== undefined && q !== null && q !== '') return q;
+
+                          for (const v of Object.values(obj)) {
+                            const found = findBetterQty(v);
+                            if (found !== null) return found;
+                          }
+                          return null;
+                        };
+                        const better = findBetterQty(expanded);
+                        if (better !== null) qty = String(better);
+                      }
+
                       const displayName = name !== '-' ? name : (expandedAny.asset_id || expandedAny.id || 'Item Tanpa Nama');
-                      const displayQty = qty !== '-' ? qty : (expandedAny.quantity || expandedAny.qty || expandedAny.jumlah || '-');
+                      const displayQty = qty !== '-' ? qty : '-';
                       
                       return (
                         <div key={idx} style={{ 
