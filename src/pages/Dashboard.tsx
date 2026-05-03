@@ -947,9 +947,9 @@ const filterSarmokRowsByKind = (rows: any[], kind: SarmokDetailKind) => {
 
 const isSarmokRejectedRow = (row: unknown) => {
   const status = getRowStatusValue(row);
-  const rejectedKeywords = ['3', 'rejected', 'reject', 'ditolak', 'tolak'];
+  const rejectedKeywords = ['3', 'rejected', 'reject', 'ditolak', 'tolak', 'decline', 'declined'];
   if (rejectedKeywords.some(kw => status.includes(kw))) return true;
-  return hasAnyDetailValue(row, ['rejected_at', 'reason_rejected']);
+  return hasAnyDetailValue(row, ['rejected_at', 'reason_rejected', 'rejected_reason']);
 };
 
 const isSarmokPendingRow = (row: unknown) => {
@@ -963,8 +963,7 @@ const isSarmokPendingRow = (row: unknown) => {
   }
   
   if (status !== '-') return false;
-  if (isTruthyDetailFlag(row, ['verified_responsibility']) && !hasAnyDetailValue(row, ['verified_admin'])) return false;
-  return !hasAnyDetailValue(row, ['process_at', 'processed_at', 'approved_at', 'start_at']);
+  return !hasAnyDetailValue(row, ['process_at', 'processed_at', 'approved_at', 'start_at', 'borrow_at']);
 };
 
 const isSarmokProcessRow = (row: unknown) => {
@@ -990,17 +989,19 @@ const isSarmokReturnedRow = (row: unknown) => {
 
 const isSarmokActiveRow = (row: unknown) => {
   if (isSarmokRejectedRow(row)) return false;
+  if (isSarmokReturnedRow(row)) return false;
+  
   const status = getRowStatusValue(row);
   const activeKeywords = ['1', 'active', 'approved', 'verified', 'terverifikasi', 'aktif', 'disetujui', 'berlangsung', 'ongoing'];
   if (activeKeywords.some(kw => status.includes(kw))) return true;
   
   if (hasAnyDetailValue(row, ['verified_admin'])) {
-    return isTruthyDetailFlag(row, ['verified_admin']) && !isSarmokReturnedRow(row);
+    return isTruthyDetailFlag(row, ['verified_admin']);
   }
   
   if (isTruthyDetailFlag(row, ['verified_responsibility']) && !hasAnyDetailValue(row, ['verified_admin'])) return true;
   if (status !== '-') return false;
-  return hasAnyDetailValue(row, ['process_at', 'processed_at', 'approved_at', 'start_at', 'borrow_at']) && !isSarmokReturnedRow(row);
+  return hasAnyDetailValue(row, ['process_at', 'processed_at', 'approved_at', 'start_at', 'borrow_at']);
 };
 
 const isSarmokRoomInUseRow = (row: unknown) => {
