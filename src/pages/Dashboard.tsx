@@ -241,10 +241,20 @@ const normalizeSarmokComplaintStats = (
   payload: unknown,
   fallback: { waitingConfirmation: number; onProcess: number },
 ): SarmokComplaintStats => {
-  const pending = pickSarmokCount(payload, ['count_pending', 'countPending', 'pending', 'pending_count']) ?? fallback.waitingConfirmation ?? 0;
-  const inProgress = pickSarmokCount(payload, ['count_in_progress', 'countInProgress', 'count_process', 'in_progress', 'inProgress', 'on_process']) ?? fallback.onProcess ?? 0;
-  const complete = pickSarmokCount(payload, ['count_completed', 'count_complete', 'countComplete', 'countCompleted', 'completed', 'complete']) ?? 0;
-  const rejected = pickSarmokCount(payload, ['count_rejected', 'countRejected', 'rejected', 'reject']) ?? 0;
+  const pending = pickSarmokCount(payload, ['count_pending', 'countPending', 'pending', 'pending_count']) 
+    ?? pickSarmokStatusCount(payload, ['pending', 'waiting', 'menunggu'])
+    ?? fallback.waitingConfirmation 
+    ?? 0;
+  const inProgress = pickSarmokCount(payload, ['count_in_progress', 'countInProgress', 'count_process', 'in_progress', 'inProgress', 'on_process']) 
+    ?? pickSarmokStatusCount(payload, ['in_progress', 'on_process', 'process', 'diproses'])
+    ?? fallback.onProcess 
+    ?? 0;
+  const complete = pickSarmokCount(payload, ['count_completed', 'count_complete', 'countComplete', 'countCompleted', 'completed', 'complete']) 
+    ?? pickSarmokStatusCount(payload, ['completed', 'complete', 'selesai'])
+    ?? 0;
+  const rejected = pickSarmokCount(payload, ['count_rejected', 'countRejected', 'rejected', 'reject']) 
+    ?? pickSarmokStatusCount(payload, ['rejected', 'reject', 'ditolak'])
+    ?? 0;
 
   return {
     waitingConfirmation: pending,
@@ -260,10 +270,19 @@ const normalizeSarmokRoomStats = (
   payload: unknown,
   fallback: { waitingConfirmation?: number; rejectedReservation?: number; activeReservation: number; inUseReservation?: number },
 ): SarmokRoomStats => {
-  const rejectedReservation = pickSarmokCount(payload, ['count_rejected', 'countRejected', 'count_rejected_reservation', 'rejected', 'reject', 'ditolak']) ?? fallback.rejectedReservation ?? 0;
-  const activeReservation = pickSarmokCount(payload, ['count_verified', 'countVerified', 'count_approved', 'countApproved', 'count_active', 'countActive', 'count_ongoing', 'countOngoing', 'verified', 'approved', 'active', 'ongoing', 'sedang_berlangsung']) ?? fallback.activeReservation ?? 0;
+  const detailRows = normalizeSarmokDetailRows(payload);
+  const rejectedReservation = pickSarmokCount(payload, ['count_rejected', 'countRejected', 'count_rejected_reservation', 'rejected', 'reject', 'ditolak']) 
+    ?? pickSarmokStatusCount(payload, ['rejected', 'reject', 'ditolak'])
+    ?? detailRows.filter(isSarmokRejectedRow).length
+    ?? fallback.rejectedReservation 
+    ?? 0;
+  const activeReservation = pickSarmokCount(payload, ['count_verified', 'countVerified', 'count_approved', 'countApproved', 'count_active', 'countActive', 'count_ongoing', 'countOngoing', 'verified', 'approved', 'active', 'ongoing', 'sedang_berlangsung']) 
+    ?? pickSarmokStatusCount(payload, ['verified', 'approved', 'active', 'ongoing', 'sedang_berlangsung', 'disetujui'])
+    ?? detailRows.filter(isSarmokActiveRow).length
+    ?? fallback.activeReservation 
+    ?? 0;
   const inUseReservation = pickSarmokCount(payload, ['count_in_use', 'countInUse', 'count_using', 'countUsing', 'count_current', 'countCurrent', 'in_use', 'inUse', 'using', 'current', 'sedang_dipakai'])
-    ?? normalizeSarmokDetailRows(payload).filter(isSarmokRoomInUseRow).length
+    ?? detailRows.filter(isSarmokRoomInUseRow).length
     ?? fallback.inUseReservation
     ?? 0;
 
@@ -279,12 +298,12 @@ const normalizeSarmokToolsStats = (
   const activeRowsCount = payload === null || payload === undefined ? undefined : rows.filter(isSarmokActiveRow).length;
   const returnedRowsCount = payload === null || payload === undefined ? undefined : rows.filter(isSarmokReturnedRow).length;
   const waitingConfirmation = pickSarmokCount(payload, ['count_pending', 'countPending', 'pending', 'pending_count', 'waitingConfirmation', 'waiting_confirmation'])
-    ?? pickSarmokStatusCount(payload, ['pending', 'waiting', 'waiting_confirmation', 'menunggu', 'menunggu_konfirmasi'])
+    ?? pickSarmokStatusCount(payload, ['pending', 'waiting', 'waiting_confirmation', 'menunggu', 'menunggu_konfirmasi', 'konfirmasi'])
     ?? pendingRowsCount
     ?? fallback.waitingConfirmation
     ?? 0;
   const haveNotReturn = pickSarmokCount(payload, ['count_verified', 'countVerified', 'count_approved', 'countApproved', 'count_active', 'countActive', 'count_not_returned', 'countNotReturned', 'verified', 'approved', 'active', 'haveNotReturn', 'have_not_return'])
-    ?? pickSarmokStatusCount(payload, ['verified', 'approved', 'active', 'terverifikasi', 'disetujui', 'aktif'])
+    ?? pickSarmokStatusCount(payload, ['verified', 'approved', 'active', 'terverifikasi', 'disetujui', 'aktif', 'ongoing', 'berlangsung'])
     ?? activeRowsCount
     ?? fallback.haveNotReturn
     ?? 0;
@@ -852,7 +871,16 @@ const normalizeStatusValue = (value: unknown) => {
 };
 
 const getRowStatusValue = (row: unknown) => {
-  return normalizeStatusValue(pickDetailValue(row, ['status', 'status_name', 'state', 'approval_status', 'borrow_status']));
+  return normalizeStatusValue(pickDetailValue(row, [
+    'status', 
+    'status_name', 
+    'state', 
+    'approval_status', 
+    'borrow_status', 
+    'reservation_status', 
+    'complaint_status',
+    'module_status'
+  ]));
 };
 
 const hasAnyDetailValue = (row: unknown, paths: string[]) => {
@@ -901,7 +929,8 @@ const filterSarmokRowsByKind = (rows: any[], kind: SarmokDetailKind) => {
 
 const isSarmokPendingRow = (row: unknown) => {
   const status = getRowStatusValue(row);
-  if (['0', 'pending', 'waiting', 'waiting_confirmation', 'menunggu', 'menunggu_konfirmasi'].includes(status)) return true;
+  const pendingKeywords = ['0', 'pending', 'waiting', 'waiting_confirmation', 'menunggu', 'menunggu_konfirmasi', 'konfirmasi'];
+  if (pendingKeywords.some(kw => status.includes(kw))) return true;
   if (status !== '-') return false;
   if (isTruthyDetailFlag(row, ['verified_responsibility', 'verified_admin'])) return false;
   return !hasAnyDetailValue(row, ['process_at', 'processed_at', 'approved_at', 'start_at']);
@@ -909,12 +938,15 @@ const isSarmokPendingRow = (row: unknown) => {
 
 const isSarmokRejectedRow = (row: unknown) => {
   const status = getRowStatusValue(row);
-  return ['3', 'rejected', 'reject', 'ditolak'].includes(status) || hasAnyDetailValue(row, ['rejected_at', 'reason_rejected']);
+  const rejectedKeywords = ['3', 'rejected', 'reject', 'ditolak', 'tolak'];
+  if (rejectedKeywords.some(kw => status.includes(kw))) return true;
+  return hasAnyDetailValue(row, ['rejected_at', 'reason_rejected']);
 };
 
 const isSarmokProcessRow = (row: unknown) => {
   const status = getRowStatusValue(row);
-  if (['1', 'process', 'processing', 'in_progress', 'on_process', 'proses', 'diproses'].includes(status)) return true;
+  const processKeywords = ['1', 'process', 'processing', 'in_progress', 'on_process', 'proses', 'diproses', 'berjalan'];
+  if (processKeywords.some(kw => status.includes(kw))) return true;
   if (status !== '-') return false;
   return hasAnyDetailValue(row, ['process_at', 'processed_at', 'start_at']) && !hasAnyDetailValue(row, ['finish_at', 'finished_at', 'completed_at']);
 };
@@ -923,7 +955,7 @@ const isSarmokProcessRow = (row: unknown) => {
 const isSarmokReturnedRow = (row: unknown) => {
   const status = getRowStatusValue(row);
   const returnedKeywords = ['2', 'returned', 'dikembalikan', 'kembali', 'complete', 'completed', 'done', 'finish', 'finished', 'selesai', 'terkembali'];
-  if (returnedKeywords.includes(status)) return true;
+  if (returnedKeywords.some(kw => status.includes(kw))) return true;
   
   return hasAnyDetailValue(row, [
     'return_at', 'returned_at', 'finish_at', 'finished_at', 'completed_at', 
@@ -934,7 +966,8 @@ const isSarmokReturnedRow = (row: unknown) => {
 
 const isSarmokActiveRow = (row: unknown) => {
   const status = getRowStatusValue(row);
-  if (['1', 'active', 'approved', 'verified', 'terverifikasi', 'aktif'].includes(status)) return true;
+  const activeKeywords = ['1', 'active', 'approved', 'verified', 'terverifikasi', 'aktif', 'disetujui', 'berlangsung', 'ongoing'];
+  if (activeKeywords.some(kw => status.includes(kw))) return true;
   if (isTruthyDetailFlag(row, ['verified_responsibility', 'verified_admin'])) return true;
   if (status !== '-') return false;
   return hasAnyDetailValue(row, ['process_at', 'processed_at', 'approved_at', 'start_at', 'borrow_at']) && !isSarmokReturnedRow(row);
