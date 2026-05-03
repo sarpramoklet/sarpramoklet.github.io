@@ -44,11 +44,9 @@ const getSarmokBasicAuthHeader = () => {
 type SarmokDetailKind = 'complaints' | 'roomReservation' | 'toolsLoan';
 
 type SarmokComplaintStats = {
-  waitingConfirmation: number;
-  onProcess: number;
-  rejected: number;
   pending: number;
   inProgress: number;
+  rejected: number;
   complete: number;
 };
 
@@ -256,7 +254,7 @@ const normalizeSarmokComplaintStats = (
     ?? detailRows.filter(isSarmokProcessRow).length
     ?? 0;
   const complete = pickSarmokCount(payload, ['count_completed', 'count_complete', 'countComplete', 'countCompleted', 'completed', 'complete']) 
-    ?? pickSarmokStatusCount(payload, ['completed', 'complete', 'selesai', 'done'])
+    ?? pickSarmokStatusCount(payload, ['completed', 'complete', 'selesai', 'done', 'returned'])
     ?? detailRows.filter(isSarmokReturnedRow).length
     ?? 0;
   const rejected = pickSarmokCount(payload, ['count_rejected', 'countRejected', 'rejected', 'reject', 'ditolak']) 
@@ -266,8 +264,8 @@ const normalizeSarmokComplaintStats = (
     ?? 0;
 
   return {
-    waitingConfirmation: pending,
-    onProcess: inProgress,
+    pending,
+    inProgress,
     complete,
     rejected,
   };
