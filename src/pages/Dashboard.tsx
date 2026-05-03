@@ -166,6 +166,77 @@ const pickSarmokCount = (source: unknown, aliases: string[]) => {
   return undefined;
 };
 
+const pickSarmokStatusCount = (source: unknown, statusAliases: string[]) => {
+  const normalizedAliases = statusAliases.map((alias) => normalizeStatusValue(alias));
+  const candidates: unknown[] = [];
+
+  if (isDetailRecord(source)) {
+    candidates.push(source);
+    for (const key of ['summary', 'summaries', 'stats', 'statistic', 'statistics', 'status', 'statuses', 'status_summary', 'statusSummary', 'data']) {
+      if (source[key] !== undefined) candidates.push(source[key]);
+    }
+  }
+
+  const unwrapped = unwrapSarmokDetailPayload(source);
+  if (unwrapped !== source) candidates.push(unwrapped);
+
+  const statusMatches = (value: unknown) => {
+    const normalized = normalizeStatusValue(value);
+    return normalizedAliases.some((alias) => normalized.includes(alias));
+  };
+
+  const pickCountFromRecord = (record: Record<string, unknown>) => {
+    for (const alias of normalizedAliases) {
+      for (const [key, value] of Object.entries(record)) {
+        const normalizedKey = normalizeStatusValue(key);
+        if (normalizedKey === alias || normalizedKey.includes(alias)) {
+          const parsed = toSarmokCount(value);
+          if (parsed !== undefined) return parsed;
+        }
+      }
+    }
+
+    const statusFields = ['status', 'state', 'label', 'name', 'type', 'category'];
+    const countFields = ['count', 'total', 'value', 'jumlah', 'qty', 'data', 'amount'];
+    for (const statusField of statusFields) {
+      if (statusMatches(record[statusField])) {
+        for (const countField of countFields) {
+          const parsed = toSarmokCount(record[countField]);
+          if (parsed !== undefined) return parsed;
+        }
+      }
+    }
+
+    return undefined;
+  };
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) {
+      for (const item of candidate) {
+        if (!isDetailRecord(item)) continue;
+        const parsed = pickCountFromRecord(item);
+        if (parsed !== undefined) return parsed;
+      }
+    }
+
+    if (isDetailRecord(candidate)) {
+      const direct = pickCountFromRecord(candidate);
+      if (direct !== undefined) return direct;
+
+      for (const value of Object.values(candidate)) {
+        if (!Array.isArray(value)) continue;
+        for (const item of value) {
+          if (!isDetailRecord(item)) continue;
+          const parsed = pickCountFromRecord(item);
+          if (parsed !== undefined) return parsed;
+        }
+      }
+    }
+  }
+
+  return undefined;
+};
+
 const normalizeSarmokComplaintStats = (
   payload: unknown,
   fallback: { waitingConfirmation: number; onProcess: number },
@@ -208,14 +279,17 @@ const normalizeSarmokToolsStats = (
   const activeRowsCount = payload === null || payload === undefined ? undefined : rows.filter(isSarmokActiveRow).length;
   const returnedRowsCount = payload === null || payload === undefined ? undefined : rows.filter(isSarmokReturnedRow).length;
   const waitingConfirmation = pickSarmokCount(payload, ['count_pending', 'countPending', 'pending', 'pending_count', 'waitingConfirmation', 'waiting_confirmation'])
+    ?? pickSarmokStatusCount(payload, ['pending', 'waiting', 'waiting_confirmation', 'menunggu', 'menunggu_konfirmasi'])
     ?? pendingRowsCount
     ?? fallback.waitingConfirmation
     ?? 0;
   const haveNotReturn = pickSarmokCount(payload, ['count_verified', 'countVerified', 'count_approved', 'countApproved', 'count_active', 'countActive', 'count_not_returned', 'countNotReturned', 'verified', 'approved', 'active', 'haveNotReturn', 'have_not_return'])
+    ?? pickSarmokStatusCount(payload, ['verified', 'approved', 'active', 'terverifikasi', 'disetujui', 'aktif'])
     ?? activeRowsCount
     ?? fallback.haveNotReturn
     ?? 0;
   const returned = pickSarmokCount(payload, ['count_returned', 'count_complete', 'countReturned', 'countComplete', 'returned', 'complete', 'dikembalikan'])
+    ?? pickSarmokStatusCount(payload, ['returned', 'complete', 'completed', 'selesai', 'dikembalikan', 'kembali'])
     ?? returnedRowsCount
     ?? 0;
 
