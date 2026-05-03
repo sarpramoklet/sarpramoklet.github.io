@@ -3342,20 +3342,20 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '0.6rem', opacity: mokletService.loading ? 0.5 : 1, transition: 'opacity 0.2s' }}>
                   <div style={{ padding: '0.55rem 0.6rem', border: '1px solid rgba(248,113,113,0.28)', borderRadius: 8, background: 'rgba(248,113,113,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem' }}>
-                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#fb7185', textTransform: 'uppercase' }}>Rejected</span>
-                    {renderSarmokMetricButton(mokletService.complaints?.rejected ?? '-', '#fb7185', 'complaints', 'Pengaduan', 'Rejected', SARMOK_COMPLAINT_DETAIL_API_URL)}
+                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#fb7185', textTransform: 'uppercase' }}>Ditolak</span>
+                    {renderSarmokMetricButton(mokletService.complaints?.rejected ?? '-', '#fb7185', 'complaints', 'Pengaduan', 'Ditolak', SARMOK_COMPLAINT_DETAIL_API_URL)}
                   </div>
                   <div style={{ padding: '0.55rem 0.6rem', border: '1px solid rgba(249,115,22,0.28)', borderRadius: 8, background: 'rgba(249,115,22,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem' }}>
-                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#f97316', textTransform: 'uppercase' }}>Pending</span>
-                    {renderSarmokMetricButton(mokletService.complaints?.pending ?? '-', '#f97316', 'complaints', 'Pengaduan', 'Pending', SARMOK_COMPLAINT_DETAIL_API_URL)}
+                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#f97316', textTransform: 'uppercase' }}>Menunggu Konfirmasi</span>
+                    {renderSarmokMetricButton(mokletService.complaints?.pending ?? '-', '#f97316', 'complaints', 'Pengaduan', 'Menunggu Konfirmasi', SARMOK_COMPLAINT_DETAIL_API_URL)}
                   </div>
                   <div style={{ padding: '0.55rem 0.6rem', border: '1px solid rgba(59,130,246,0.28)', borderRadius: 8, background: 'rgba(59,130,246,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem' }}>
-                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#3b82f6', textTransform: 'uppercase' }}>In Progress</span>
-                    {renderSarmokMetricButton(mokletService.complaints?.inProgress ?? '-', '#3b82f6', 'complaints', 'Pengaduan', 'In Progress', SARMOK_COMPLAINT_DETAIL_API_URL)}
+                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#3b82f6', textTransform: 'uppercase' }}>Sedang Diproses</span>
+                    {renderSarmokMetricButton(mokletService.complaints?.inProgress ?? '-', '#3b82f6', 'complaints', 'Pengaduan', 'Sedang Diproses', SARMOK_COMPLAINT_DETAIL_API_URL)}
                   </div>
                   <div style={{ padding: '0.55rem 0.6rem', border: '1px solid rgba(34,197,94,0.28)', borderRadius: 8, background: 'rgba(34,197,94,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem' }}>
-                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#22c55e', textTransform: 'uppercase' }}>Complete</span>
-                    {renderSarmokMetricButton(mokletService.complaints?.complete ?? '-', '#22c55e', 'complaints', 'Pengaduan', 'Complete', SARMOK_COMPLAINT_DETAIL_API_URL)}
+                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#22c55e', textTransform: 'uppercase' }}>Selesai</span>
+                    {renderSarmokMetricButton(mokletService.complaints?.complete ?? '-', '#22c55e', 'complaints', 'Pengaduan', 'Selesai', SARMOK_COMPLAINT_DETAIL_API_URL)}
                   </div>
                 </div>
               )}
