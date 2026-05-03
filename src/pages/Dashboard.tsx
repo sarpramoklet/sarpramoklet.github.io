@@ -62,6 +62,7 @@ type SarmokToolsStats = {
   waitingConfirmation: number;
   haveNotReturn: number;
   returned: number;
+  rejected: number;
 };
 
 type SarmokDetailModal = {
@@ -297,6 +298,8 @@ const normalizeSarmokToolsStats = (
   const pendingRowsCount = payload === null || payload === undefined ? undefined : rows.filter(isSarmokPendingRow).length;
   const activeRowsCount = payload === null || payload === undefined ? undefined : rows.filter(isSarmokActiveRow).length;
   const returnedRowsCount = payload === null || payload === undefined ? undefined : rows.filter(isSarmokReturnedRow).length;
+  const rejectedRowsCount = payload === null || payload === undefined ? undefined : rows.filter(isSarmokRejectedRow).length;
+
   const waitingConfirmation = pickSarmokCount(payload, ['count_pending', 'countPending', 'pending', 'pending_count', 'waitingConfirmation', 'waiting_confirmation'])
     ?? pickSarmokStatusCount(payload, ['pending', 'waiting', 'waiting_confirmation', 'menunggu', 'menunggu_konfirmasi', 'konfirmasi'])
     ?? pendingRowsCount
@@ -311,8 +314,13 @@ const normalizeSarmokToolsStats = (
     ?? pickSarmokStatusCount(payload, ['returned', 'complete', 'completed', 'selesai', 'dikembalikan', 'kembali'])
     ?? returnedRowsCount
     ?? 0;
+  const rejected = pickSarmokCount(payload, ['count_rejected', 'countRejected', 'rejected', 'reject'])
+    ?? pickSarmokStatusCount(payload, ['rejected', 'reject', 'ditolak'])
+    ?? rejectedRowsCount
+    ?? fallback.rejected
+    ?? 0;
 
-  return { waitingConfirmation, haveNotReturn, returned };
+  return { waitingConfirmation, haveNotReturn, returned, rejected };
 };
 
 const formatDetailKey = (key: string) => {
@@ -3391,6 +3399,11 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                 <div style={{ display: 'flex', justifyContent: 'center', padding: '1rem' }}><Loader2 size={20} className="animate-spin" color="#3b82f6" /></div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', opacity: mokletService.loading ? 0.5 : 1, transition: 'opacity 0.2s' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Ditolak</span>
+                    {renderSarmokMetricButton(mokletService.toolsLoan?.rejected ?? '-', '#fb7185', 'toolsLoan', 'Peminjaman Alat', 'Ditolak', SARMOK_BORROW_DETAIL_API_URL)}
+                  </div>
+                  <div style={{ height: '1px', background: 'var(--border-subtle)' }} />
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Menunggu Konfirmasi</span>
                     {renderSarmokMetricButton(mokletService.toolsLoan?.waitingConfirmation ?? '-', '#6b7280', 'toolsLoan', 'Peminjaman Alat', 'Menunggu Konfirmasi', SARMOK_BORROW_DETAIL_API_URL)}

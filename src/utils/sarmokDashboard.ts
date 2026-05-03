@@ -2,15 +2,18 @@ export type SarmokDashboardData = {
   complaints: {
     waitingConfirmation: number;
     onProcess: number;
+    rejected: number;
   };
   roomReservation: {
     waitingConfirmation: number;
     activeReservation: number;
+    rejectedReservation: number;
   };
   toolsLoan: {
     waitingConfirmation: number;
     haveNotReturn: number;
     returned: number;
+    rejected: number;
   };
 };
 
@@ -25,11 +28,12 @@ const SECTION_ALIASES = {
 };
 
 const FIELD_ALIASES = {
-  waitingConfirmation: ['waitingConfirmation', 'waiting_confirmation', 'waiting', 'pending', 'pendingConfirmation', 'menungguKonfirmasi', 'menunggu_konfirmasi'],
-  onProcess: ['onProcess', 'on_process', 'inProcess', 'in_process', 'processing', 'inProgress', 'in_progress', 'diproses', 'sedangDiproses', 'sedang_diproses'],
-  activeReservation: ['activeReservation', 'active_reservation', 'active', 'aktif', 'reservationActive', 'reservation_active', 'approved', 'disetujui', 'ongoing', 'onGoing', 'on_going', 'sedangBerlangsung', 'sedang_berlangsung'],
-  haveNotReturn: ['haveNotReturn', 'have_not_return', 'notReturn', 'not_return', 'notReturned', 'not_returned', 'verified', 'verifiedLoan', 'verifiedLoans', 'approved', 'activeLoan', 'activeLoans', 'terverifikasi', 'belumKembali', 'belum_kembali', 'belumDikembalikan', 'belum_dikembalikan'],
+  waitingConfirmation: ['waitingConfirmation', 'waiting_confirmation', 'waiting', 'pending', 'pendingConfirmation', 'menungguKonfirmasi', 'menunggu_konfirmasi', 'konfirmasi'],
+  onProcess: ['onProcess', 'on_process', 'inProcess', 'in_process', 'processing', 'inProgress', 'in_progress', 'diproses', 'sedangDiproses', 'sedang_diproses', 'proses'],
+  activeReservation: ['activeReservation', 'active_reservation', 'active', 'aktif', 'reservationActive', 'reservation_active', 'approved', 'disetujui', 'ongoing', 'onGoing', 'on_going', 'sedangBerlangsung', 'sedang_berlangsung', 'verified'],
+  haveNotReturn: ['haveNotReturn', 'have_not_return', 'notReturn', 'not_return', 'notReturned', 'not_returned', 'verified', 'verifiedLoan', 'verifiedLoans', 'approved', 'activeLoan', 'activeLoans', 'terverifikasi', 'belumKembali', 'belum_kembali', 'belumDikembalikan', 'belum_dikembalikan', 'aktif', 'disetujui'],
   returned: ['returned', 'return', 'dikembalikan', 'kembali', 'complete', 'completed', 'selesai', 'done'],
+  rejected: ['rejected', 'reject', 'rejectedReservation', 'count_rejected', 'countRejected', 'ditolak', 'tolak'],
 };
 
 const normalizeToken = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -173,15 +177,18 @@ export const normalizeSarmokDashboardPayload = (payload: unknown): SarmokDashboa
     complaints: {
       waitingConfirmation: sectionNumber(root, SECTION_ALIASES.complaints, FIELD_ALIASES.waitingConfirmation),
       onProcess: sectionNumber(root, SECTION_ALIASES.complaints, FIELD_ALIASES.onProcess),
+      rejected: sectionNumber(root, SECTION_ALIASES.complaints, FIELD_ALIASES.rejected),
     },
     roomReservation: {
       waitingConfirmation: sectionNumber(root, SECTION_ALIASES.roomReservation, FIELD_ALIASES.waitingConfirmation),
       activeReservation: sectionNumber(root, SECTION_ALIASES.roomReservation, FIELD_ALIASES.activeReservation),
+      rejectedReservation: sectionNumber(root, SECTION_ALIASES.roomReservation, FIELD_ALIASES.rejected),
     },
     toolsLoan: {
       waitingConfirmation: sectionNumber(root, SECTION_ALIASES.toolsLoan, FIELD_ALIASES.waitingConfirmation),
       haveNotReturn: sectionNumber(root, SECTION_ALIASES.toolsLoan, FIELD_ALIASES.haveNotReturn),
       returned: sectionNumber(root, SECTION_ALIASES.toolsLoan, FIELD_ALIASES.returned),
+      rejected: sectionNumber(root, SECTION_ALIASES.toolsLoan, FIELD_ALIASES.rejected),
     },
   };
 };
@@ -215,17 +222,20 @@ export const normalizeSarmokDashboardText = (text: string): SarmokDashboardData 
 
   return {
     complaints: {
-      waitingConfirmation: findTextValue(complaintsSection, 'Waiting for Confirmation') || findTextValue(complaintsSection, 'Menunggu Konfirmasi'),
+      waitingConfirmation: findTextValue(complaintsSection, 'Waiting for Confirmation') || findTextValue(complaintsSection, 'Menunggu Konfirmasi') || findTextValue(complaintsSection, 'Pending'),
       onProcess: findTextValue(complaintsSection, 'On Process') || findTextValue(complaintsSection, 'Sedang Diproses'),
+      rejected: findTextValue(complaintsSection, 'Rejected') || findTextValue(complaintsSection, 'Ditolak'),
     },
     roomReservation: {
-      waitingConfirmation: findTextValue(roomSection, 'Waiting for Confirmation') || findTextValue(roomSection, 'Menunggu Konfirmasi'),
-      activeReservation: findTextValue(roomSection, 'Active Reservation') || findTextValue(roomSection, 'Reservasi Aktif') || findTextValue(roomSection, 'Sedang Berlangsung') || findTextValue(roomSection, 'Disetujui'),
+      waitingConfirmation: findTextValue(roomSection, 'Waiting for Confirmation') || findTextValue(roomSection, 'Menunggu Konfirmasi') || findTextValue(roomSection, 'Pending'),
+      activeReservation: findTextValue(roomSection, 'Active Reservation') || findTextValue(roomSection, 'Reservasi Aktif') || findTextValue(roomSection, 'Sedang Berlangsung') || findTextValue(roomSection, 'Disetujui') || findTextValue(roomSection, 'Verified'),
+      rejectedReservation: findTextValue(roomSection, 'Rejected') || findTextValue(roomSection, 'Ditolak'),
     },
     toolsLoan: {
-      waitingConfirmation: findTextValue(toolsSection, 'Waiting for Confirmation') || findTextValue(toolsSection, 'Menunggu Konfirmasi'),
-      haveNotReturn: findTextValue(toolsSection, 'Have not return') || findTextValue(toolsSection, 'Belum Dikembalikan') || findTextValue(toolsSection, 'Belum Kembali'),
+      waitingConfirmation: findTextValue(toolsSection, 'Waiting for Confirmation') || findTextValue(toolsSection, 'Menunggu Konfirmasi') || findTextValue(toolsSection, 'Pending'),
+      haveNotReturn: findTextValue(toolsSection, 'Have not return') || findTextValue(toolsSection, 'Belum Dikembalikan') || findTextValue(toolsSection, 'Belum Kembali') || findTextValue(toolsSection, 'Verified') || findTextValue(toolsSection, 'Aktif'),
       returned: findTextValue(toolsSection, 'Returned') || findTextValue(toolsSection, 'Dikembalikan') || findTextValue(toolsSection, 'Selesai'),
+      rejected: findTextValue(toolsSection, 'Rejected') || findTextValue(toolsSection, 'Ditolak'),
     },
   };
 };
