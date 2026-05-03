@@ -172,23 +172,44 @@ const sectionNumber = (root: unknown, sectionAliases: string[], fieldAliases: st
 
 export const normalizeSarmokDashboardPayload = (payload: unknown): SarmokDashboardData => {
   const root = unwrapPayload(payload);
+  const data = isRecord(root) ? root : {};
+
+  // Direct mapping for Moklet Service API keys
+  const directComplaints = {
+    waitingConfirmation: toDashboardNumber(data.countWaitingComplaints ?? data.count_waiting_complaints),
+    onProcess: toDashboardNumber(data.countInProcessComplaints ?? data.count_in_process_complaints),
+    rejected: toDashboardNumber(data.countRejectedComplaints ?? data.count_rejected_complaints),
+  };
+
+  const directRoom = {
+    waitingConfirmation: toDashboardNumber(data.countPendingReservation ?? data.count_pending_reservation),
+    activeReservation: toDashboardNumber(data.countActiveReservation ?? data.count_active_reservation),
+    rejectedReservation: toDashboardNumber(data.countRejectedReservation ?? data.count_rejected_reservation),
+  };
+
+  const directTools = {
+    waitingConfirmation: toDashboardNumber(data.countPendingLoans ?? data.count_pending_loans),
+    haveNotReturn: toDashboardNumber(data.countVerifiedLoans ?? data.count_verified_loans),
+    returned: toDashboardNumber(data.countReturnedLoans ?? data.count_returned_loans),
+    rejected: toDashboardNumber(data.countRejectedLoans ?? data.count_rejected_loans),
+  };
 
   return {
     complaints: {
-      waitingConfirmation: sectionNumber(root, SECTION_ALIASES.complaints, FIELD_ALIASES.waitingConfirmation),
-      onProcess: sectionNumber(root, SECTION_ALIASES.complaints, FIELD_ALIASES.onProcess),
-      rejected: sectionNumber(root, SECTION_ALIASES.complaints, FIELD_ALIASES.rejected),
+      waitingConfirmation: directComplaints.waitingConfirmation ?? sectionNumber(root, SECTION_ALIASES.complaints, FIELD_ALIASES.waitingConfirmation),
+      onProcess: directComplaints.onProcess ?? sectionNumber(root, SECTION_ALIASES.complaints, FIELD_ALIASES.onProcess),
+      rejected: directComplaints.rejected ?? sectionNumber(root, SECTION_ALIASES.complaints, FIELD_ALIASES.rejected),
     },
     roomReservation: {
-      waitingConfirmation: sectionNumber(root, SECTION_ALIASES.roomReservation, FIELD_ALIASES.waitingConfirmation),
-      activeReservation: sectionNumber(root, SECTION_ALIASES.roomReservation, FIELD_ALIASES.activeReservation),
-      rejectedReservation: sectionNumber(root, SECTION_ALIASES.roomReservation, FIELD_ALIASES.rejected),
+      waitingConfirmation: directRoom.waitingConfirmation ?? sectionNumber(root, SECTION_ALIASES.roomReservation, FIELD_ALIASES.waitingConfirmation),
+      activeReservation: directRoom.activeReservation ?? sectionNumber(root, SECTION_ALIASES.roomReservation, FIELD_ALIASES.activeReservation),
+      rejectedReservation: directRoom.rejectedReservation ?? sectionNumber(root, SECTION_ALIASES.roomReservation, FIELD_ALIASES.rejected),
     },
     toolsLoan: {
-      waitingConfirmation: sectionNumber(root, SECTION_ALIASES.toolsLoan, FIELD_ALIASES.waitingConfirmation),
-      haveNotReturn: sectionNumber(root, SECTION_ALIASES.toolsLoan, FIELD_ALIASES.haveNotReturn),
-      returned: sectionNumber(root, SECTION_ALIASES.toolsLoan, FIELD_ALIASES.returned),
-      rejected: sectionNumber(root, SECTION_ALIASES.toolsLoan, FIELD_ALIASES.rejected),
+      waitingConfirmation: directTools.waitingConfirmation ?? sectionNumber(root, SECTION_ALIASES.toolsLoan, FIELD_ALIASES.waitingConfirmation),
+      haveNotReturn: directTools.haveNotReturn ?? sectionNumber(root, SECTION_ALIASES.toolsLoan, FIELD_ALIASES.haveNotReturn),
+      returned: directTools.returned ?? sectionNumber(root, SECTION_ALIASES.toolsLoan, FIELD_ALIASES.returned),
+      rejected: directTools.rejected ?? sectionNumber(root, SECTION_ALIASES.toolsLoan, FIELD_ALIASES.rejected),
     },
   };
 };
