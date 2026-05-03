@@ -54,6 +54,7 @@ type SarmokComplaintStats = {
 
 type SarmokRoomStats = {
   rejectedReservation: number;
+  waitingConfirmation: number;
   activeReservation: number;
   inUseReservation: number;
 };
@@ -277,6 +278,11 @@ const normalizeSarmokRoomStats = (
     ?? detailRows.filter(isSarmokRejectedRow).length
     ?? fallback.rejectedReservation 
     ?? 0;
+  const waitingConfirmation = pickSarmokCount(payload, ['count_pending', 'countPending', 'pending', 'pending_count', 'waitingConfirmation', 'waiting_confirmation'])
+    ?? pickSarmokStatusCount(payload, ['pending', 'waiting', 'waiting_confirmation', 'menunggu', 'menunggu_konfirmasi', 'konfirmasi'])
+    ?? detailRows.filter(isSarmokPendingRow).length
+    ?? fallback.waitingConfirmation
+    ?? 0;
   const activeReservation = pickSarmokCount(payload, ['count_verified', 'countVerified', 'count_approved', 'countApproved', 'count_active', 'countActive', 'count_ongoing', 'countOngoing', 'verified', 'approved', 'active', 'ongoing', 'sedang_berlangsung']) 
     ?? pickSarmokStatusCount(payload, ['verified', 'approved', 'active', 'ongoing', 'sedang_berlangsung', 'disetujui'])
     ?? detailRows.filter(isSarmokActiveRow).length
@@ -287,7 +293,7 @@ const normalizeSarmokRoomStats = (
     ?? fallback.inUseReservation
     ?? 0;
 
-  return { rejectedReservation, activeReservation, inUseReservation };
+  return { rejectedReservation, waitingConfirmation, activeReservation, inUseReservation };
 };
 
 const normalizeSarmokToolsStats = (
@@ -3371,6 +3377,11 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Ditolak</span>
                     {renderSarmokMetricButton(mokletService.roomReservation?.rejectedReservation ?? '-', '#fb7185', 'roomReservation', 'Peminjaman Ruang', 'Ditolak', SARMOK_ROOM_DETAIL_API_URL)}
+                  </div>
+                  <div style={{ height: '1px', background: 'var(--border-subtle)' }} />
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Menunggu Konfirmasi</span>
+                    {renderSarmokMetricButton(mokletService.roomReservation?.waitingConfirmation ?? '-', '#6b7280', 'roomReservation', 'Peminjaman Ruang', 'Menunggu Konfirmasi', SARMOK_ROOM_DETAIL_API_URL)}
                   </div>
                   <div style={{ height: '1px', background: 'var(--border-subtle)' }} />
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
