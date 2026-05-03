@@ -28,12 +28,12 @@ const SECTION_ALIASES = {
 };
 
 const FIELD_ALIASES = {
-  waitingConfirmation: ['waitingConfirmation', 'waiting_confirmation', 'waiting', 'pending', 'pendingConfirmation', 'menungguKonfirmasi', 'menunggu_konfirmasi', 'konfirmasi'],
-  onProcess: ['onProcess', 'on_process', 'inProcess', 'in_process', 'processing', 'inProgress', 'in_progress', 'diproses', 'sedangDiproses', 'sedang_diproses', 'proses'],
-  activeReservation: ['activeReservation', 'active_reservation', 'active', 'aktif', 'reservationActive', 'reservation_active', 'approved', 'disetujui', 'ongoing', 'onGoing', 'on_going', 'sedangBerlangsung', 'sedang_berlangsung', 'verified'],
-  haveNotReturn: ['haveNotReturn', 'have_not_return', 'notReturn', 'not_return', 'notReturned', 'not_returned', 'verified', 'verifiedLoan', 'verifiedLoans', 'approved', 'activeLoan', 'activeLoans', 'terverifikasi', 'belumKembali', 'belum_kembali', 'belumDikembalikan', 'belum_dikembalikan', 'aktif', 'disetujui'],
-  returned: ['returned', 'return', 'dikembalikan', 'kembali', 'complete', 'completed', 'selesai', 'done'],
-  rejected: ['rejected', 'reject', 'rejectedReservation', 'count_rejected', 'countRejected', 'ditolak', 'tolak'],
+  waitingConfirmation: ['waitingConfirmation', 'waiting_confirmation', 'waiting', 'pending', 'pendingConfirmation', 'menungguKonfirmasi', 'menunggu_konfirmasi', 'konfirmasi', 'countWaiting', 'countPending'],
+  onProcess: ['onProcess', 'on_process', 'inProcess', 'in_process', 'processing', 'inProgress', 'in_progress', 'diproses', 'sedangDiproses', 'sedang_diproses', 'proses', 'countInProcess', 'countInProgress'],
+  activeReservation: ['activeReservation', 'active_reservation', 'active', 'aktif', 'reservationActive', 'reservation_active', 'approved', 'disetujui', 'ongoing', 'onGoing', 'on_going', 'sedangBerlangsung', 'sedang_berlangsung', 'verified', 'countActive', 'countApproved'],
+  haveNotReturn: ['haveNotReturn', 'have_not_return', 'notReturn', 'not_return', 'notReturned', 'not_returned', 'verified', 'verifiedLoan', 'verifiedLoans', 'approved', 'activeLoan', 'activeLoans', 'terverifikasi', 'belumKembali', 'belum_kembali', 'belumDikembalikan', 'belum_dikembalikan', 'aktif', 'disetujui', 'countVerified', 'countActiveLoans'],
+  returned: ['returned', 'return', 'dikembalikan', 'kembali', 'complete', 'completed', 'selesai', 'done', 'countReturned', 'countComplete'],
+  rejected: ['rejected', 'reject', 'rejectedReservation', 'count_rejected', 'countRejected', 'ditolak', 'tolak', 'countRejected'],
 };
 
 const normalizeToken = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '');

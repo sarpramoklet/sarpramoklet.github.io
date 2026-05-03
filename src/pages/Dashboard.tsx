@@ -241,30 +241,35 @@ const pickSarmokStatusCount = (source: unknown, statusAliases: string[]) => {
 
 const normalizeSarmokComplaintStats = (
   payload: unknown,
-  fallback: { waitingConfirmation: number; onProcess: number },
+  fallback: { waitingConfirmation: number; onProcess: number; rejected: number },
 ): SarmokComplaintStats => {
-  const pending = pickSarmokCount(payload, ['count_pending', 'countPending', 'pending', 'pending_count']) 
-    ?? pickSarmokStatusCount(payload, ['pending', 'waiting', 'menunggu'])
+  const detailRows = normalizeSarmokDetailRows(payload);
+  
+  const pending = pickSarmokCount(payload, ['count_pending', 'countPending', 'pending', 'pending_count', 'countWaitingComplaints', 'waitingConfirmation']) 
+    ?? pickSarmokStatusCount(payload, ['pending', 'waiting', 'menunggu', 'konfirmasi'])
     ?? fallback.waitingConfirmation 
+    ?? detailRows.filter(isSarmokPendingRow).length
     ?? 0;
-  const inProgress = pickSarmokCount(payload, ['count_in_progress', 'countInProgress', 'count_process', 'in_progress', 'inProgress', 'on_process']) 
-    ?? pickSarmokStatusCount(payload, ['in_progress', 'on_process', 'process', 'diproses'])
+  const inProgress = pickSarmokCount(payload, ['count_in_progress', 'countInProgress', 'count_process', 'in_progress', 'inProgress', 'on_process', 'countInProcessComplaints']) 
+    ?? pickSarmokStatusCount(payload, ['in_progress', 'on_process', 'process', 'diproses', 'berjalan'])
     ?? fallback.onProcess 
+    ?? detailRows.filter(isSarmokProcessRow).length
     ?? 0;
   const complete = pickSarmokCount(payload, ['count_completed', 'count_complete', 'countComplete', 'countCompleted', 'completed', 'complete']) 
-    ?? pickSarmokStatusCount(payload, ['completed', 'complete', 'selesai'])
+    ?? pickSarmokStatusCount(payload, ['completed', 'complete', 'selesai', 'done'])
+    ?? detailRows.filter(isSarmokReturnedRow).length
     ?? 0;
-  const rejected = pickSarmokCount(payload, ['count_rejected', 'countRejected', 'rejected', 'reject']) 
+  const rejected = pickSarmokCount(payload, ['count_rejected', 'countRejected', 'rejected', 'reject', 'ditolak']) 
     ?? pickSarmokStatusCount(payload, ['rejected', 'reject', 'ditolak'])
+    ?? fallback.rejected
+    ?? detailRows.filter(isSarmokRejectedRow).length
     ?? 0;
 
   return {
     waitingConfirmation: pending,
     onProcess: inProgress,
-    rejected,
-    pending,
-    inProgress,
     complete,
+    rejected,
   };
 };
 
