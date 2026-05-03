@@ -61,6 +61,7 @@ type SarmokRoomStats = {
 type SarmokToolsStats = {
   waitingConfirmation: number;
   haveNotReturn: number;
+  returned: number;
 };
 
 type SarmokDetailModal = {
@@ -205,6 +206,7 @@ const normalizeSarmokToolsStats = (
   const rows = filterSarmokRowsByKind(normalizeSarmokDetailRows(payload), 'toolsLoan');
   const pendingRowsCount = payload === null || payload === undefined ? undefined : rows.filter(isSarmokPendingRow).length;
   const activeRowsCount = payload === null || payload === undefined ? undefined : rows.filter(isSarmokActiveRow).length;
+  const returnedRowsCount = payload === null || payload === undefined ? undefined : rows.filter(isSarmokReturnedRow).length;
   const waitingConfirmation = pickSarmokCount(payload, ['count_pending', 'countPending', 'pending', 'pending_count', 'waitingConfirmation', 'waiting_confirmation'])
     ?? pendingRowsCount
     ?? fallback.waitingConfirmation
@@ -213,8 +215,11 @@ const normalizeSarmokToolsStats = (
     ?? activeRowsCount
     ?? fallback.haveNotReturn
     ?? 0;
+  const returned = pickSarmokCount(payload, ['count_returned', 'count_complete', 'countReturned', 'countComplete', 'returned', 'complete', 'dikembalikan'])
+    ?? returnedRowsCount
+    ?? 0;
 
-  return { waitingConfirmation, haveNotReturn };
+  return { waitingConfirmation, haveNotReturn, returned };
 };
 
 const formatDetailKey = (key: string) => {
@@ -250,9 +255,14 @@ const pickDetailValue = (source: unknown, paths: string[]): unknown => {
 };
 
 const formatHumanValue = (value: unknown): string => {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (trimmed.startsWith('{') || trimmed.startsWith('[')) return '-';
+  }
+
   if (isDetailRecord(value)) {
     const readable = pickDetailValue(value, ['name', 'nama', 'full_name', 'fullname', 'title', 'label', 'description', 'code', 'kode', 'email']);
-    if (readable !== undefined) return formatDetailValue(readable);
+    if (readable !== undefined) return formatHumanValue(readable);
   }
 
   if (Array.isArray(value)) {
@@ -282,26 +292,24 @@ const parseMaybeJsonValue = (value: unknown): unknown => {
   }
 };
 
-const parseMaybeJsonRecord = (value: unknown) => {
-  const parsed = parseMaybeJsonValue(value);
-  return isDetailRecord(parsed) ? parsed : null;
-};
-
-const expandDetailRecord = (detail: unknown) => {
+const expandDetailRecord = (detail: unknown, visited = new WeakSet<object>()): any => {
   const normalized = parseMaybeJsonValue(detail) ?? detail;
-  if (isDetailRecord(normalized)) {
-    const expanded = { ...normalized };
-    for (const key of ['asset_id', 'tool_id', 'item_id', 'asset', 'tool', 'item', 'goods', 'barang', 'procurement', 'procurements', 'label']) {
-      if (typeof expanded[key] === 'string' && (expanded[key].startsWith('{') || expanded[key].startsWith('['))) {
-        const parsed = parseMaybeJsonValue(expanded[key]);
-        if (parsed !== null) {
-          expanded[key] = parsed;
-        }
+  if (!isDetailRecord(normalized)) return normalized;
+  if (visited.has(normalized)) return normalized;
+  visited.add(normalized);
+
+  const expanded: any = { ...normalized };
+  for (const [key, value] of Object.entries(expanded)) {
+    if (typeof value === 'string' && (value.trim().startsWith('{') || value.trim().startsWith('['))) {
+      const parsed = parseMaybeJsonValue(value);
+      if (parsed !== null) {
+        expanded[key] = expandDetailRecord(parsed, visited);
       }
+    } else if (isDetailRecord(value) || Array.isArray(value)) {
+      expanded[key] = expandDetailRecord(value, visited);
     }
-    return expanded;
   }
-  return normalized;
+  return expanded;
 };
 
 const getDetailCollection = (row: unknown, paths: string[]) => {
@@ -378,15 +386,7 @@ const getDetailCollection = (row: unknown, paths: string[]) => {
   return findNestedCollection(row);
 };
 
-const formatAssetDescription = (value: unknown) => {
-  const parsed = parseMaybeJsonRecord(value);
-  if (!parsed) return '';
 
-  return ['Merk', 'Spesifikasi', 'Warna', 'Ket']
-    .map((key) => formatHumanValue(parsed[key]))
-    .filter((item) => item !== '-')
-    .join(' | ');
-};
 
 const pickCreatorName = (row: unknown) => {
   return pickHumanValue(row, [
@@ -458,100 +458,175 @@ const pickRoomReservationName = (row: unknown) => {
   ]);
 };
 
+const isSarmokUuid = (val: unknown): boolean => {
+  if (typeof val !== 'string') return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+};
+
+const findBetterSarmokName = (obj: any, depth = 0): string | null => {
+  if (depth > 12 || !obj || typeof obj !== 'object') return null;
+  
+  if (Array.isArray(obj)) {
+    for (const item of obj) {
+      const found = findBetterSarmokName(item, depth + 1);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  const isValid = (n: any): n is string => {
+    if (typeof n !== 'string') return false;
+    const t = n.trim();
+    if (t.length < 2 || t.length > 250) return false;
+    if (/^\d+$/.test(t)) return false;
+    if (t === '-' || isSarmokUuid(t)) return false;
+    if (t.includes('{') || t.includes('}') || t.includes('[') || t.includes(']')) return false;
+    if (t.includes('T00:00:00')) return false;
+    return true;
+  };
+
+  // 0. TOP PRIORITY: Known structure from user screenshot
+  if (obj.procurements && typeof obj.procurements === 'object') {
+    if (isValid(obj.procurements.name)) return obj.procurements.name;
+    if (isValid(obj.procurements.nama)) return obj.procurements.nama;
+  }
+  if (obj.procurement && typeof obj.procurement === 'object') {
+    if (isValid(obj.procurement.name)) return obj.procurement.name;
+  }
+  if (obj.asset && typeof obj.asset === 'object') {
+    if (isValid(obj.asset.name)) return obj.asset.name;
+  }
+
+  // 1. Direct hit
+  const priority = ['name', 'nama', 'asset_name', 'item_name', 'tool_name', 'title', 'label'];
+  for (const k of priority) {
+    if (isValid(obj[k])) return obj[k];
+  }
+
+  // 2. High priority sub-objects
+  for (const k of ['procurements', 'procurement', 'asset', 'item', 'label', 'tool']) {
+    if (obj[k] && typeof obj[k] === 'object') {
+      const found = findBetterSarmokName(obj[k], depth + 1);
+      if (found) return found;
+    }
+  }
+
+  // 3. Scan all
+  for (const [k, v] of Object.entries(obj)) {
+    if (k.toLowerCase().includes('name') || k.toLowerCase().includes('nama')) {
+      if (isValid(v)) return v;
+    }
+    if (typeof v === 'object' && v !== null && k !== 'procurements' && k !== 'asset' && k !== 'item') {
+      const found = findBetterSarmokName(v, depth + 1);
+      if (found) return found;
+    }
+  }
+
+  return null;
+};
+
+const findBetterSarmokQty = (obj: any): any => {
+  if (!obj || typeof obj !== 'object') return null;
+  if (Array.isArray(obj)) {
+    for (const item of obj) {
+      const found = findBetterSarmokQty(item);
+      if (found !== null) return found;
+    }
+    return null;
+  }
+
+  const q = obj.quantity ?? obj.qty ?? obj.jumlah ?? obj.amount ?? obj.total;
+  if (q !== undefined && q !== null && q !== '' && q !== '-') return q;
+
+  for (const v of Object.values(obj)) {
+    if (typeof v === 'object' && v !== null) {
+      const found = findBetterSarmokQty(v);
+      if (found !== null) return found;
+    }
+  }
+  return null;
+};
+
 const formatBorrowItems = (row: unknown) => {
   const expandedRow = expandDetailRecord(row);
-  const direct = pickHumanValue(expandedRow, [
-    'tool.name', 'tool.nama', 'tool_id.name', 'tool_id.nama',
-    'item.name', 'item.nama', 'item_id.name', 'item_id.nama',
-    'asset.name', 'asset.nama', 'asset_id.name', 'asset_id.nama',
-    'goods.name', 'barang.name', 'procurement.name', 'procurement.asset.name', 'procurements.name', 'procurements.asset.name', 'tool_name', 'item_name', 'asset_name', 'name'
+  const details = getDetailCollection(expandedRow, [
+    'procurements', 'SARPRA DETAIL BORROW', 'sarpra_detail_borrow', 'sarpra_detail_borrows', 
+    'detail_borrow', 'detail_borrows', 'borrow_details', 'details', 'items', 'tools', 'assets'
   ]);
-  if (direct !== '-') return direct;
 
-  const details = getDetailCollection(expandedRow, ['procurements', 'SARPRA DETAIL BORROW', 'sarpra_detail_borrow', 'sarpra_detail_borrows', 'detail_borrow', 'detail_borrows', 'borrow_details', 'details', 'items', 'tools', 'assets']);
-  if (details.length === 0) return '-';
-
-  return details.map((detail) => {
-    const normalizedDetail = expandDetailRecord(detail);
-    const itemName = pickHumanValue(normalizedDetail, [
-      'asset.name',
-      'asset.nama',
-      'asset.title',
-      'asset.label',
-      'asset_id.name',
-      'asset_id.nama',
-      'asset_id.title',
-      'asset_id.label',
-      'item.asset.name',
-      'item.asset.nama',
-      'label.asset.name',
-      'label.asset.nama',
-      'label.procurement.asset.name',
-      'label.procurement.asset.nama',
-      'label.item.asset.name',
-      'label.item.name',
-      'procurement.name',
-      'procurement.nama',
-      'procurements.name',
-      'procurements.nama',
-      'procurements.asset.name',
-      'procurements.asset.nama',
-      'procurement.asset.name',
-      'procurement.asset.nama',
-      'sarpra.name',
-      'sarpra.nama',
-      'sarpra_item.name',
-      'sarpra_item.nama',
-      'item.name',
-      'item.nama',
-      'item_id.name',
-      'item_id.nama',
-      'tool.name',
-      'tool.nama',
-      'tool_id.name',
-      'tool_id.nama',
-      'goods.name',
-      'barang.name',
-      'name',
-      'nama',
+  if (details.length === 0) {
+    const direct = pickHumanValue(expandedRow, [
+      'tool.name', 'tool.nama', 'tool_id.name', 'tool_id.nama',
+      'item.name', 'item.nama', 'item_id.name', 'item_id.nama',
+      'asset.name', 'asset.nama', 'asset_id.name', 'asset_id.nama',
+      'goods.name', 'barang.name', 'procurement.name', 'procurement.asset.name', 'procurements.name', 'procurements.asset.name', 'tool_name', 'item_name', 'asset_name', 'name', 'nama'
     ]);
-    const qty = pickHumanValue(normalizedDetail, [
+    if (direct !== '-') return direct;
+    return findBetterSarmokName(expandedRow) || '-';
+  }
+
+  const itemStrings = details.map((detail) => {
+    const normalizedDetail = expandDetailRecord(detail);
+    let name = pickHumanValue(normalizedDetail, [
+      'asset.name', 'asset.nama', 'asset.title', 'asset.label',
+      'item.asset.name', 'item.asset.nama', 'label.asset.name', 'label.asset.nama',
+      'label.procurement.asset.name', 'label.procurement.asset.nama',
+      'procurement.name', 'procurement.nama', 'procurements.name', 'procurements.nama',
+      'procurements.asset.name', 'procurements.asset.nama',
+      'procurement.asset.name', 'procurement.asset.nama',
+      'item.name', 'item.nama', 'name', 'nama', 'title', 'label'
+    ]);
+
+    if (name === '-' || /^\d+$/.test(name) || isSarmokUuid(name) || name.includes('{')) {
+      name = findBetterSarmokName(normalizedDetail) || '-';
+    }
+    
+    if (name.includes('{') || name === '-') name = 'Aset Sarpra';
+
+    let qty = pickHumanValue(normalizedDetail, [
       'quantity', 'qty', 'jumlah', 'amount', 'total', 
       'item.quantity', 'item.qty', 'item.jumlah',
       'item.asset.quantity', 'item.asset.qty',
-      'label.quantity', 'label.qty', 'label.jumlah',
-      'label.procurement.quantity', 'label.procurement.qty',
-      'procurement.quantity', 'procurement.qty', 'procurements.quantity', 'procurements.qty',
-      'asset_id.quantity', 'asset_id.qty', 'asset_id.jumlah',
-      'item_id.quantity', 'item_id.qty', 'item_id.jumlah',
-      'tool_id.quantity', 'tool_id.qty', 'tool_id.jumlah'
+      'label.quantity', 'label.qty', 'label.jumlah'
     ]);
-    const assetDescription = formatAssetDescription(pickDetailValue(normalizedDetail, ['asset.description', 'description', 'asset.deskripsi', 'deskripsi', 'procurement.description', 'procurements.description', 'procurement.asset.description', 'procurements.asset.description', 'asset_id.description', 'asset_id.deskripsi']));
-    const readableName = assetDescription && itemName === '-' ? assetDescription : itemName;
-    return qty !== '-' ? `${readableName} (${qty})` : readableName;
-  }).filter((item) => item !== '-').join(', ') || '-';
+
+    if (qty === '-') {
+      const bQty = findBetterSarmokQty(normalizedDetail);
+      if (bQty !== null) qty = String(bQty);
+    }
+
+    return qty !== '-' ? `${name} (${qty})` : name;
+  }).filter((s) => s !== '-');
+
+  if (itemStrings.length === 0) return '-';
+  if (itemStrings.length === 1) return itemStrings[0];
+  
+  // Format multiple items with bullet points for the table
+  return itemStrings.join('\n• ').replace(/^/, '• ');
 };
 
 const formatBorrowQuantity = (row: unknown) => {
   const expandedRow = expandDetailRecord(row);
-  const direct = pickHumanValue(expandedRow, ['quantity', 'qty', 'jumlah', 'amount', 'total']);
-  if (direct !== '-') return direct;
+  const details = getDetailCollection(expandedRow, [
+    'procurements', 'SARPRA DETAIL BORROW', 'sarpra_detail_borrow', 'sarpra_detail_borrows', 
+    'detail_borrow', 'detail_borrows', 'borrow_details', 'details', 'items', 'tools', 'assets'
+  ]);
 
-  const details = getDetailCollection(expandedRow, ['procurements', 'SARPRA DETAIL BORROW', 'sarpra_detail_borrow', 'sarpra_detail_borrows', 'detail_borrow', 'detail_borrows', 'borrow_details', 'details', 'items', 'tools', 'assets']);
-  if (details.length === 0) return '-';
+  if (details.length === 0) {
+    const direct = pickHumanValue(expandedRow, ['quantity', 'qty', 'jumlah', 'amount', 'total']);
+    if (direct !== '-') return direct;
+    const bQty = findBetterSarmokQty(expandedRow);
+    return bQty !== null ? String(bQty) : '-';
+  }
 
   const quantities = details
-    .map((detail) => pickHumanValue(expandDetailRecord(detail), [
-      'quantity', 'qty', 'jumlah', 'amount', 'total', 
-      'item.quantity', 'item.qty', 'item.jumlah',
-      'item.asset.quantity', 'item.asset.qty',
-      'label.quantity', 'label.qty', 'label.jumlah',
-      'label.procurement.quantity', 'label.procurement.qty',
-      'procurement.quantity', 'procurement.qty', 'procurements.quantity', 'procurements.qty',
-      'asset_id.quantity', 'asset_id.qty', 'asset_id.jumlah',
-      'item_id.quantity', 'item_id.qty', 'item_id.jumlah',
-      'tool_id.quantity', 'tool_id.qty', 'tool_id.jumlah'
-    ]))
+    .map((detail) => {
+      const normalized = expandDetailRecord(detail);
+      const q = pickHumanValue(normalized, ['quantity', 'qty', 'jumlah', 'amount', 'total']);
+      if (q !== '-') return q;
+      const bQty = findBetterSarmokQty(normalized);
+      return bQty !== null ? String(bQty) : '-';
+    })
     .filter((quantity) => quantity !== '-');
 
   return quantities.join(', ') || '-';
@@ -652,23 +727,50 @@ const buildSarmokDetailUrl = (endpoint: string, kind: SarmokDetailKind, metricLa
 };
 
 const getSarmokStatusLabel = (value: unknown) => {
-  const raw = formatDetailValue(value);
-  const statusMap: Record<string, string> = {
-    '0': 'Menunggu',
-    '1': 'Proses',
-    '2': 'Selesai',
-    pending: 'Menunggu',
-    process: 'Proses',
-    in_progress: 'Proses',
-    verified: 'Terverifikasi',
-    rejected: 'Ditolak',
-    reject: 'Ditolak',
-    complete: 'Selesai',
-    completed: 'Selesai',
-    finished: 'Selesai',
+  const raw = formatDetailValue(value).toLowerCase();
+  
+  const statusMap: Record<string, { label: string; color: string; bg: string; border: string }> = {
+    '0': { label: 'PENDING', color: 'var(--accent-amber)', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.5)' },
+    'pending': { label: 'PENDING', color: 'var(--accent-amber)', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.5)' },
+    'waiting': { label: 'PENDING', color: 'var(--accent-amber)', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.5)' },
+    'waiting_confirmation': { label: 'PENDING', color: 'var(--accent-amber)', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.5)' },
+    
+    '1': { label: 'VERIFIED', color: 'var(--accent-blue)', bg: 'rgba(59,130,246,0.08)', border: 'rgba(59,130,246,0.5)' },
+    'verified': { label: 'VERIFIED', color: 'var(--accent-blue)', bg: 'rgba(59,130,246,0.08)', border: 'rgba(59,130,246,0.5)' },
+    'approved': { label: 'VERIFIED', color: 'var(--accent-blue)', bg: 'rgba(59,130,246,0.08)', border: 'rgba(59,130,246,0.5)' },
+    'active': { label: 'VERIFIED', color: 'var(--accent-blue)', bg: 'rgba(59,130,246,0.08)', border: 'rgba(59,130,246,0.5)' },
+    
+    '2': { label: 'RETURNED', color: 'var(--accent-emerald)', bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.5)' },
+    'returned': { label: 'RETURNED', color: 'var(--accent-emerald)', bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.5)' },
+    'complete': { label: 'RETURNED', color: 'var(--accent-emerald)', bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.5)' },
+    'completed': { label: 'RETURNED', color: 'var(--accent-emerald)', bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.5)' },
+    'done': { label: 'RETURNED', color: 'var(--accent-emerald)', bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.5)' },
+    'finish': { label: 'RETURNED', color: 'var(--accent-emerald)', bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.5)' },
+    
+    '3': { label: 'REJECTED', color: 'var(--accent-rose)', bg: 'rgba(244,63,94,0.08)', border: 'rgba(244,63,94,0.5)' },
+    'rejected': { label: 'REJECTED', color: 'var(--accent-rose)', bg: 'rgba(244,63,94,0.08)', border: 'rgba(244,63,94,0.5)' },
+    'reject': { label: 'REJECTED', color: 'var(--accent-rose)', bg: 'rgba(244,63,94,0.08)', border: 'rgba(244,63,94,0.5)' },
   };
 
-  return statusMap[raw.toLowerCase()] || raw;
+  const style = statusMap[raw] || { label: raw.toUpperCase(), color: 'var(--text-secondary)', bg: 'rgba(255,255,255,0.05)', border: 'var(--border-subtle)' };
+
+  return (
+    <div style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      padding: '4px 10px',
+      borderRadius: '6px',
+      fontSize: '0.68rem',
+      fontWeight: 800,
+      letterSpacing: '0.04em',
+      color: style.color,
+      background: style.bg,
+      border: `1px solid ${style.border}`,
+      textTransform: 'uppercase'
+    }}>
+      {style.label}
+    </div>
+  );
 };
 
 const normalizeStatusValue = (value: unknown) => {
@@ -743,10 +845,17 @@ const isSarmokProcessRow = (row: unknown) => {
   return hasAnyDetailValue(row, ['process_at', 'processed_at', 'start_at']) && !hasAnyDetailValue(row, ['finish_at', 'finished_at', 'completed_at']);
 };
 
-const isSarmokCompleteRow = (row: unknown) => {
+
+const isSarmokReturnedRow = (row: unknown) => {
   const status = getRowStatusValue(row);
-  if (['2', 'complete', 'completed', 'done', 'finish', 'finished', 'selesai'].includes(status)) return true;
-  return hasAnyDetailValue(row, ['finish_at', 'finished_at', 'completed_at']);
+  const returnedKeywords = ['2', 'returned', 'dikembalikan', 'kembali', 'complete', 'completed', 'done', 'finish', 'finished', 'selesai', 'terkembali'];
+  if (returnedKeywords.includes(status)) return true;
+  
+  return hasAnyDetailValue(row, [
+    'return_at', 'returned_at', 'finish_at', 'finished_at', 'completed_at', 
+    'return_date', 'returned_date', 'finish_date', 'finished_date', 'completed_date',
+    'actual_return_date', 'actual_return_at'
+  ]);
 };
 
 const isSarmokActiveRow = (row: unknown) => {
@@ -754,7 +863,7 @@ const isSarmokActiveRow = (row: unknown) => {
   if (['1', 'active', 'approved', 'verified', 'terverifikasi', 'aktif'].includes(status)) return true;
   if (isTruthyDetailFlag(row, ['verified_responsibility', 'verified_admin'])) return true;
   if (status !== '-') return false;
-  return hasAnyDetailValue(row, ['process_at', 'processed_at', 'approved_at', 'start_at', 'borrow_at']) && !hasAnyDetailValue(row, ['return_at', 'returned_at', 'finish_at', 'finished_at']);
+  return hasAnyDetailValue(row, ['process_at', 'processed_at', 'approved_at', 'start_at', 'borrow_at']) && !isSarmokReturnedRow(row);
 };
 
 const isSarmokRoomInUseRow = (row: unknown) => {
@@ -777,7 +886,7 @@ const filterSarmokDetailRows = (rows: any[], metricLabel: string) => {
   if (normalizedLabel.includes('menunggu') || normalizedLabel.includes('pending')) return rows.filter(isSarmokPendingRow);
   if (normalizedLabel.includes('dipakai')) return rows.filter(isSarmokRoomInUseRow);
   if (normalizedLabel.includes('diproses') || normalizedLabel.includes('proses') || normalizedLabel.includes('progress')) return rows.filter(isSarmokProcessRow);
-  if (normalizedLabel.includes('complete') || normalizedLabel.includes('selesai')) return rows.filter(isSarmokCompleteRow);
+  if (normalizedLabel.includes('complete') || normalizedLabel.includes('selesai') || normalizedLabel.includes('kembali') || normalizedLabel.includes('returned') || normalizedLabel.includes('dikembalikan')) return rows.filter(isSarmokReturnedRow);
   if (normalizedLabel.includes('aktif') || normalizedLabel.includes('terverifikasi') || normalizedLabel.includes('disetujui') || normalizedLabel.includes('berlangsung') || normalizedLabel.includes('reservasi')) return rows.filter(isSarmokActiveRow);
 
   return rows;
@@ -906,13 +1015,45 @@ const getReminderColumns = (kind: SarmokDetailKind) => {
       render: (row: any) => pickCreatorName(row),
     },
     {
+      label: 'Guru PJ',
+      minWidth: 170,
+      render: (row: any) => pickHumanValue(row, ['person_responsibility.name', 'person_responsibility.nama', 'verifier.name', 'verifier.nama', 'pic.name', 'user_pic.name', 'approver.name', 'approved_by.name', 'handler.name']),
+    },
+    {
       label: 'Alat/Barang',
-      minWidth: 190,
-      render: (row: any) => formatBorrowItems(row),
+      minWidth: 320,
+      render: (row: any) => (
+        <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+          {formatBorrowItems(row)}
+          {(() => {
+            const returned = isSarmokReturnedRow(row);
+            const items = getDetailCollection(row, TOOL_BORROW_FIELDS);
+            const count = items.length || 1;
+            
+            return (
+              <div style={{ 
+                marginTop: '0.5rem', 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: '0.4rem',
+                padding: '3px 8px',
+                borderRadius: '6px',
+                fontSize: '0.65rem',
+                fontWeight: 700,
+                border: returned ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(244,63,94,0.3)',
+                background: returned ? 'rgba(16,185,129,0.06)' : 'rgba(244,63,94,0.06)',
+                color: returned ? 'var(--accent-emerald)' : 'var(--accent-rose)'
+              }}>
+                {count} items {returned ? 'returned' : 'still borrow'}
+              </div>
+            );
+          })()}
+        </div>
+      ),
     },
     {
       label: 'Jumlah',
-      minWidth: 90,
+      minWidth: 100,
       render: (row: any) => formatBorrowQuantity(row),
     },
     {
@@ -2907,7 +3048,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                   )}
 
                   <div style={{ overflowX: 'auto', border: '1px solid var(--border-subtle)', borderRadius: 8, background: 'rgba(255,255,255,0.02)' }}>
-                    <table style={{ width: '100%', minWidth: '1280px', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                    <table style={{ width: '100%', minWidth: sarmokDetailModal.kind === 'complaints' ? '1120px' : '1280px', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                       <thead>
                         <tr style={{ background: 'rgba(255,255,255,0.03)' }}>
                           <th style={{ width: 52, padding: '0.75rem 0.7rem', textAlign: 'left', fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border-subtle)' }}>No</th>
@@ -2916,7 +3057,9 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                               {column.label}
                             </th>
                           ))}
-                          <th style={{ width: 290, padding: '0.75rem 0.7rem', textAlign: 'left', fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border-subtle)' }}>Pertimbangan</th>
+                          {sarmokDetailModal.kind !== 'complaints' && (
+                            <th style={{ width: 290, padding: '0.75rem 0.7rem', textAlign: 'left', fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border-subtle)' }}>Pertimbangan</th>
+                          )}
                         </tr>
                       </thead>
                       <tbody>
@@ -2938,9 +3081,11 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                                 {column.render(row)}
                               </td>
                             ))}
-                            <td style={{ padding: '0.75rem 0.7rem', verticalAlign: 'top', color: 'var(--text-primary)', fontSize: '0.76rem', lineHeight: 1.45, fontWeight: 700, wordBreak: 'break-word' }}>
-                              {getDecisionNote(sarmokDetailModal.kind, row)}
-                            </td>
+                            {sarmokDetailModal.kind !== 'complaints' && (
+                              <td style={{ padding: '0.75rem 0.7rem', verticalAlign: 'top', color: 'var(--text-primary)', fontSize: '0.76rem', lineHeight: 1.45, fontWeight: 700, wordBreak: 'break-word' }}>
+                                {getDecisionNote(sarmokDetailModal.kind, row)}
+                              </td>
+                            )}
                           </tr>
                         ))}
                       </tbody>
@@ -3147,6 +3292,11 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Terverifikasi/Aktif</span>
                     {renderSarmokMetricButton(mokletService.toolsLoan?.haveNotReturn ?? '-', '#3b82f6', 'toolsLoan', 'Peminjaman Alat', 'Terverifikasi/Aktif', SARMOK_BORROW_DETAIL_API_URL)}
+                  </div>
+                  <div style={{ height: '1px', background: 'var(--border-subtle)' }} />
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Dikembalikan/Selesai</span>
+                    {renderSarmokMetricButton(mokletService.toolsLoan?.returned ?? '-', '#10b981', 'toolsLoan', 'Peminjaman Alat', 'Selesai', SARMOK_BORROW_DETAIL_API_URL)}
                   </div>
                 </div>
               )}
@@ -3982,7 +4132,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
             className="glass-panel"
             onClick={(event) => event.stopPropagation()}
             style={{
-              width: 'min(500px, 100%)',
+              width: sarmokDetailModal?.kind === 'complaints' ? 'min(760px, 100%)' : 'min(500px, 100%)',
               marginTop: '5vh',
               maxHeight: 'none',
               overflow: 'hidden',
@@ -3997,7 +4147,15 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
             <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.02)' }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                  <Briefcase size={18} color={sarmokDetailModal?.accent || 'var(--accent-blue)'} /> Daftar Item Dipinjam
+                  {sarmokDetailModal?.kind === 'complaints' ? (
+                    <>
+                      <MessageSquare size={18} color={sarmokDetailModal?.accent || 'var(--accent-rose)'} /> Detail Pengaduan
+                    </>
+                  ) : (
+                    <>
+                      <Briefcase size={18} color={sarmokDetailModal?.accent || 'var(--accent-blue)'} /> Daftar Item Dipinjam
+                    </>
+                  )}
                 </h3>
               </div>
               <button
@@ -4011,7 +4169,27 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
             </div>
             
             <div style={{ padding: '1.5rem', overflowY: 'auto', flex: 1 }}>
-              {(() => {
+              {sarmokDetailModal?.kind === 'complaints' ? (() => {
+                const complaintDetails = [
+                  ['Tanggal', formatSarmokDate(pickDetailValue(sarmokRowDetailModal, ['created_at', 'updated_at', 'process_at', 'date', 'tanggal']))],
+                  ['Pelapor', pickCreatorName(sarmokRowDetailModal)],
+                  ['Ruang/Lokasi', pickHumanValue(sarmokRowDetailModal, ['room.name', 'room.nama', 'room_name', 'room', 'location.name', 'location', 'lokasi'])],
+                  ['Keluhan', pickHumanValue(sarmokRowDetailModal, ['complaint_description', 'complaint', 'keluhan', 'description', 'deskripsi', 'problem', 'issue', 'reason', 'note', 'notes'])],
+                  ['Kategori', pickHumanValue(sarmokRowDetailModal, ['category.name', 'category', 'type.name', 'type'])],
+                  ['PIC/Tindak Lanjut', pickHumanValue(sarmokRowDetailModal, ['pic.name', 'user_pic.name', 'assignee.name', 'handler.name', 'technician.name', 'user_pic'])],
+                ].filter(([, value]) => value !== '-');
+
+                return (
+                  <div style={{ display: 'grid', gap: '0.85rem' }}>
+                    {complaintDetails.map(([label, value]) => (
+                      <div key={label} style={{ padding: '0.9rem 1rem', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
+                        <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>{label}</div>
+                        <div style={{ fontSize: label === 'Keluhan' ? '0.86rem' : '0.82rem', fontWeight: label === 'Keluhan' ? 600 : 700, color: 'var(--text-primary)', lineHeight: 1.55 }}>{value}</div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })() : (() => {
                 const items = getDetailCollection(sarmokRowDetailModal, ['SARPRA DETAIL BORROW', 'sarpra_detail_borrow', 'items', 'tools', 'assets', 'procurements']);
                 
                 if (items.length === 0) {
@@ -4026,83 +4204,27 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                   <div style={{ display: 'grid', gap: '0.85rem' }}>
                     {items.map((item: any, idx) => {
                       const expanded = expandDetailRecord(item);
-                      const expandedAny = expanded as any;
-                      
+
                       let name = pickHumanValue(expanded, [
-                        'asset.name', 'asset.nama', 'item.asset.name', 'item.asset.nama',
-                        'label.asset.name', 'label.asset.nama', 'label.procurement.asset.name', 'label.procurement.asset.nama',
-                        'procurement.asset.name', 'procurement.asset.nama', 'procurements.asset.name', 'procurements.asset.nama',
-                        'item.name', 'item.nama', 'tool.name', 'tool.nama', 'sarpra_item.name', 'sarpra_item.nama',
-                        'name', 'nama', 'asset.title', 'asset.label', 'title'
+                        'asset.name', 'asset.nama', 'asset.title', 'asset.label',
+                        'item.asset.name', 'item.asset.nama', 'label.asset.name', 'label.asset.nama',
+                        'label.procurement.asset.name', 'label.procurement.asset.nama',
+                        'procurement.name', 'procurement.nama', 'procurements.name', 'procurements.nama',
+                        'procurements.asset.name', 'procurements.asset.nama',
+                        'procurement.asset.name', 'procurement.asset.nama',
+                        'item.name', 'item.nama', 'name', 'nama', 'title', 'label'
                       ]);
 
-                      // If name is just a number/ID, try to find a better one deeper
-                      if (name === '-' || /^\d+$/.test(name)) {
-                        const findBetterName = (obj: any): string | null => {
-                          if (!obj || typeof obj !== 'object') return null;
-                          if (Array.isArray(obj)) {
-                            for (const item of obj) {
-                              const found = findBetterName(item);
-                              if (found) return found;
-                            }
-                            return null;
-                          }
-                          
-                          // Check direct properties first (prioritize asset/item/label)
-                          for (const key of ['asset', 'item', 'label', 'procurement', 'sarpra']) {
-                            if (obj[key]) {
-                              const found = findBetterName(obj[key]);
-                              if (found) return found;
-                            }
-                          }
-
-                          const n = obj.name || obj.nama || obj.title || obj.label;
-                          if (typeof n === 'string' && n.length > 2 && !/^\d+$/.test(n)) return n;
-                          
-                          for (const v of Object.values(obj)) {
-                            const found = findBetterName(v);
-                            if (found) return found;
-                          }
-                          return null;
-                        };
-                        const better = findBetterName(expanded);
-                        if (better) name = better;
+                      if (name === '-' || /^\d+$/.test(name) || isSarmokUuid(name) || name.includes('{')) {
+                        name = findBetterSarmokName(expanded) || name;
                       }
+                      if (name.includes('{')) name = '-';
 
-                      let qty = pickHumanValue(expanded, [
-                        'quantity', 'qty', 'jumlah', 'amount', 'total', 
-                        'item.quantity', 'item.qty', 'item.jumlah',
-                        'item.asset.quantity', 'item.asset.qty', 'item.asset.jumlah',
-                        'label.quantity', 'label.qty', 'label.jumlah',
-                        'label.procurement.asset.quantity'
-                      ]);
+                      let qty = '-';
+                      const bQty = findBetterSarmokQty(expanded);
+                      if (bQty !== null) qty = String(bQty);
 
-                      // If qty is still '-', search recursively
-                      if (qty === '-') {
-                        const findBetterQty = (obj: any): any => {
-                          if (!obj || typeof obj !== 'object') return null;
-                          if (Array.isArray(obj)) {
-                            for (const item of obj) {
-                              const found = findBetterQty(item);
-                              if (found !== null) return found;
-                            }
-                            return null;
-                          }
-
-                          const q = obj.quantity ?? obj.qty ?? obj.jumlah ?? obj.amount ?? obj.total;
-                          if (q !== undefined && q !== null && q !== '') return q;
-
-                          for (const v of Object.values(obj)) {
-                            const found = findBetterQty(v);
-                            if (found !== null) return found;
-                          }
-                          return null;
-                        };
-                        const better = findBetterQty(expanded);
-                        if (better !== null) qty = String(better);
-                      }
-
-                      const displayName = name !== '-' ? name : (expandedAny.asset_id || expandedAny.id || 'Item Tanpa Nama');
+                      const displayName = (name !== '-' && !name.includes('{')) ? name : 'Item Tanpa Nama';
                       const displayQty = qty !== '-' ? qty : '-';
                       
                       return (

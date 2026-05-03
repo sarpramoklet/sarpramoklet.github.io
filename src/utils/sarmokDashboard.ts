@@ -10,6 +10,7 @@ export type SarmokDashboardData = {
   toolsLoan: {
     waitingConfirmation: number;
     haveNotReturn: number;
+    returned: number;
   };
 };
 
@@ -28,6 +29,7 @@ const FIELD_ALIASES = {
   onProcess: ['onProcess', 'on_process', 'inProcess', 'in_process', 'processing', 'inProgress', 'in_progress', 'diproses', 'sedangDiproses', 'sedang_diproses'],
   activeReservation: ['activeReservation', 'active_reservation', 'active', 'aktif', 'reservationActive', 'reservation_active', 'approved', 'disetujui', 'ongoing', 'onGoing', 'on_going', 'sedangBerlangsung', 'sedang_berlangsung'],
   haveNotReturn: ['haveNotReturn', 'have_not_return', 'notReturn', 'not_return', 'notReturned', 'not_returned', 'verified', 'verifiedLoan', 'verifiedLoans', 'approved', 'activeLoan', 'activeLoans', 'terverifikasi', 'belumKembali', 'belum_kembali', 'belumDikembalikan', 'belum_dikembalikan'],
+  returned: ['returned', 'return', 'dikembalikan', 'kembali', 'complete', 'completed', 'selesai', 'done'],
 };
 
 const normalizeToken = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -179,6 +181,7 @@ export const normalizeSarmokDashboardPayload = (payload: unknown): SarmokDashboa
     toolsLoan: {
       waitingConfirmation: sectionNumber(root, SECTION_ALIASES.toolsLoan, FIELD_ALIASES.waitingConfirmation),
       haveNotReturn: sectionNumber(root, SECTION_ALIASES.toolsLoan, FIELD_ALIASES.haveNotReturn),
+      returned: sectionNumber(root, SECTION_ALIASES.toolsLoan, FIELD_ALIASES.returned),
     },
   };
 };
@@ -222,6 +225,7 @@ export const normalizeSarmokDashboardText = (text: string): SarmokDashboardData 
     toolsLoan: {
       waitingConfirmation: findTextValue(toolsSection, 'Waiting for Confirmation') || findTextValue(toolsSection, 'Menunggu Konfirmasi'),
       haveNotReturn: findTextValue(toolsSection, 'Have not return') || findTextValue(toolsSection, 'Belum Dikembalikan') || findTextValue(toolsSection, 'Belum Kembali'),
+      returned: findTextValue(toolsSection, 'Returned') || findTextValue(toolsSection, 'Dikembalikan') || findTextValue(toolsSection, 'Selesai'),
     },
   };
 };
