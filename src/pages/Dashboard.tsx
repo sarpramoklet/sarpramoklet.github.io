@@ -242,22 +242,27 @@ const normalizeSarmokComplaintStats = (
   fallback: { waitingConfirmation: number; onProcess: number; rejected: number },
 ): SarmokComplaintStats => {
   const detailRows = normalizeSarmokDetailRows(payload);
+  const unwrapped = unwrapSarmokDetailPayload(payload) as any;
   
-  const pending = pickSarmokCount(payload, ['count_pending', 'countPending', 'pending', 'pending_count', 'countWaitingComplaints', 'waitingConfirmation']) 
+  const pending = unwrapped?.countWaitingComplaints ?? unwrapped?.count_waiting_complaints 
+    ?? pickSarmokCount(payload, ['count_pending', 'countPending', 'pending', 'pending_count', 'waitingConfirmation']) 
     ?? pickSarmokStatusCount(payload, ['pending', 'waiting', 'menunggu', 'konfirmasi'])
     ?? fallback.waitingConfirmation 
     ?? detailRows.filter(isSarmokPendingRow).length
     ?? 0;
-  const inProgress = pickSarmokCount(payload, ['count_in_progress', 'countInProgress', 'count_process', 'in_progress', 'inProgress', 'on_process', 'countInProcessComplaints']) 
+  const inProgress = unwrapped?.countInProcessComplaints ?? unwrapped?.count_in_process_complaints
+    ?? pickSarmokCount(payload, ['count_in_progress', 'countInProgress', 'count_process', 'in_progress', 'inProgress', 'on_process']) 
     ?? pickSarmokStatusCount(payload, ['in_progress', 'on_process', 'process', 'diproses', 'berjalan'])
     ?? fallback.onProcess 
     ?? detailRows.filter(isSarmokProcessRow).length
     ?? 0;
-  const complete = pickSarmokCount(payload, ['count_completed', 'count_complete', 'countComplete', 'countCompleted', 'completed', 'complete']) 
+  const complete = unwrapped?.countCompleteComplaints ?? unwrapped?.count_complete_complaints
+    ?? pickSarmokCount(payload, ['count_completed', 'count_complete', 'countComplete', 'countCompleted', 'completed', 'complete']) 
     ?? pickSarmokStatusCount(payload, ['completed', 'complete', 'selesai', 'done', 'returned'])
     ?? detailRows.filter(isSarmokReturnedRow).length
     ?? 0;
-  const rejected = pickSarmokCount(payload, ['count_rejected', 'countRejected', 'rejected', 'reject', 'ditolak']) 
+  const rejected = unwrapped?.countRejectedComplaints ?? unwrapped?.count_rejected_complaints
+    ?? pickSarmokCount(payload, ['count_rejected', 'countRejected', 'rejected', 'reject', 'ditolak']) 
     ?? pickSarmokStatusCount(payload, ['rejected', 'reject', 'ditolak'])
     ?? fallback.rejected
     ?? detailRows.filter(isSarmokRejectedRow).length
@@ -276,17 +281,22 @@ const normalizeSarmokRoomStats = (
   fallback: { waitingConfirmation?: number; rejectedReservation?: number; activeReservation: number; inUseReservation?: number },
 ): SarmokRoomStats => {
   const detailRows = normalizeSarmokDetailRows(payload);
-  const rejectedReservation = pickSarmokCount(payload, ['count_rejected', 'countRejected', 'count_rejected_reservation', 'rejected', 'reject', 'ditolak']) 
+  const unwrapped = unwrapSarmokDetailPayload(payload) as any;
+
+  const rejectedReservation = unwrapped?.countRejectedReservation ?? unwrapped?.count_rejected_reservation
+    ?? pickSarmokCount(payload, ['count_rejected', 'countRejected', 'count_rejected_reservation', 'rejected', 'reject', 'ditolak']) 
     ?? pickSarmokStatusCount(payload, ['rejected', 'reject', 'ditolak'])
     ?? fallback.rejectedReservation 
     ?? detailRows.filter(isSarmokRejectedRow).length
     ?? 0;
-  const waitingConfirmation = pickSarmokCount(payload, ['count_pending', 'countPending', 'pending', 'pending_count', 'waitingConfirmation', 'waiting_confirmation'])
+  const waitingConfirmation = unwrapped?.countPendingReservation ?? unwrapped?.count_pending_reservation
+    ?? pickSarmokCount(payload, ['count_pending', 'countPending', 'pending', 'pending_count', 'waitingConfirmation', 'waiting_confirmation'])
     ?? pickSarmokStatusCount(payload, ['pending', 'waiting', 'waiting_confirmation', 'menunggu', 'menunggu_konfirmasi', 'konfirmasi'])
     ?? fallback.waitingConfirmation
     ?? detailRows.filter(isSarmokPendingRow).length
     ?? 0;
-  const activeReservation = pickSarmokCount(payload, ['count_verified', 'countVerified', 'count_approved', 'countApproved', 'count_active', 'countActive', 'count_ongoing', 'countOngoing', 'verified', 'approved', 'active', 'ongoing', 'sedang_berlangsung']) 
+  const activeReservation = unwrapped?.countActiveReservation ?? unwrapped?.count_active_reservation
+    ?? pickSarmokCount(payload, ['count_verified', 'countVerified', 'count_approved', 'countApproved', 'count_active', 'countActive', 'count_ongoing', 'countOngoing', 'verified', 'approved', 'active', 'ongoing', 'sedang_berlangsung']) 
     ?? pickSarmokStatusCount(payload, ['verified', 'approved', 'active', 'ongoing', 'sedang_berlangsung', 'disetujui'])
     ?? fallback.activeReservation 
     ?? detailRows.filter(isSarmokActiveRow).length
@@ -304,27 +314,32 @@ const normalizeSarmokToolsStats = (
   fallback: SarmokToolsStats,
 ): SarmokToolsStats => {
   const rows = filterSarmokRowsByKind(normalizeSarmokDetailRows(payload), 'toolsLoan');
+  const unwrapped = unwrapSarmokDetailPayload(payload) as any;
   const pendingRowsCount = payload === null || payload === undefined ? undefined : rows.filter(isSarmokPendingRow).length;
   const activeRowsCount = payload === null || payload === undefined ? undefined : rows.filter(isSarmokActiveRow).length;
   const returnedRowsCount = payload === null || payload === undefined ? undefined : rows.filter(isSarmokReturnedRow).length;
   const rejectedRowsCount = payload === null || payload === undefined ? undefined : rows.filter(isSarmokRejectedRow).length;
 
-  const waitingConfirmation = pickSarmokCount(payload, ['count_pending', 'countPending', 'pending', 'pending_count', 'waitingConfirmation', 'waiting_confirmation'])
+  const waitingConfirmation = unwrapped?.countPendingLoans ?? unwrapped?.count_pending_loans
+    ?? pickSarmokCount(payload, ['count_pending', 'countPending', 'pending', 'pending_count', 'waitingConfirmation', 'waiting_confirmation'])
     ?? pickSarmokStatusCount(payload, ['pending', 'waiting', 'waiting_confirmation', 'menunggu', 'menunggu_konfirmasi', 'konfirmasi'])
     ?? fallback.waitingConfirmation
     ?? pendingRowsCount
     ?? 0;
-  const haveNotReturn = pickSarmokCount(payload, ['count_verified', 'countVerified', 'count_approved', 'countApproved', 'count_active', 'countActive', 'count_not_returned', 'countNotReturned', 'verified', 'approved', 'active', 'haveNotReturn', 'have_not_return'])
+  const haveNotReturn = unwrapped?.countVerifiedLoans ?? unwrapped?.count_verified_loans
+    ?? pickSarmokCount(payload, ['count_verified', 'countVerified', 'count_approved', 'countApproved', 'count_active', 'countActive', 'count_not_returned', 'countNotReturned', 'verified', 'approved', 'active', 'haveNotReturn', 'have_not_return'])
     ?? pickSarmokStatusCount(payload, ['verified', 'approved', 'active', 'terverifikasi', 'disetujui', 'aktif', 'ongoing', 'berlangsung'])
     ?? fallback.haveNotReturn
     ?? activeRowsCount
     ?? 0;
-  const returned = pickSarmokCount(payload, ['count_returned', 'count_complete', 'countReturned', 'countComplete', 'returned', 'complete', 'dikembalikan'])
+  const returned = unwrapped?.countReturnedLoans ?? unwrapped?.count_returned_loans
+    ?? pickSarmokCount(payload, ['count_returned', 'count_complete', 'countReturned', 'countComplete', 'returned', 'complete', 'dikembalikan'])
     ?? pickSarmokStatusCount(payload, ['returned', 'complete', 'completed', 'selesai', 'dikembalikan', 'kembali'])
     ?? fallback.returned
     ?? returnedRowsCount
     ?? 0;
-  const rejected = pickSarmokCount(payload, ['count_rejected', 'countRejected', 'rejected', 'reject'])
+  const rejected = unwrapped?.countRejectedLoans ?? unwrapped?.count_rejected_loans
+    ?? pickSarmokCount(payload, ['count_rejected', 'countRejected', 'rejected', 'reject'])
     ?? pickSarmokStatusCount(payload, ['rejected', 'reject', 'ditolak'])
     ?? fallback.rejected
     ?? rejectedRowsCount
