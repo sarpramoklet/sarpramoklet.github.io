@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, LabelList, LineChart, Line, Legend } from 'recharts';
-import { UserCircle2, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, MessageSquare, AlertCircle, Edit3, Trash2, Wind, Briefcase, Smartphone, Activity, Coins, Camera, X, Heart } from 'lucide-react';
+import { UserCircle2, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, MessageSquare, AlertCircle, Edit3, Trash2, Wind, Briefcase, Smartphone, Activity, Coins, Camera, X, Heart, Home } from 'lucide-react';
 import { getCurrentUser, ROLES, USERS } from '../data/organization';
 import { mergeCapexProjects } from '../data/capexProjects';
 import { getUtilityChartData } from '../data/utilities';
@@ -4314,6 +4314,10 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                     <>
                       <MessageSquare size={18} color={sarmokDetailModal?.accent || 'var(--accent-rose)'} /> Detail Pengaduan
                     </>
+                  ) : sarmokDetailModal?.kind === 'roomReservation' ? (
+                    <>
+                      <Home size={18} color={sarmokDetailModal?.accent || 'var(--accent-green)'} /> Detail Peminjaman Ruang
+                    </>
                   ) : (
                     <>
                       <Briefcase size={18} color={sarmokDetailModal?.accent || 'var(--accent-blue)'} /> Daftar Item Dipinjam
@@ -4348,6 +4352,26 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                       <div key={label} style={{ padding: '0.9rem 1rem', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
                         <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>{label}</div>
                         <div style={{ fontSize: label === 'Keluhan' ? '0.86rem' : '0.82rem', fontWeight: label === 'Keluhan' ? 600 : 700, color: 'var(--text-primary)', lineHeight: 1.55 }}>{value}</div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })() : sarmokDetailModal?.kind === 'roomReservation' ? (() => {
+                const roomDetails = [
+                  ['Peminjam', pickRoomReservationBorrower(sarmokRowDetailModal)],
+                  ['Keperluan', pickHumanValue(sarmokRowDetailModal, ['need_description', 'purpose', 'keperluan', 'borrow_description', 'description', 'deskripsi', 'event_name', 'activity', 'reason', 'note', 'notes'])],
+                  ['Ruang', pickRoomReservationName(sarmokRowDetailModal)],
+                  ['Waktu Reservasi', formatRoomReservationRange(sarmokRowDetailModal)],
+                  ['Penanggung Jawab', pickHumanValue(sarmokRowDetailModal, ['person_responsibility.name', 'person_responsibility.nama', 'verifier_reservation.name', 'verifier_reservation.nama', 'pic.name', 'user_pic.name', 'approver.name', 'approved_by.name', 'handler.name'])],
+                  ['Proses Pada', formatSarmokDate(pickDetailValue(sarmokRowDetailModal, ['process_at', 'processed_at', 'approved_at']))],
+                ].filter(([, value]) => value !== '-');
+
+                return (
+                  <div style={{ display: 'grid', gap: '0.85rem' }}>
+                    {roomDetails.map(([label, value]) => (
+                      <div key={label} style={{ padding: '0.9rem 1rem', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
+                        <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>{label}</div>
+                        <div style={{ fontSize: label === 'Keperluan' ? '0.86rem' : '0.82rem', fontWeight: label === 'Keperluan' ? 600 : 700, color: 'var(--text-primary)', lineHeight: 1.55 }}>{value}</div>
                       </div>
                     ))}
                   </div>
