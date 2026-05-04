@@ -365,44 +365,6 @@ const isDetailRecord = (value: unknown): value is Record<string, unknown> => {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 };
 
-const pickDetailValue = (source: unknown, paths: string[]): unknown => {
-  if (!isDetailRecord(source)) return undefined;
-
-  for (const path of paths) {
-    const value = path.split('.').reduce<unknown>((current, key) => {
-      if (!isDetailRecord(current)) return undefined;
-      return current[key];
-    }, source);
-
-    if (value !== undefined && value !== null && value !== '') return value;
-  }
-
-  return undefined;
-};
-
-const formatHumanValue = (value: unknown): string => {
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    if (trimmed.startsWith('{') || trimmed.startsWith('[')) return '-';
-  }
-
-  if (isDetailRecord(value)) {
-    const readable = pickDetailValue(value, ['name', 'nama', 'full_name', 'fullname', 'title', 'label', 'description', 'code', 'kode', 'email']);
-    if (readable !== undefined) return formatHumanValue(readable);
-  }
-
-  if (Array.isArray(value)) {
-    if (value.length === 0) return '-';
-    return value.map(formatHumanValue).filter((item) => item !== '-').join(', ') || '-';
-  }
-
-  return formatDetailValue(value);
-};
-
-const pickHumanValue = (row: unknown, paths: string[]) => {
-  return formatHumanValue(pickDetailValue(row, paths));
-};
-
 const parseMaybeJsonValue = (value: unknown): unknown => {
   if (isDetailRecord(value) || Array.isArray(value)) return value;
   if (typeof value !== 'string') return null;
@@ -436,6 +398,45 @@ const expandDetailRecord = (detail: unknown, visited = new WeakSet<object>()): a
     }
   }
   return expanded;
+};
+
+const pickHumanValue = (row: unknown, paths: string[]) => {
+  const expanded = expandDetailRecord(row);
+  return formatHumanValue(pickDetailValue(expanded, paths));
+};
+
+const pickDetailValue = (source: unknown, paths: string[]): unknown => {
+  if (!isDetailRecord(source)) return undefined;
+
+  for (const path of paths) {
+    const value = path.split('.').reduce<unknown>((current, key) => {
+      if (!isDetailRecord(current)) return undefined;
+      return current[key];
+    }, source);
+
+    if (value !== undefined && value !== null && value !== '') return value;
+  }
+
+  return undefined;
+};
+
+const formatHumanValue = (value: unknown): string => {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (trimmed.startsWith('{') || trimmed.startsWith('[')) return '-';
+  }
+
+  if (isDetailRecord(value)) {
+    const readable = pickDetailValue(value, ['name', 'nama', 'full_name', 'fullname', 'title', 'label', 'description', 'code', 'kode', 'email']);
+    if (readable !== undefined) return formatHumanValue(readable);
+  }
+
+  if (Array.isArray(value)) {
+    if (value.length === 0) return '-';
+    return value.map(formatHumanValue).filter((item) => item !== '-').join(', ') || '-';
+  }
+
+  return formatDetailValue(value);
 };
 
 const getDetailCollection = (row: unknown, paths: string[]) => {
@@ -543,6 +544,19 @@ const pickCreatorName = (row: unknown) => {
     'complainant.name',
     'reporter.name',
     'requester.name',
+  ]);
+};
+
+const pickBorrowerName = (row: unknown) => {
+  return pickHumanValue(row, [
+    'borrower.name',
+    'borrower.nama',
+    'peminjam.name',
+    'peminjam.nama',
+    'student.name',
+    'student.nama',
+    'user.name',
+    'user.nama',
   ]);
 };
 
@@ -1163,9 +1177,14 @@ const getReminderColumns = (kind: SarmokDetailKind) => {
       render: (row: any) => formatSarmokDate(pickDetailValue(row, ['start_date', 'start_at', 'borrow_date', 'borrow_at', 'created_at', 'updated_at', 'tanggal'])),
     },
     {
-      label: 'Peminjam',
+      label: 'Pembuat',
       minWidth: 170,
       render: (row: any) => pickCreatorName(row),
+    },
+    {
+      label: 'Peminjam',
+      minWidth: 170,
+      render: (row: any) => pickBorrowerName(row),
     },
     {
       label: 'Guru PJ',
