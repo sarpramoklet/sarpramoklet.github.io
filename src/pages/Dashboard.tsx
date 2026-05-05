@@ -320,29 +320,29 @@ const normalizeSarmokToolsStats = (
   const returnedRowsCount = payload === null || payload === undefined ? undefined : rows.filter(isSarmokReturnedRow).length;
   const rejectedRowsCount = payload === null || payload === undefined ? undefined : rows.filter(isSarmokRejectedRow).length;
 
-  const waitingConfirmation = fallback.waitingConfirmation
+  const waitingConfirmation = pendingRowsCount
     ?? unwrapped?.countPendingLoans ?? unwrapped?.count_pending_loans
     ?? pickSarmokCount(payload, ['count_pending', 'countPending', 'pending', 'pending_count', 'waitingConfirmation', 'waiting_confirmation'])
     ?? pickSarmokStatusCount(payload, ['pending', 'waiting', 'waiting_confirmation', 'menunggu', 'menunggu_konfirmasi', 'konfirmasi'])
-    ?? pendingRowsCount
+    ?? fallback.waitingConfirmation
     ?? 0;
-  const haveNotReturn = fallback.haveNotReturn
+  const haveNotReturn = activeRowsCount
     ?? unwrapped?.countVerifiedLoans ?? unwrapped?.count_verified_loans
     ?? pickSarmokCount(payload, ['count_verified', 'countVerified', 'count_approved', 'countApproved', 'count_active', 'countActive', 'count_not_returned', 'countNotReturned', 'verified', 'approved', 'active', 'haveNotReturn', 'have_not_return'])
     ?? pickSarmokStatusCount(payload, ['verified', 'approved', 'active', 'terverifikasi', 'disetujui', 'aktif', 'ongoing', 'berlangsung'])
-    ?? activeRowsCount
+    ?? fallback.haveNotReturn
     ?? 0;
-  const returned = fallback.returned
+  const returned = returnedRowsCount
     ?? unwrapped?.countReturnedLoans ?? unwrapped?.count_returned_loans
     ?? pickSarmokCount(payload, ['count_returned', 'count_complete', 'countReturned', 'countComplete', 'returned', 'complete', 'dikembalikan'])
     ?? pickSarmokStatusCount(payload, ['returned', 'complete', 'completed', 'selesai', 'dikembalikan', 'kembali'])
-    ?? returnedRowsCount
+    ?? fallback.returned
     ?? 0;
-  const rejected = fallback.rejected
+  const rejected = rejectedRowsCount
     ?? unwrapped?.countRejectedLoans ?? unwrapped?.count_rejected_loans
     ?? pickSarmokCount(payload, ['count_rejected', 'countRejected', 'rejected', 'reject'])
     ?? pickSarmokStatusCount(payload, ['rejected', 'reject', 'ditolak'])
-    ?? rejectedRowsCount
+    ?? fallback.rejected
     ?? 0;
 
   return { waitingConfirmation, haveNotReturn, returned, rejected };
