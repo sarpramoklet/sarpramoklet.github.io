@@ -182,6 +182,11 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
                 if (excludedPublic.includes(item.name)) return false;
               }
 
+              // pimpinanOnly items: hanya Pimpinan (Waka)
+              if (item.pimpinanOnly) {
+                return user.roleAplikasi === ROLES.PIMPINAN;
+              }
+
               // leaderOnly items: hanya Waka (Pimpinan) + 3 Kaur + Amalia (PIC Admin)
               if (item.leaderOnly) {
                 if (!isLoggedIn) return false;

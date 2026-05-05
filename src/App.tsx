@@ -25,7 +25,7 @@ import CapexBudget from './pages/CapexBudget';
 import ClassroomMonitor from './pages/ClassroomMonitor';
 import ClassroomPriorityFocus from './pages/ClassroomPriorityFocus';
 import Login from './pages/Login';
-import { getCurrentUser } from './data/organization';
+import { getCurrentUser, ROLES } from './data/organization';
 import { NAVIGATION } from './navigation';
 import { logAccess } from './utils/logger';
 
@@ -68,6 +68,14 @@ const ProtectedRoute = ({ isLoggedIn, children }: { isLoggedIn: boolean, childre
   if (!isLoggedIn) {
     return <Navigate to="/login" replace />;
   }
+  return children;
+};
+
+// Pimpinan-only Route Component
+const PimpinanRoute = ({ isLoggedIn, children }: { isLoggedIn: boolean, children: React.ReactNode }) => {
+  if (!isLoggedIn) return <Navigate to="/login" replace />;
+  const currentUser = getCurrentUser();
+  if (currentUser?.roleAplikasi !== ROLES.PIMPINAN) return <Navigate to="/" replace />;
   return children;
 };
 
@@ -186,7 +194,7 @@ function App() {
               <Route path="/operational-cash" element={<ProtectedRoute isLoggedIn={isLoggedIn}><OperationalCash /></ProtectedRoute>} />
               <Route path="/ac-cash" element={<ProtectedRoute isLoggedIn={isLoggedIn}><ACCash /></ProtectedRoute>} />
               <Route path="/ac-history" element={<ProtectedRoute isLoggedIn={isLoggedIn}><ACHistory /></ProtectedRoute>} />
-              <Route path="/logs" element={<ProtectedRoute isLoggedIn={isLoggedIn}><AccessLogs /></ProtectedRoute>} />
+              <Route path="/logs" element={<PimpinanRoute isLoggedIn={isLoggedIn}><AccessLogs /></PimpinanRoute>} />
               <Route path="/assignment" element={<ProtectedRoute isLoggedIn={isLoggedIn}><Assignment /></ProtectedRoute>} />
               <Route path="/projects" element={<ProtectedRoute isLoggedIn={isLoggedIn}><DummyPage title="Proyek & Pengembangan" /></ProtectedRoute>} />
               <Route path="/sop" element={<ProtectedRoute isLoggedIn={isLoggedIn}><DummyPage title="SOP & Dokumen" /></ProtectedRoute>} />

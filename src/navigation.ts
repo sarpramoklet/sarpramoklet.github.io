@@ -16,7 +16,7 @@ export const NAVIGATION = [
   { path: '/ac-cash', name: 'Kas Perawatan AC', icon: Wind, authRequired: true, leaderOnly: true },
   { path: '/ac-monitor', name: 'Monitor AC', icon: Wind, authRequired: true },
   { path: '/ac-history', name: 'Riwayat AC', icon: HistoryIcon, authRequired: true },
-  { path: '/logs', name: 'Log Akses', icon: HistoryIcon, authRequired: true },
+  { path: '/logs', name: 'Log Akses', icon: HistoryIcon, authRequired: true, pimpinanOnly: true },
   { path: '/assignment', name: 'Penugasan', icon: Briefcase, authRequired: true },
 
   { path: '/sop', name: 'SOP & Dokumen', icon: BookOpen, authRequired: true },
