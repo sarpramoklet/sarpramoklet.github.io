@@ -201,4 +201,48 @@ export const logLoginEvent = async (
 
   await postLog(logData);
   console.log(`[Logger] Login recorded for: ${nama} (${email})`);
+
+  if (profilePicture) {
+    await persistProfilePicture({ userId, nama, jabatan, unit, role, email, profilePicture });
+  }
+};
+
+const persistProfilePicture = async (params: {
+  userId: string;
+  nama: string;
+  jabatan: string;
+  unit: string;
+  role: string;
+  email: string;
+  profilePicture: string;
+}) => {
+  const timestamp = getTimestamp();
+  const recordId = `PIC-${params.userId || params.email}`;
+  const payload = {
+    action: 'FINANCE_RECORD',
+    sheetName: 'Profile_Pictures',
+    sheet: 'Profile_Pictures',
+    upsertKey: 'Email',
+
+    id: recordId,
+    ID: recordId,
+    Timestamp: timestamp,
+    UpdatedAt: timestamp,
+    ID_User: params.userId,
+    Nama: params.nama,
+    Jabatan: params.jabatan,
+    Unit: params.unit,
+    Role: params.role,
+    Email: params.email,
+    ProfilePicture: params.profilePicture,
+
+    timestamp,
+    updatedAt: timestamp,
+    nama: params.nama,
+    email: params.email,
+    profilePicture: params.profilePicture,
+  };
+
+  await postLog(payload);
+  console.log(`[Logger] Profile picture persisted for: ${params.nama} (${params.email})`);
 };

@@ -69,9 +69,13 @@ const UserAvatar = ({
       <img
         src={src}
         alt={name}
+        referrerPolicy="no-referrer"
+        loading="lazy"
         style={{ width: '100%', height: '100%', objectFit: 'cover', ...imgStyle }}
         onError={(e) => {
           const target = e.target as HTMLImageElement;
+          if (target.dataset.fallback === 'default') return;
+          target.dataset.fallback = 'default';
           target.src = getDefaultAvatarUrl(name);
         }}
       />

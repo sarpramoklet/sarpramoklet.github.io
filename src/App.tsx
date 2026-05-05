@@ -149,11 +149,22 @@ function App() {
             <Routes>
               {/* Public Routes */}
               <Route path="/login" element={
-                <Login onLogin={(email, picture) => { 
-                  localStorage.setItem('userEmail', email); 
+                <Login onLogin={(email, picture) => {
+                  localStorage.setItem('userEmail', email);
                   if (picture) localStorage.setItem('userPicture', picture);
                   localStorage.setItem('loginSessionSeed', `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`);
-                  setIsLoggedIn(true); 
+                  if (email && picture) {
+                    try {
+                      const cacheKey = 'profileThumbByEmailCache.v1';
+                      const raw = localStorage.getItem(cacheKey);
+                      const map = raw ? JSON.parse(raw) : {};
+                      if (map && typeof map === 'object') {
+                        map[email.toLowerCase()] = picture;
+                        localStorage.setItem(cacheKey, JSON.stringify(map));
+                      }
+                    } catch { /* ignore */ }
+                  }
+                  setIsLoggedIn(true);
                   if (picture) setUserPicture(picture);
                 }} />
               } />
