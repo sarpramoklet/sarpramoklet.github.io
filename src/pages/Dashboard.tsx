@@ -280,30 +280,34 @@ const normalizeSarmokRoomStats = (
   payload: unknown,
   fallback: { waitingConfirmation?: number; rejectedReservation?: number; activeReservation: number; inUseReservation?: number },
 ): SarmokRoomStats => {
-  const detailRows = normalizeSarmokDetailRows(payload);
+  const rows = filterSarmokRowsByKind(normalizeSarmokDetailRows(payload), 'roomReservation');
   const unwrapped = unwrapSarmokDetailPayload(payload) as any;
+  const rejectedRowsCount = payload === null || payload === undefined ? undefined : rows.filter(isSarmokRejectedRow).length;
+  const pendingRowsCount = payload === null || payload === undefined ? undefined : rows.filter(isSarmokPendingRow).length;
+  const activeRowsCount = payload === null || payload === undefined ? undefined : rows.filter(isSarmokActiveRow).length;
+  const inUseRowsCount = payload === null || payload === undefined ? undefined : rows.filter(isSarmokRoomInUseRow).length;
 
-  const rejectedReservation = fallback.rejectedReservation
+  const rejectedReservation = rejectedRowsCount
     ?? unwrapped?.countRejectedReservation ?? unwrapped?.count_rejected_reservation
-    ?? pickSarmokCount(payload, ['count_rejected', 'countRejected', 'count_rejected_reservation', 'rejected', 'reject', 'ditolak']) 
+    ?? pickSarmokCount(payload, ['count_rejected', 'countRejected', 'count_rejected_reservation', 'rejected', 'reject', 'ditolak'])
     ?? pickSarmokStatusCount(payload, ['rejected', 'reject', 'ditolak'])
-    ?? detailRows.filter(isSarmokRejectedRow).length
+    ?? fallback.rejectedReservation
     ?? 0;
-  const waitingConfirmation = fallback.waitingConfirmation
+  const waitingConfirmation = pendingRowsCount
     ?? unwrapped?.countPendingReservation ?? unwrapped?.count_pending_reservation
     ?? pickSarmokCount(payload, ['count_pending', 'countPending', 'pending', 'pending_count', 'waitingConfirmation', 'waiting_confirmation'])
     ?? pickSarmokStatusCount(payload, ['pending', 'waiting', 'waiting_confirmation', 'menunggu', 'menunggu_konfirmasi', 'konfirmasi'])
-    ?? detailRows.filter(isSarmokPendingRow).length
+    ?? fallback.waitingConfirmation
     ?? 0;
-  const activeReservation = fallback.activeReservation
+  const activeReservation = activeRowsCount
     ?? unwrapped?.countActiveReservation ?? unwrapped?.count_active_reservation
-    ?? pickSarmokCount(payload, ['count_verified', 'countVerified', 'count_approved', 'countApproved', 'count_active', 'countActive', 'count_ongoing', 'countOngoing', 'verified', 'approved', 'active', 'ongoing', 'sedang_berlangsung']) 
+    ?? pickSarmokCount(payload, ['count_verified', 'countVerified', 'count_approved', 'countApproved', 'count_active', 'countActive', 'count_ongoing', 'countOngoing', 'verified', 'approved', 'active', 'ongoing', 'sedang_berlangsung'])
     ?? pickSarmokStatusCount(payload, ['verified', 'approved', 'active', 'ongoing', 'sedang_berlangsung', 'disetujui'])
-    ?? detailRows.filter(isSarmokActiveRow).length
+    ?? fallback.activeReservation
     ?? 0;
-  const inUseReservation = fallback.inUseReservation
+  const inUseReservation = inUseRowsCount
     ?? pickSarmokCount(payload, ['count_in_use', 'countInUse', 'count_using', 'countUsing', 'count_current', 'countCurrent', 'in_use', 'inUse', 'using', 'current', 'sedang_dipakai'])
-    ?? detailRows.filter(isSarmokRoomInUseRow).length
+    ?? fallback.inUseReservation
     ?? 0;
 
   return { rejectedReservation, waitingConfirmation, activeReservation, inUseReservation };
