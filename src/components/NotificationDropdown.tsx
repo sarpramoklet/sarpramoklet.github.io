@@ -166,6 +166,51 @@ const parseAccessLogTimestamp = (log: Record<string, any>) => {
   return 0;
 };
 
+const KNOWN_ROUTE_PATHS = [
+  '/meeting', '/it', '/lab', '/sarpras', '/performance', '/tickets',
+  '/utilities', '/assets', '/personnel', '/finance', '/operational-cash',
+  '/ac-cash', '/ac-monitor', '/ac-history', '/logs', '/assignment',
+  '/sop', '/duty-notes', '/classroom-monitor', '/capex',
+];
+
+const resolveAccessLogPath = (log: Record<string, any>): string => {
+  const rawPath = pickLogValue(log, ['Path', 'path']);
+  if (rawPath) {
+    const cleaned = rawPath.split('?')[0].split('#')[0].trim();
+    const normalized = cleaned.startsWith('/') ? cleaned : `/${cleaned}`;
+    const match = KNOWN_ROUTE_PATHS.find((known) => normalized === known || normalized.startsWith(`${known}/`));
+    if (match) return match;
+    if (normalized === '/' || normalized === '') return '/';
+  }
+
+  const pageOrMenu = pickLogValue(log, ['Page', 'page', 'Menu', 'menu']).toLowerCase();
+  if (pageOrMenu) {
+    if (pageOrMenu.includes('kas sarpra') || pageOrMenu.includes('finance')) return '/finance';
+    if (pageOrMenu.includes('operasional')) return '/operational-cash';
+    if (pageOrMenu.includes('perawatan ac') || pageOrMenu.includes('kas ac')) return '/ac-cash';
+    if (pageOrMenu.includes('monitor ac')) return '/ac-monitor';
+    if (pageOrMenu.includes('riwayat ac')) return '/ac-history';
+    if (pageOrMenu.includes('rapat')) return '/meeting';
+    if (pageOrMenu.includes('it service') || pageOrMenu.includes('jaringan')) return '/it';
+    if (pageOrMenu.includes('lab')) return '/lab';
+    if (pageOrMenu.includes('sarpras')) return '/sarpras';
+    if (pageOrMenu.includes('kinerja')) return '/performance';
+    if (pageOrMenu.includes('tiket') || pageOrMenu.includes('layanan')) return '/tickets';
+    if (pageOrMenu.includes('utilitas') || pageOrMenu.includes('tagihan')) return '/utilities';
+    if (pageOrMenu.includes('aset') || pageOrMenu.includes('inventaris')) return '/assets';
+    if (pageOrMenu.includes('personel')) return '/personnel';
+    if (pageOrMenu.includes('log')) return '/logs';
+    if (pageOrMenu.includes('penugasan')) return '/assignment';
+    if (pageOrMenu.includes('sop') || pageOrMenu.includes('dokumen')) return '/sop';
+    if (pageOrMenu.includes('piket') || pageOrMenu.includes('catatan')) return '/duty-notes';
+    if (pageOrMenu.includes('monitor kelas') || pageOrMenu.includes('kelas')) return '/classroom-monitor';
+    if (pageOrMenu.includes('capex')) return '/capex';
+    if (pageOrMenu.includes('dashboard') || pageOrMenu.includes('beranda')) return '/';
+  }
+
+  return '/logs';
+};
+
 const getAccessLogDistinctKey = (actor: string, presenter: ReturnType<typeof getAccessLogPresentation>) => {
   return [
     actor.trim().toLowerCase(),
@@ -466,6 +511,7 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
             const detailSuffix = presenter.meta ? ` • ${presenter.meta}` : '';
             const logId = pickLogValue(log, ['ID', 'id']) || `access-${timestamp}`;
             const distinctKey = getAccessLogDistinctKey(actor, presenter);
+            const targetPath = resolveAccessLogPath(log);
 
             return {
               id: `access-log-${logId}`,
@@ -475,7 +521,7 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
               message: `${actor}: ${presenter.message}${detailSuffix}`,
               date: new Date(timestamp || Date.now()),
               timestamp: timestamp || 0,
-              path: '/logs',
+              path: targetPath,
               icon: Clock,
               color: presenter.color,
               bg: presenter.bg,
