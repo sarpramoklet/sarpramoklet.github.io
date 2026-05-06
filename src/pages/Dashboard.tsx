@@ -2716,29 +2716,29 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         borderLeft: '4px solid var(--accent-cyan)',
       }}
     >
-      <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+      <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.6rem' }}>
         <div>
-          <h3 style={{ fontSize: '1.05rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <AlertCircle size={18} color="var(--accent-cyan)" /> Monitor Rekap Pantauan Kelas
+          <h3 style={{ fontSize: '0.95rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <AlertCircle size={16} color="var(--accent-cyan)" /> Monitor Rekap Pantauan Kelas
           </h3>
-          <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)', maxWidth: '760px' }}>
-            Ringkasan harian kebersihan, kerapihan, dan awareness penghematan energi agar wali kelas dan guru cepat tahu ruang yang perlu ditindaklanjuti pada snapshot terbaru.
+          <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.7rem', color: 'var(--text-secondary)', maxWidth: '760px' }}>
+            Ringkasan harian kebersihan, kerapihan & hemat energi untuk wali kelas dan guru.
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <a href="#/classroom-monitor" className="btn btn-outline" style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}>
+        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+          <a href="#/classroom-monitor" className="btn btn-outline" style={{ fontSize: '0.72rem', padding: '0.3rem 0.65rem' }}>
             Detail & Input
           </a>
-          <span className="badge badge-info" style={{ background: 'rgba(6,182,212,0.12)', color: 'var(--accent-cyan)', borderColor: 'rgba(6,182,212,0.28)' }}>
-            Snapshot {classroomSnapshotDate ? formatWifiDateDisplay(classroomSnapshotDate) : 'Belum ada data'}
+          <span className="badge badge-info" style={{ background: 'rgba(6,182,212,0.12)', color: 'var(--accent-cyan)', borderColor: 'rgba(6,182,212,0.28)', fontSize: '0.65rem' }}>
+            Snapshot {classroomSnapshotDate ? formatWifiDateDisplay(classroomSnapshotDate) : '-'}
           </span>
-          <span className="badge badge-success">
+          <span className="badge badge-success" style={{ fontSize: '0.65rem' }}>
             Cakupan {classroomCoverage}/{CLASSROOM_REFERENCE_TOTAL} lokasi
           </span>
         </div>
       </div>
 
-      <div style={{ padding: '1.25rem' }}>
+      <div style={{ padding: '0.85rem 1rem' }}>
         {classroomMonitorLoading ? (
           <div style={{ padding: '3rem', display: 'flex', justifyContent: 'center' }}>
             <Loader2 className="animate-spin" color="var(--accent-cyan)" />
@@ -2761,75 +2761,74 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           </div>
         ) : (
           <>
-            <div className="stats-grid" style={{ marginBottom: '1.25rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
-              <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ruang aman terpantau</div>
-                <div style={{ marginTop: '0.35rem', fontSize: '1.65rem', fontWeight: 800, color: 'var(--accent-emerald)' }}>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+              gap: '0.6rem',
+              marginBottom: '0.85rem'
+            }}>
+              <div style={{ padding: '0.6rem 0.75rem', borderRadius: '10px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)' }}>
+                <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Ruang Aman</div>
+                <div style={{ marginTop: '0.15rem', fontSize: '1.15rem', fontWeight: 800, color: 'var(--accent-emerald)', lineHeight: 1.1 }}>
                   {classroomSafeRooms.length}
                 </div>
-                <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
-                  {classroomSafeRooms.length} lokasi tanpa temuan pada snapshot harian ini.
-                </div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', marginTop: '0.1rem' }}>tanpa temuan</div>
               </div>
 
-              <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Butuh tindak lanjut</div>
-                <div style={{ marginTop: '0.35rem', fontSize: '1.65rem', fontWeight: 800, color: 'var(--accent-rose)' }}>
+              <div style={{ padding: '0.6rem 0.75rem', borderRadius: '10px', background: 'rgba(244,63,94,0.08)', border: '1px solid rgba(244,63,94,0.2)' }}>
+                <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Tindak Lanjut</div>
+                <div style={{ marginTop: '0.15rem', fontSize: '1.15rem', fontWeight: 800, color: 'var(--accent-rose)', lineHeight: 1.1 }}>
                   {classroomRoomsNeedAttention.length}
                 </div>
-                <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
-                  Prioritaskan koordinasi dengan wali kelas untuk ruang yang masih bermasalah.
-                </div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', marginTop: '0.1rem' }}>perlu koordinasi</div>
               </div>
 
-              <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Fokus temuan</div>
-                <div style={{ marginTop: '0.35rem', fontSize: '1.2rem', fontWeight: 800, color: 'var(--accent-cyan)' }}>
+              <div style={{ padding: '0.6rem 0.75rem', borderRadius: '10px', background: 'rgba(6,182,212,0.08)', border: '1px solid rgba(6,182,212,0.2)' }}>
+                <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Fokus Temuan</div>
+                <div style={{ marginTop: '0.15rem', fontSize: '0.95rem', fontWeight: 800, color: 'var(--accent-cyan)', lineHeight: 1.1 }}>
                   {classroomTotalCleanlinessFindings >= classroomTotalEnergyFindings && classroomTotalCleanlinessFindings >= classroomTotalTidinessFindings
                     ? 'Kebersihan'
                     : classroomTotalEnergyFindings >= classroomTotalTidinessFindings
                       ? 'Hemat energi'
                       : 'Kerapihan'}
                 </div>
-                <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
-                  {classroomTotalCleanlinessFindings + classroomTotalEnergyFindings + classroomTotalTidinessFindings} temuan tercatat pada snapshot harian.
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', marginTop: '0.1rem' }}>
+                  {classroomTotalCleanlinessFindings + classroomTotalEnergyFindings + classroomTotalTidinessFindings} temuan
                 </div>
               </div>
 
-              <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Coverage monitor</div>
-                <div style={{ marginTop: '0.35rem', fontSize: '1.65rem', fontWeight: 800, color: 'var(--accent-blue)' }}>
+              <div style={{ padding: '0.6rem 0.75rem', borderRadius: '10px', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)' }}>
+                <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Coverage</div>
+                <div style={{ marginTop: '0.15rem', fontSize: '1.15rem', fontWeight: 800, color: 'var(--accent-blue)', lineHeight: 1.1 }}>
                   {classroomCoverageRate}%
                 </div>
-                <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
-                  Membaca cakupan lokasi yang berhasil terisi pada snapshot tanggal ini.
-                </div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', marginTop: '0.1rem' }}>cakupan terisi</div>
               </div>
             </div>
 
-            <div className="dashboard-grid" style={{ marginBottom: '1.25rem' }}>
-              <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', minHeight: '320px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
+            <div className="dashboard-grid" style={{ marginBottom: '0.85rem' }}>
+              <div className="glass-panel" style={{ padding: '0.8rem', background: 'rgba(255,255,255,0.02)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.6rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
                   <div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>Prioritas ruang untuk diinformasikan</div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
-                      Skor makin rendah berarti butuh perhatian lebih cepat pada hasil pantauan hari ini.
+                    <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-primary)' }}>Prioritas ruang</div>
+                    <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', marginTop: '0.1rem' }}>
+                      Skor rendah = butuh perhatian lebih cepat.
                     </div>
                   </div>
-                  <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-                    Berdasarkan snapshot harian
+                  <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>
+                    Snapshot harian
                   </span>
                 </div>
 
                 {classroomPriorityChartData.length > 0 ? (
-                  <div style={{ width: '100%', height: '250px' }}>
+                  <div style={{ width: '100%', height: '200px' }}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={classroomPriorityChartData} layout="vertical" margin={{ left: 8, right: 24, top: 10, bottom: 0 }}>
+                      <BarChart data={classroomPriorityChartData} layout="vertical" margin={{ left: 8, right: 24, top: 4, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" horizontal={false} />
-                        <XAxis type="number" domain={[0, 100]} stroke="var(--text-muted)" fontSize={11} tickFormatter={(value) => `${value}%`} />
-                        <YAxis dataKey="ruang" type="category" width={44} stroke="var(--text-muted)" fontSize={11} />
+                        <XAxis type="number" domain={[0, 100]} stroke="var(--text-muted)" fontSize={10} tickFormatter={(value) => `${value}%`} />
+                        <YAxis dataKey="ruang" type="category" width={40} stroke="var(--text-muted)" fontSize={10} />
                         <RechartsTooltip
-                          contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-focus)', borderRadius: '10px' }}
+                          contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-focus)', borderRadius: '10px', fontSize: '11px' }}
                           formatter={(value: any, name: any) => {
                             if (name === 'score') return [`${value}%`, 'Skor kondisi'];
                             return [`${value}`, 'Jumlah temuan'];
@@ -2839,164 +2838,158 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                             return tooltipItem?.ruangLabel || '';
                           }}
                         />
-                        <Bar dataKey="score" radius={[0, 6, 6, 0]} barSize={24}>
+                        <Bar dataKey="score" radius={[0, 6, 6, 0]} barSize={18}>
                           {classroomPriorityChartData.map((item, idx) => (
                             <Cell key={`priority-${idx}`} fill={item.fill} fillOpacity={0.9} />
                           ))}
-                          <LabelList dataKey="score" position="right" formatter={(value: any) => `${value}%`} style={{ fill: 'var(--text-primary)', fontSize: 11, fontWeight: 700 }} />
+                          <LabelList dataKey="score" position="right" formatter={(value: any) => `${value}%`} style={{ fill: 'var(--text-primary)', fontSize: 10, fontWeight: 700 }} />
                         </Bar>
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
                 ) : (
-                  <div style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+                  <div style={{ padding: '1.5rem 1rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
                     Belum ada ruang yang membutuhkan tindak lanjut.
                   </div>
                 )}
               </div>
 
-              <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', minHeight: '320px', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>Sebaran jenis temuan</div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
-                  Membantu fokus pembinaan harian: kebersihan, kerapihan, atau penghematan energi.
+              <div className="glass-panel" style={{ padding: '0.8rem', background: 'rgba(255,255,255,0.02)', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-primary)' }}>Sebaran jenis temuan</div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', marginTop: '0.1rem' }}>
+                  Fokus pembinaan: kebersihan, kerapihan, atau hemat energi.
                 </div>
 
-                <div style={{ flex: 1, position: 'relative', minHeight: '210px', marginTop: '0.5rem' }}>
-                  {classroomIssueComposition.length > 0 ? (
-                    <>
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={classroomIssueComposition}
-                            dataKey="value"
-                            nameKey="name"
-                            innerRadius={52}
-                            outerRadius={82}
-                            paddingAngle={2}
-                          >
-                            {classroomIssueComposition.map((entry, idx) => (
-                              <Cell key={`composition-${idx}`} fill={entry.color} />
-                            ))}
-                          </Pie>
-                          <RechartsTooltip contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-focus)', borderRadius: '8px', fontSize: '11px' }} />
-                        </PieChart>
-                      </ResponsiveContainer>
-                      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-                        <div style={{ textAlign: 'center' }}>
-                          <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                            {classroomIssueComposition.reduce((sum, item) => sum + item.value, 0)}
-                          </div>
-                          <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                            total temuan
+                <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'center', marginTop: '0.5rem' }}>
+                  <div style={{ width: '140px', height: '140px', position: 'relative', flexShrink: 0 }}>
+                    {classroomIssueComposition.length > 0 ? (
+                      <>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={classroomIssueComposition}
+                              dataKey="value"
+                              nameKey="name"
+                              innerRadius={42}
+                              outerRadius={68}
+                              paddingAngle={2}
+                            >
+                              {classroomIssueComposition.map((entry, idx) => (
+                                <Cell key={`composition-${idx}`} fill={entry.color} />
+                              ))}
+                            </Pie>
+                            <RechartsTooltip contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-focus)', borderRadius: '8px', fontSize: '11px' }} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                          <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.1 }}>
+                              {classroomIssueComposition.reduce((sum, item) => sum + item.value, 0)}
+                            </div>
+                            <div style={{ fontSize: '0.55rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                              total
+                            </div>
                           </div>
                         </div>
+                      </>
+                    ) : (
+                      <div style={{ paddingTop: '2rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
+                        Belum ada data.
                       </div>
-                    </>
-                  ) : (
-                    <div style={{ paddingTop: '2.5rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
-                      Belum ada data komposisi temuan.
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem', marginTop: '0.4rem' }}>
-                  {classroomIssueComposition.map((item) => (
-                    <div key={item.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', padding: '0.55rem 0.65rem', borderRadius: '10px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                        <span style={{ width: '10px', height: '10px', borderRadius: '999px', background: item.color, display: 'inline-block' }} />
-                        {item.name}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', flex: 1, minWidth: 0 }}>
+                    {classroomIssueComposition.map((item) => (
+                      <div key={item.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', padding: '0.4rem 0.55rem', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.7rem', color: 'var(--text-secondary)', minWidth: 0 }}>
+                          <span style={{ width: '8px', height: '8px', borderRadius: '999px', background: item.color, display: 'inline-block', flexShrink: 0 }} />
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</span>
+                        </div>
+                        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)', flexShrink: 0 }}>{item.value}</div>
                       </div>
-                      <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)' }}>{item.value}</div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
 
             <div className="dashboard-grid" style={{ marginBottom: 0 }}>
-              <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
-                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.75rem' }}>
-                  Arahan cepat untuk wali kelas & guru
+              <div className="glass-panel" style={{ padding: '0.8rem', background: 'rgba(255,255,255,0.02)' }}>
+                <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.55rem' }}>
+                  Arahan cepat wali kelas & guru
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  {classroomFollowUpItems.length > 0 ? classroomFollowUpItems.map((item) => (
-                    <div key={item.ruang} style={{ padding: '0.85rem', borderRadius: '12px', background: item.status.bg, border: `1px solid ${item.status.border}` }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem', flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                              {item.ruang}
-                              {getEffectiveRoomDetails(item).className && (
-                                <span style={{ opacity: 0.6, fontWeight: 400, marginLeft: '0.25rem' }}>/ {getEffectiveRoomDetails(item).className}</span>
-                              )}
-                            </span>
-                            <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '2px 8px', borderRadius: '999px', color: item.status.color, background: item.status.bg, border: `1px solid ${item.status.border}` }}>
-                              {item.status.label}
-                            </span>
-                          </div>
-                          {getEffectiveRoomDetails(item) && (getEffectiveRoomDetails(item).className || getEffectiveRoomDetails(item).waliKelas) && (
-                            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>
-                              {getEffectiveRoomDetails(item).className && (
-                                <span><strong style={{ color: 'var(--text-primary)' }}>Kelas:</strong> {getEffectiveRoomDetails(item).className}</span>
-                              )}
-                              {getEffectiveRoomDetails(item).className && getEffectiveRoomDetails(item).waliKelas && <span> · </span>}
-                              {getEffectiveRoomDetails(item).waliKelas && (
-                                <span><strong style={{ color: 'var(--text-primary)' }}>Wali:</strong> {getEffectiveRoomDetails(item).waliKelas}</span>
-                              )}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '380px', overflowY: 'auto', paddingRight: '0.25rem' }}>
+                  {classroomFollowUpItems.length > 0 ? classroomFollowUpItems.map((item) => {
+                    const details = getEffectiveRoomDetails(item);
+                    return (
+                      <div key={item.ruang} style={{ padding: '0.6rem 0.7rem', borderRadius: '10px', background: item.status.bg, border: `1px solid ${item.status.border}` }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.55rem', alignItems: 'flex-start' }}>
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.2rem', flexWrap: 'wrap' }}>
+                              <span style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                                {item.ruang}
+                                {details.className && (
+                                  <span style={{ opacity: 0.6, fontWeight: 400, marginLeft: '0.25rem' }}>/ {details.className}</span>
+                                )}
+                              </span>
+                              <span style={{ fontSize: '0.56rem', fontWeight: 700, padding: '1px 6px', borderRadius: '999px', color: item.status.color, background: item.status.bg, border: `1px solid ${item.status.border}` }}>
+                                {item.status.label}
+                              </span>
                             </div>
-                          )}
-                          <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                            <strong style={{ color: 'var(--text-primary)' }}>Temuan:</strong> {item.latestNote}
+                            {details.waliKelas && (
+                              <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', marginBottom: '0.2rem' }}>
+                                <strong style={{ color: 'var(--text-primary)' }}>Wali:</strong> {details.waliKelas}
+                              </div>
+                            )}
+                            <div style={{ fontSize: '0.66rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                              <strong style={{ color: 'var(--text-primary)' }}>Temuan:</strong> {item.latestNote}
+                            </div>
+                            <div style={{ marginTop: '0.25rem', fontSize: '0.66rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                              <strong style={{ color: 'var(--text-primary)' }}>Aksi:</strong> {item.action}
+                            </div>
+                          </div>
+                          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: item.status.color, lineHeight: 1.1 }}>{item.score}%</div>
+                            <div style={{ fontSize: '0.58rem', color: 'var(--text-muted)' }}>skor</div>
                           </div>
                         </div>
-                        <div style={{ textAlign: 'right', minWidth: '90px' }}>
-                          <div style={{ fontSize: '1rem', fontWeight: 800, color: item.status.color }}>{item.score}%</div>
-                          <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Skor kelas</div>
-                        </div>
                       </div>
-                      <div style={{ marginTop: '0.55rem', fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                        <strong style={{ color: 'var(--text-primary)' }}>Sampaikan ke:</strong> {item.recipients}
-                      </div>
-                      <div style={{ marginTop: '0.2rem', fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.55 }}>
-                        <strong style={{ color: 'var(--text-primary)' }}>Aksi:</strong> {item.action}
-                      </div>
-                    </div>
-                  )) : (
-                    <div style={{ padding: '1rem', borderRadius: '12px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
-                      Semua ruang pada snapshot harian ini berada dalam kondisi aman.
+                    );
+                  }) : (
+                    <div style={{ padding: '0.85rem', borderRadius: '10px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
+                      Semua ruang dalam kondisi aman.
                     </div>
                   )}
                 </div>
               </div>
 
-              <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
-                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.75rem' }}>
+              <div className="glass-panel" style={{ padding: '0.8rem', background: 'rgba(255,255,255,0.02)' }}>
+                <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.55rem' }}>
                   Ringkasan komunikasi harian
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
-                  <div style={{ padding: '0.8rem', borderRadius: '12px', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)' }}>
-                    <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ruang bersih & siap pakai</div>
-                    <div style={{ marginTop: '0.3rem', fontSize: '1.35rem', fontWeight: 800, color: 'var(--accent-blue)' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <div style={{ padding: '0.6rem 0.7rem', borderRadius: '10px', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)' }}>
+                    <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Ruang bersih & siap pakai</div>
+                    <div style={{ marginTop: '0.15rem', fontSize: '1.05rem', fontWeight: 800, color: 'var(--accent-blue)', lineHeight: 1.1 }}>
                       {classroomSafeRooms.length} lokasi
                     </div>
-                    <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '0.25rem', lineHeight: 1.5 }}>
-                      Contoh lokasi aman: {classroomSafeRooms.slice(0, 6).map((room) => {
-                        return formatClassroomIdentityLabel(room, { shortRoom: true });
-                      }).join(', ') || '-'}
+                    <div style={{ fontSize: '0.66rem', color: 'var(--text-secondary)', marginTop: '0.2rem', lineHeight: 1.45 }}>
+                      {classroomSafeRooms.slice(0, 6).map((room) => formatClassroomIdentityLabel(room, { shortRoom: true })).join(', ') || '-'}
                     </div>
                   </div>
 
-                  <div style={{ padding: '0.8rem', borderRadius: '12px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)' }}>
-                    <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Catatan untuk briefing guru</div>
-                    <div style={{ marginTop: '0.35rem', fontSize: '0.74rem', color: 'var(--text-secondary)', lineHeight: 1.55 }}>
-                      Tekankan budaya cek akhir kelas: sampah terangkat, lantai/area depan bersih, dan kipas/lampu/TV/AC dipastikan mati setelah KBM.
+                  <div style={{ padding: '0.6rem 0.7rem', borderRadius: '10px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)' }}>
+                    <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Briefing guru</div>
+                    <div style={{ marginTop: '0.2rem', fontSize: '0.68rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                      Tekankan cek akhir kelas: sampah terangkat, lantai bersih, kipas/lampu/TV/AC dipastikan mati.
                     </div>
                   </div>
 
-                  <div style={{ padding: '0.8rem', borderRadius: '12px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)' }}>
-                    <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Catatan implementasi</div>
-                    <div style={{ marginTop: '0.35rem', fontSize: '0.74rem', color: 'var(--text-secondary)', lineHeight: 1.55 }}>
-                      Section ini membaca snapshot tanggal paling baru dari sheet `{CLASSROOM_MONITOR_SHEET}` lalu merangkum kondisi harian per ruang.
+                  <div style={{ padding: '0.6rem 0.7rem', borderRadius: '10px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)' }}>
+                    <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Sumber data</div>
+                    <div style={{ marginTop: '0.2rem', fontSize: '0.68rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                      Snapshot terbaru dari sheet <code style={{ fontSize: '0.66rem' }}>{CLASSROOM_MONITOR_SHEET}</code>.
                     </div>
                   </div>
                 </div>
