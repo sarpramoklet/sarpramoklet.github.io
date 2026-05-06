@@ -3851,29 +3851,29 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                   transform: isToday ? 'scale(1.02)' : 'none',
                   zIndex: isToday ? 2 : 1
                 }}>
-                  {isToday && (
-                    <div className="piket-today-badge" style={{
-                      position: 'absolute',
-                      top: '-10px',
-                      right: '10px',
-                      background: item.color,
-                      color: 'white',
-                      fontSize: '0.6rem',
-                      fontWeight: 800,
-                      padding: '3px 10px',
-                      borderRadius: '10px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
-                      boxShadow: `0 2px 8px ${item.color}60`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.3rem'
-                    }}>
-                      <Sparkles size={10} /> Hari Ini
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: isToday ? item.color : 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      {item.day}
                     </div>
-                  )}
-                  <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.75rem', color: isToday ? item.color : 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    {item.day}
+                    {isToday && (
+                      <div className="piket-today-badge" style={{
+                        background: item.color,
+                        color: 'white',
+                        fontSize: '0.6rem',
+                        fontWeight: 800,
+                        padding: '3px 9px',
+                        borderRadius: '10px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        boxShadow: `0 2px 8px ${item.color}60`,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.3rem',
+                        flexShrink: 0
+                      }}>
+                        <Sparkles size={10} /> Hari Ini
+                      </div>
+                    )}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     {item.personnel.map((p, pIdx) => {
