@@ -241,36 +241,31 @@ const normalizeSarmokComplaintStats = (
   payload: unknown,
   fallback: { waitingConfirmation: number; onProcess: number; rejected: number },
 ): SarmokComplaintStats => {
-  const rows = normalizeSarmokDetailRows(payload);
+  const detailRows = normalizeSarmokDetailRows(payload);
   const unwrapped = unwrapSarmokDetailPayload(payload) as any;
-  const hasPayload = payload !== null && payload !== undefined;
-  const pendingRowsCount = hasPayload ? rows.filter(isSarmokPendingRow).length : undefined;
-  const processRowsCount = hasPayload ? rows.filter(isSarmokProcessRow).length : undefined;
-  const completeRowsCount = hasPayload ? rows.filter(isSarmokReturnedRow).length : undefined;
-  const rejectedRowsCount = hasPayload ? rows.filter(isSarmokRejectedRow).length : undefined;
-
-  const pending = pendingRowsCount
-    ?? unwrapped?.countWaitingComplaints ?? unwrapped?.count_waiting_complaints
-    ?? pickSarmokCount(payload, ['count_pending', 'countPending', 'pending', 'pending_count', 'waitingConfirmation'])
+  
+  const pending = fallback.waitingConfirmation 
+    ?? unwrapped?.countWaitingComplaints ?? unwrapped?.count_waiting_complaints 
+    ?? pickSarmokCount(payload, ['count_pending', 'countPending', 'pending', 'pending_count', 'waitingConfirmation']) 
     ?? pickSarmokStatusCount(payload, ['pending', 'waiting', 'menunggu', 'konfirmasi'])
-    ?? fallback.waitingConfirmation
+    ?? detailRows.filter(isSarmokPendingRow).length
     ?? 0;
-  const inProgress = processRowsCount
+  const inProgress = fallback.onProcess
     ?? unwrapped?.countInProcessComplaints ?? unwrapped?.count_in_process_complaints
-    ?? pickSarmokCount(payload, ['count_in_progress', 'countInProgress', 'count_process', 'in_progress', 'inProgress', 'on_process'])
+    ?? pickSarmokCount(payload, ['count_in_progress', 'countInProgress', 'count_process', 'in_progress', 'inProgress', 'on_process']) 
     ?? pickSarmokStatusCount(payload, ['in_progress', 'on_process', 'process', 'diproses', 'berjalan'])
-    ?? fallback.onProcess
+    ?? detailRows.filter(isSarmokProcessRow).length
     ?? 0;
-  const complete = completeRowsCount
-    ?? unwrapped?.countCompleteComplaints ?? unwrapped?.count_complete_complaints
-    ?? pickSarmokCount(payload, ['count_completed', 'count_complete', 'countComplete', 'countCompleted', 'completed', 'complete'])
+  const complete = unwrapped?.countCompleteComplaints ?? unwrapped?.count_complete_complaints
+    ?? pickSarmokCount(payload, ['count_completed', 'count_complete', 'countComplete', 'countCompleted', 'completed', 'complete']) 
     ?? pickSarmokStatusCount(payload, ['completed', 'complete', 'selesai', 'done', 'returned'])
+    ?? detailRows.filter(isSarmokReturnedRow).length
     ?? 0;
-  const rejected = rejectedRowsCount
+  const rejected = fallback.rejected
     ?? unwrapped?.countRejectedComplaints ?? unwrapped?.count_rejected_complaints
-    ?? pickSarmokCount(payload, ['count_rejected', 'countRejected', 'rejected', 'reject', 'ditolak'])
+    ?? pickSarmokCount(payload, ['count_rejected', 'countRejected', 'rejected', 'reject', 'ditolak']) 
     ?? pickSarmokStatusCount(payload, ['rejected', 'reject', 'ditolak'])
-    ?? fallback.rejected
+    ?? detailRows.filter(isSarmokRejectedRow).length
     ?? 0;
 
   return {
@@ -858,13 +853,12 @@ const getSarmokApiStatusFilter = (metricLabel: string) => {
 };
 
 const buildSarmokDetailUrl = (endpoint: string, kind: SarmokDetailKind, metricLabel: string) => {
+  if (kind === 'complaints') return endpoint;
+
+  const { startDate, endDate } = getCurrentMonthDateRange();
   const url = new URL(endpoint);
   url.searchParams.set('page', '1');
   url.searchParams.set('quantity', '100');
-
-  if (kind === 'complaints') return url.toString();
-
-  const { startDate, endDate } = getCurrentMonthDateRange();
   url.searchParams.set('startDate', startDate);
   url.searchParams.set('endDate', endDate);
 
@@ -2221,9 +2215,8 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         }
 
         let complaintStats = normalizeSarmokComplaintStats(null, data.complaints);
-        const complaintSummaryUrl = buildSarmokDetailUrl(SARMOK_COMPLAINT_DETAIL_API_URL, 'complaints', 'All Status');
         try {
-          const directComplaintResp = await fetch(complaintSummaryUrl, {
+          const directComplaintResp = await fetch(SARMOK_COMPLAINT_DETAIL_API_URL, {
             method: 'GET',
             headers: {
               Authorization: authHeader,
@@ -2236,7 +2229,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         } catch (complaintDirectError) {
           try {
             console.warn('Sarmok complaint direct fetch failed, trying proxy fallback:', complaintDirectError);
-            const proxyUrl = `${FINANCE_API_URL}?proxyUrl=${encodeURIComponent(complaintSummaryUrl)}&authHeader=${encodeURIComponent(authHeader)}`;
+            const proxyUrl = `${FINANCE_API_URL}?proxyUrl=${encodeURIComponent(SARMOK_COMPLAINT_DETAIL_API_URL)}&authHeader=${encodeURIComponent(authHeader)}`;
             const proxyResp = await fetch(proxyUrl, { headers: { Accept: 'application/json' } });
             if (!proxyResp.ok) throw new Error(`Sarmok complaint proxy failed (${proxyResp.status})`);
             complaintStats = normalizeSarmokComplaintStats(await readSarmokRawResponse(proxyResp), data.complaints);
