@@ -2391,9 +2391,10 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
     }
   };
 
-  const renderSarmokMetricButton = (
+  const renderSarmokMetricCell = (
     value: number | string,
     color: string,
+    label: string,
     kind: SarmokDetailKind,
     title: string,
     metricLabel: string,
@@ -2404,42 +2405,47 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       onClick={() => openSarmokDetail(kind, title, metricLabel, endpoint, color)}
       disabled={mokletService.loading}
       aria-label={`Lihat detail ${title} ${metricLabel}`}
-      title="Lihat detail"
+      title={`Lihat detail ${metricLabel}`}
       style={{
         appearance: 'none',
-        border: `1px solid ${color}4d`,
-        background: `${color}12`,
-        padding: '0.2rem 0.45rem 0.25rem',
-        margin: '-0.2rem -0.45rem',
+        width: '100%',
+        border: `1px solid ${color}33`,
+        background: `${color}0d`,
+        padding: '0.4rem 0.55rem',
         borderRadius: '8px',
         cursor: mokletService.loading ? 'default' : 'pointer',
-        color,
-        lineHeight: 1,
-        display: 'inline-flex',
-        flexDirection: 'column',
-        alignItems: 'flex-end',
-        gap: '0.2rem',
-        boxShadow: `0 0 0 1px ${color}12 inset`,
-        transition: 'background 0.2s, border-color 0.2s, transform 0.2s, box-shadow 0.2s',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '0.4rem',
+        transition: 'background 0.18s, border-color 0.18s, transform 0.18s',
       }}
       onMouseEnter={(event) => {
-        event.currentTarget.style.background = `${color}20`;
-        event.currentTarget.style.borderColor = `${color}80`;
-        event.currentTarget.style.transform = 'translateY(-1px)';
-        event.currentTarget.style.boxShadow = `0 0 0 1px ${color}20 inset, 0 8px 18px ${color}18`;
+        event.currentTarget.style.background = `${color}1c`;
+        event.currentTarget.style.borderColor = `${color}66`;
       }}
       onMouseLeave={(event) => {
-        event.currentTarget.style.background = `${color}12`;
-        event.currentTarget.style.borderColor = `${color}4d`;
-        event.currentTarget.style.transform = 'translateY(0)';
-        event.currentTarget.style.boxShadow = `0 0 0 1px ${color}12 inset`;
+        event.currentTarget.style.background = `${color}0d`;
+        event.currentTarget.style.borderColor = `${color}33`;
       }}
     >
-      <span style={{ fontWeight: 900, fontSize: '1.35rem', textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: '4px' }}>
-        {value}
+      <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0 }}>
+        <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0 }} />
+        <span style={{
+          fontSize: '0.62rem',
+          fontWeight: 700,
+          letterSpacing: '0.04em',
+          textTransform: 'uppercase',
+          color: 'var(--text-secondary)',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap'
+        }}>
+          {label}
+        </span>
       </span>
-      <span style={{ fontSize: '0.52rem', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase', opacity: 0.9 }}>
-        Detail
+      <span style={{ fontWeight: 800, fontSize: '0.95rem', color, lineHeight: 1, flexShrink: 0 }}>
+        {value}
       </span>
     </button>
   );
@@ -3404,103 +3410,58 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
             </div>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem' }}>
 
             {/* Box 1: Complaints */}
-            <div className="glass-panel" style={{ padding: '1.25rem', border: '1px solid rgba(251,146,60,0.25)', background: 'linear-gradient(135deg, rgba(251,146,60,0.05), transparent)', position: 'relative', overflow: 'hidden' }}>
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'linear-gradient(90deg, #f97316, #fb923c)' }} />
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1rem' }}>
-                <div style={{ padding: '0.45rem', background: 'rgba(249,115,22,0.15)', borderRadius: '8px', color: '#f97316', display: 'flex' }}>
-                  <AlertCircle size={16} />
-                </div>
-                <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#f97316' }}>Pengaduan</span>
+            <div className="glass-panel" style={{ padding: '0.75rem', border: '1px solid rgba(251,146,60,0.22)', background: 'rgba(251,146,60,0.025)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.55rem' }}>
+                <AlertCircle size={14} color="#f97316" />
+                <span style={{ fontWeight: 700, fontSize: '0.78rem', color: '#f97316' }}>Pengaduan</span>
               </div>
               {mokletService.loading && !mokletService.complaints ? (
-                <div style={{ display: 'flex', justifyContent: 'center', padding: '1rem' }}><Loader2 size={20} className="animate-spin" color="#f97316" /></div>
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '0.75rem' }}><Loader2 size={16} className="animate-spin" color="#f97316" /></div>
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '0.6rem', opacity: mokletService.loading ? 0.5 : 1, transition: 'opacity 0.2s' }}>
-                  <div style={{ padding: '0.55rem 0.6rem', border: '1px solid rgba(248,113,113,0.28)', borderRadius: 8, background: 'rgba(248,113,113,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem' }}>
-                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#fb7185', textTransform: 'uppercase' }}>Ditolak</span>
-                    {renderSarmokMetricButton(mokletService.complaints?.rejected ?? '-', '#fb7185', 'complaints', 'Pengaduan', 'Ditolak', SARMOK_COMPLAINT_DETAIL_API_URL)}
-                  </div>
-                  <div style={{ padding: '0.55rem 0.6rem', border: '1px solid rgba(249,115,22,0.28)', borderRadius: 8, background: 'rgba(249,115,22,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem' }}>
-                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#f97316', textTransform: 'uppercase' }}>Menunggu Konfirmasi</span>
-                    {renderSarmokMetricButton(mokletService.complaints?.pending ?? '-', '#f97316', 'complaints', 'Pengaduan', 'Menunggu Konfirmasi', SARMOK_COMPLAINT_DETAIL_API_URL)}
-                  </div>
-                  <div style={{ padding: '0.55rem 0.6rem', border: '1px solid rgba(59,130,246,0.28)', borderRadius: 8, background: 'rgba(59,130,246,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem' }}>
-                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#3b82f6', textTransform: 'uppercase' }}>Sedang Diproses</span>
-                    {renderSarmokMetricButton(mokletService.complaints?.inProgress ?? '-', '#3b82f6', 'complaints', 'Pengaduan', 'Sedang Diproses', SARMOK_COMPLAINT_DETAIL_API_URL)}
-                  </div>
-                  <div style={{ padding: '0.55rem 0.6rem', border: '1px solid rgba(34,197,94,0.28)', borderRadius: 8, background: 'rgba(34,197,94,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem' }}>
-                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#22c55e', textTransform: 'uppercase' }}>Selesai</span>
-                    {renderSarmokMetricButton(mokletService.complaints?.complete ?? '-', '#22c55e', 'complaints', 'Pengaduan', 'Selesai', SARMOK_COMPLAINT_DETAIL_API_URL)}
-                  </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '0.4rem', opacity: mokletService.loading ? 0.5 : 1, transition: 'opacity 0.2s' }}>
+                  {renderSarmokMetricCell(mokletService.complaints?.rejected ?? '-', '#fb7185', 'Ditolak', 'complaints', 'Pengaduan', 'Ditolak', SARMOK_COMPLAINT_DETAIL_API_URL)}
+                  {renderSarmokMetricCell(mokletService.complaints?.pending ?? '-', '#f97316', 'Menunggu', 'complaints', 'Pengaduan', 'Menunggu Konfirmasi', SARMOK_COMPLAINT_DETAIL_API_URL)}
+                  {renderSarmokMetricCell(mokletService.complaints?.inProgress ?? '-', '#3b82f6', 'Diproses', 'complaints', 'Pengaduan', 'Sedang Diproses', SARMOK_COMPLAINT_DETAIL_API_URL)}
+                  {renderSarmokMetricCell(mokletService.complaints?.complete ?? '-', '#22c55e', 'Selesai', 'complaints', 'Pengaduan', 'Selesai', SARMOK_COMPLAINT_DETAIL_API_URL)}
                 </div>
               )}
             </div>
 
             {/* Box 2: Room Reservation */}
-            <div className="glass-panel" style={{ padding: '1.25rem', border: '1px solid rgba(52,211,153,0.25)', background: 'linear-gradient(135deg, rgba(52,211,153,0.05), transparent)', position: 'relative', overflow: 'hidden' }}>
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'linear-gradient(90deg, #10b981, #34d399)' }} />
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1rem' }}>
-                <div style={{ padding: '0.45rem', background: 'rgba(16,185,129,0.15)', borderRadius: '8px', color: '#10b981', display: 'flex' }}>
-                  <Calendar size={16} />
-                </div>
-                <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#10b981' }}>Peminjaman Ruang</span>
+            <div className="glass-panel" style={{ padding: '0.75rem', border: '1px solid rgba(52,211,153,0.22)', background: 'rgba(52,211,153,0.025)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.55rem' }}>
+                <Calendar size={14} color="#10b981" />
+                <span style={{ fontWeight: 700, fontSize: '0.78rem', color: '#10b981' }}>Peminjaman Ruang</span>
               </div>
               {mokletService.loading && !mokletService.roomReservation ? (
-                <div style={{ display: 'flex', justifyContent: 'center', padding: '1rem' }}><Loader2 size={20} className="animate-spin" color="#10b981" /></div>
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '0.75rem' }}><Loader2 size={16} className="animate-spin" color="#10b981" /></div>
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '0.6rem', opacity: mokletService.loading ? 0.5 : 1, transition: 'opacity 0.2s' }}>
-                  <div style={{ padding: '0.55rem 0.6rem', border: '1px solid rgba(248,113,113,0.28)', borderRadius: 8, background: 'rgba(248,113,113,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem' }}>
-                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#fb7185', textTransform: 'uppercase' }}>Ditolak</span>
-                    {renderSarmokMetricButton(mokletService.roomReservation?.rejectedReservation ?? '-', '#fb7185', 'roomReservation', 'Peminjaman Ruang', 'Ditolak', SARMOK_ROOM_DETAIL_API_URL)}
-                  </div>
-                  <div style={{ padding: '0.55rem 0.6rem', border: '1px solid rgba(245,158,11,0.28)', borderRadius: 8, background: 'rgba(245,158,11,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem' }}>
-                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#f59e0b', textTransform: 'uppercase' }}>Menunggu</span>
-                    {renderSarmokMetricButton(mokletService.roomReservation?.waitingConfirmation ?? '-', '#f59e0b', 'roomReservation', 'Peminjaman Ruang', 'Menunggu Konfirmasi', SARMOK_ROOM_DETAIL_API_URL)}
-                  </div>
-                  <div style={{ padding: '0.55rem 0.6rem', border: '1px solid rgba(16,185,129,0.28)', borderRadius: 8, background: 'rgba(16,185,129,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem' }}>
-                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#10b981', textTransform: 'uppercase' }}>Berlangsung</span>
-                    {renderSarmokMetricButton(mokletService.roomReservation?.activeReservation ?? '-', '#10b981', 'roomReservation', 'Peminjaman Ruang', 'Sedang Berlangsung', SARMOK_ROOM_DETAIL_API_URL)}
-                  </div>
-                  <div style={{ padding: '0.55rem 0.6rem', border: '1px solid rgba(20,184,166,0.28)', borderRadius: 8, background: 'rgba(20,184,166,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem' }}>
-                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#14b8a6', textTransform: 'uppercase' }}>Dipakai</span>
-                    {renderSarmokMetricButton(mokletService.roomReservation?.inUseReservation ?? '-', '#14b8a6', 'roomReservation', 'Peminjaman Ruang', 'Sedang Dipakai', SARMOK_ROOM_DETAIL_API_URL)}
-                  </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '0.4rem', opacity: mokletService.loading ? 0.5 : 1, transition: 'opacity 0.2s' }}>
+                  {renderSarmokMetricCell(mokletService.roomReservation?.rejectedReservation ?? '-', '#fb7185', 'Ditolak', 'roomReservation', 'Peminjaman Ruang', 'Ditolak', SARMOK_ROOM_DETAIL_API_URL)}
+                  {renderSarmokMetricCell(mokletService.roomReservation?.waitingConfirmation ?? '-', '#f59e0b', 'Menunggu', 'roomReservation', 'Peminjaman Ruang', 'Menunggu Konfirmasi', SARMOK_ROOM_DETAIL_API_URL)}
+                  {renderSarmokMetricCell(mokletService.roomReservation?.activeReservation ?? '-', '#10b981', 'Berlangsung', 'roomReservation', 'Peminjaman Ruang', 'Sedang Berlangsung', SARMOK_ROOM_DETAIL_API_URL)}
+                  {renderSarmokMetricCell(mokletService.roomReservation?.inUseReservation ?? '-', '#14b8a6', 'Dipakai', 'roomReservation', 'Peminjaman Ruang', 'Sedang Dipakai', SARMOK_ROOM_DETAIL_API_URL)}
                 </div>
               )}
             </div>
 
             {/* Box 3: Tools Loan */}
-            <div className="glass-panel" style={{ padding: '1.25rem', border: '1px solid rgba(59,130,246,0.25)', background: 'linear-gradient(135deg, rgba(59,130,246,0.05), transparent)', position: 'relative', overflow: 'hidden' }}>
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'linear-gradient(90deg, #3b82f6, #60a5fa)' }} />
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1rem' }}>
-                <div style={{ padding: '0.45rem', background: 'rgba(59,130,246,0.15)', borderRadius: '8px', color: '#3b82f6', display: 'flex' }}>
-                  <Briefcase size={16} />
-                </div>
-                <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#3b82f6' }}>Peminjaman Alat</span>
+            <div className="glass-panel" style={{ padding: '0.75rem', border: '1px solid rgba(59,130,246,0.22)', background: 'rgba(59,130,246,0.025)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.55rem' }}>
+                <Briefcase size={14} color="#3b82f6" />
+                <span style={{ fontWeight: 700, fontSize: '0.78rem', color: '#3b82f6' }}>Peminjaman Alat</span>
               </div>
               {mokletService.loading && !mokletService.toolsLoan ? (
-                <div style={{ display: 'flex', justifyContent: 'center', padding: '1rem' }}><Loader2 size={20} className="animate-spin" color="#3b82f6" /></div>
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '0.75rem' }}><Loader2 size={16} className="animate-spin" color="#3b82f6" /></div>
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '0.6rem', opacity: mokletService.loading ? 0.5 : 1, transition: 'opacity 0.2s' }}>
-                  <div style={{ padding: '0.55rem 0.6rem', border: '1px solid rgba(248,113,113,0.28)', borderRadius: 8, background: 'rgba(248,113,113,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem' }}>
-                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#fb7185', textTransform: 'uppercase' }}>Ditolak</span>
-                    {renderSarmokMetricButton(mokletService.toolsLoan?.rejected ?? '-', '#fb7185', 'toolsLoan', 'Peminjaman Alat', 'Ditolak', SARMOK_BORROW_DETAIL_API_URL)}
-                  </div>
-                  <div style={{ padding: '0.55rem 0.6rem', border: '1px solid rgba(245,158,11,0.28)', borderRadius: 8, background: 'rgba(245,158,11,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem' }}>
-                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#f59e0b', textTransform: 'uppercase' }}>Menunggu</span>
-                    {renderSarmokMetricButton(mokletService.toolsLoan?.waitingConfirmation ?? '-', '#f59e0b', 'toolsLoan', 'Peminjaman Alat', 'Menunggu Konfirmasi', SARMOK_BORROW_DETAIL_API_URL)}
-                  </div>
-                  <div style={{ padding: '0.55rem 0.6rem', border: '1px solid rgba(59,130,246,0.28)', borderRadius: 8, background: 'rgba(59,130,246,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem' }}>
-                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#3b82f6', textTransform: 'uppercase' }}>Terverifikasi</span>
-                    {renderSarmokMetricButton(mokletService.toolsLoan?.haveNotReturn ?? '-', '#3b82f6', 'toolsLoan', 'Peminjaman Alat', 'Terverifikasi/Aktif', SARMOK_BORROW_DETAIL_API_URL)}
-                  </div>
-                  <div style={{ padding: '0.55rem 0.6rem', border: '1px solid rgba(34,197,94,0.28)', borderRadius: 8, background: 'rgba(34,197,94,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem' }}>
-                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#22c55e', textTransform: 'uppercase' }}>Selesai</span>
-                    {renderSarmokMetricButton(mokletService.toolsLoan?.returned ?? '-', '#22c55e', 'toolsLoan', 'Peminjaman Alat', 'Dikembalikan/Selesai', SARMOK_BORROW_DETAIL_API_URL)}
-                  </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '0.4rem', opacity: mokletService.loading ? 0.5 : 1, transition: 'opacity 0.2s' }}>
+                  {renderSarmokMetricCell(mokletService.toolsLoan?.rejected ?? '-', '#fb7185', 'Ditolak', 'toolsLoan', 'Peminjaman Alat', 'Ditolak', SARMOK_BORROW_DETAIL_API_URL)}
+                  {renderSarmokMetricCell(mokletService.toolsLoan?.waitingConfirmation ?? '-', '#f59e0b', 'Menunggu', 'toolsLoan', 'Peminjaman Alat', 'Menunggu Konfirmasi', SARMOK_BORROW_DETAIL_API_URL)}
+                  {renderSarmokMetricCell(mokletService.toolsLoan?.haveNotReturn ?? '-', '#3b82f6', 'Verifikasi', 'toolsLoan', 'Peminjaman Alat', 'Terverifikasi/Aktif', SARMOK_BORROW_DETAIL_API_URL)}
+                  {renderSarmokMetricCell(mokletService.toolsLoan?.returned ?? '-', '#22c55e', 'Selesai', 'toolsLoan', 'Peminjaman Alat', 'Dikembalikan/Selesai', SARMOK_BORROW_DETAIL_API_URL)}
                 </div>
               )}
             </div>
