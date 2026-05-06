@@ -3669,147 +3669,109 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
 
       {/* DASHBOARD CAPEX PROJECTS SECTION */}
       <div className="glass-panel delay-200" style={{ marginBottom: '2rem', background: 'linear-gradient(135deg, rgba(245,158,11,0.03), transparent)', borderLeft: '4px solid var(--accent-amber)' }}>
-        <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+        <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
           <div>
-            <h3 style={{ fontSize: '1.05rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Briefcase size={18} color="var(--accent-amber)" /> 5. Progres Pekerjaan & Pengadaan CAPEX
+            <h3 style={{ fontSize: '0.95rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Briefcase size={16} color="var(--accent-amber)" /> 5. Progres Pekerjaan & Pengadaan CAPEX
             </h3>
-            <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Pemantauan target penyelesaian peremajaan dan pembangunan 2026</p>
+            <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Pemantauan target peremajaan dan pembangunan 2026</p>
           </div>
           {isLoggedIn ? (
-            <a href="#/capex" className="btn btn-outline" style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}>Monitor CAPEX &rarr;</a>
+            <a href="#/capex" className="btn btn-outline" style={{ fontSize: '0.72rem', padding: '0.3rem 0.65rem' }}>Monitor CAPEX &rarr;</a>
           ) : (
-            <span className="badge badge-warning" style={{ textTransform: 'none', letterSpacing: 0 }}>
+            <span className="badge badge-warning" style={{ textTransform: 'none', letterSpacing: 0, fontSize: '0.68rem' }}>
               Ringkasan publik aktif
             </span>
           )}
         </div>
 
-        <div style={{ padding: '1.25rem' }}>
+        <div style={{ padding: '0.85rem 1rem' }}>
           {capexLoading ? (
-            <div style={{ padding: '3rem', display: 'flex', justifyContent: 'center' }}><Loader2 className="animate-spin" color="var(--accent-amber)" /></div>
+            <div style={{ padding: '2rem', display: 'flex', justifyContent: 'center' }}><Loader2 className="animate-spin" color="var(--accent-amber)" /></div>
           ) : sortedCapexProjects.length > 0 ? (
-            <div className="dashboard-grid" style={{ marginBottom: 0, alignItems: 'stretch' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Rerata progres proyek</div>
-                  <div style={{ marginTop: '0.35rem', fontSize: '1.7rem', fontWeight: 800, color: 'var(--accent-amber)' }}>
+            <>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                gap: '0.6rem',
+                marginBottom: '0.85rem'
+              }}>
+                <div style={{ padding: '0.6rem 0.75rem', borderRadius: '10px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)' }}>
+                  <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Rerata Progres</div>
+                  <div style={{ marginTop: '0.15rem', fontSize: '1.15rem', fontWeight: 800, color: 'var(--accent-amber)', lineHeight: 1.1 }}>
                     {capexAverageProgress.toFixed(1)}%
                   </div>
-                  <div style={{ marginTop: '0.2rem', fontSize: '0.76rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                    Grafik ini tampil untuk pengguna login maupun publik agar progres pekerjaan strategis tetap terbaca dari dashboard utama.
+                </div>
+                <div style={{ padding: '0.6rem 0.75rem', borderRadius: '10px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)' }}>
+                  <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Selesai</div>
+                  <div style={{ marginTop: '0.15rem', fontSize: '1.15rem', fontWeight: 800, color: 'var(--accent-emerald)', lineHeight: 1.1 }}>
+                    {capexCompletedProjects}<span style={{ fontSize: '0.7rem', fontWeight: 500, color: 'var(--text-muted)', marginLeft: '0.25rem' }}>/ {sortedCapexProjects.length}</span>
                   </div>
                 </div>
-
-                <div className="stats-grid" style={{ marginBottom: 0, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
-                  <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.18)' }}>
-                    <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Selesai</div>
-                    <div style={{ marginTop: '0.3rem', fontSize: '1.45rem', fontWeight: 800, color: 'var(--accent-emerald)' }}>
-                      {capexCompletedProjects}
-                    </div>
-                    <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>Proyek sudah 100%.</div>
-                  </div>
-
-                  <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.18)' }}>
-                    <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Prioritas</div>
-                    <div style={{ marginTop: '0.3rem', fontSize: '1.45rem', fontWeight: 800, color: 'var(--accent-amber)' }}>
-                      {capexPriorityProjects}
-                    </div>
-                    <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>Proyek di bawah 50%.</div>
+                <div style={{ padding: '0.6rem 0.75rem', borderRadius: '10px', background: 'rgba(244,63,94,0.08)', border: '1px solid rgba(244,63,94,0.2)' }}>
+                  <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Prioritas</div>
+                  <div style={{ marginTop: '0.15rem', fontSize: '1.15rem', fontWeight: 800, color: 'var(--accent-rose)', lineHeight: 1.1 }}>
+                    {capexPriorityProjects}<span style={{ fontSize: '0.65rem', fontWeight: 500, color: 'var(--text-muted)', marginLeft: '0.25rem' }}>&lt;50%</span>
                   </div>
                 </div>
-
-                <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
-                  <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.75rem' }}>
-                    Daftar pekerjaan bernomor
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
-                    {sortedCapexProjects.slice(0, 5).map((project) => (
-                      <div
-                        key={project.id || project.numberedNama}
-                        style={{
-                          padding: '0.8rem 0.9rem',
-                          borderRadius: '12px',
-                          background: 'rgba(255,255,255,0.03)',
-                          border: '1px solid var(--border-subtle)',
-                        }}
-                      >
-                        <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.5 }}>
-                          {project.numberedNama}
-                        </div>
-                        <div style={{ marginTop: '0.35rem', display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
-                            Unit: {project.unit || project.Unit || 'Sarpras'}
-                          </span>
-                          <span style={{ fontSize: '0.78rem', fontWeight: 800, color: getCapexProgressColor(Number(project.progress) || 0) }}>
-                            {Math.round(Number(project.progress) || 0)}%
-                          </span>
-                        </div>
-                      </div>
-                    ))}
+                <div style={{ padding: '0.6rem 0.75rem', borderRadius: '10px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-subtle)' }}>
+                  <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Total Proyek</div>
+                  <div style={{ marginTop: '0.15rem', fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.1 }}>
+                    {sortedCapexProjects.length}
                   </div>
                 </div>
               </div>
 
-              <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', minWidth: 0 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: '0.95rem' }}>
-                  <div>
-                    <div style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                      Ringkasan progres CAPEX
-                    </div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '0.15rem', lineHeight: 1.5 }}>
-                      Daftar proyek dibuat ringkas agar judul panjang tetap terbaca.
-                    </div>
-                  </div>
-                  <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-                    {sortedCapexProjects.length} proyek
-                  </span>
-                </div>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                gap: '0.5rem',
+                maxHeight: '360px',
+                overflowY: 'auto',
+                paddingRight: '0.25rem'
+              }}>
+                {sortedCapexProjects.map((project) => {
+                  const progress = Math.max(0, Math.min(100, Number(project.progress) || 0));
+                  const progressColor = getCapexProgressColor(progress);
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem', maxHeight: '520px', overflowY: 'auto', paddingRight: '0.25rem' }}>
-                  {sortedCapexProjects.map((project) => {
-                    const progress = Math.max(0, Math.min(100, Number(project.progress) || 0));
-                    const progressColor = getCapexProgressColor(progress);
-
-                    return (
-                      <div
-                        key={project.id || project.numberedNama}
-                        style={{
-                          padding: '0.78rem 0.85rem',
-                          borderRadius: '12px',
-                          background: 'rgba(255,255,255,0.03)',
-                          border: '1px solid var(--border-subtle)',
-                        }}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.85rem', alignItems: 'flex-start' }}>
-                          <div style={{ minWidth: 0 }}>
-                            <div style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.45, overflowWrap: 'anywhere' }}>
-                              {project.numberedNama}
-                            </div>
-                            <div style={{ marginTop: '0.2rem', fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-                              {project.unit || project.Unit || 'Sarpras'}
-                            </div>
+                  return (
+                    <div
+                      key={project.id || project.numberedNama}
+                      style={{
+                        padding: '0.55rem 0.7rem',
+                        borderRadius: '8px',
+                        background: 'rgba(255,255,255,0.025)',
+                        border: '1px solid var(--border-subtle)',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.6rem', alignItems: 'flex-start' }}>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.35, overflowWrap: 'anywhere' }}>
+                            {project.numberedNama}
                           </div>
-                          <span style={{ flex: '0 0 auto', fontSize: '0.78rem', fontWeight: 800, color: progressColor }}>
-                            {Math.round(progress)}%
-                          </span>
+                          <div style={{ marginTop: '0.1rem', fontSize: '0.62rem', color: 'var(--text-muted)' }}>
+                            {project.unit || project.Unit || 'Sarpras'}
+                          </div>
                         </div>
-                        <div style={{ marginTop: '0.65rem', height: '8px', borderRadius: 999, background: 'rgba(148,163,184,0.16)', overflow: 'hidden' }}>
-                          <div
-                            style={{
-                              width: `${progress}%`,
-                              height: '100%',
-                              borderRadius: 999,
-                              background: progressColor,
-                            }}
-                          />
-                        </div>
+                        <span style={{ flex: '0 0 auto', fontSize: '0.72rem', fontWeight: 800, color: progressColor }}>
+                          {Math.round(progress)}%
+                        </span>
                       </div>
-                    );
-                  })}
-                </div>
+                      <div style={{ marginTop: '0.4rem', height: '5px', borderRadius: 999, background: 'rgba(148,163,184,0.14)', overflow: 'hidden' }}>
+                        <div
+                          style={{
+                            width: `${progress}%`,
+                            height: '100%',
+                            borderRadius: 999,
+                            background: progressColor,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            </div>
+            </>
           ) : (
             <div style={{ padding: '1rem', color: 'var(--text-secondary)' }}>Data proyek belum tersedia.</div>
           )}
