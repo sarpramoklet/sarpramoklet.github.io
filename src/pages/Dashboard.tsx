@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, LabelList, LineChart, Line, Legend } from 'recharts';
-import { UserCircle2, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, MessageSquare, AlertCircle, Edit3, Trash2, Wind, Briefcase, Smartphone, Activity, Coins, Camera, X, Heart, Home } from 'lucide-react';
+import { UserCircle2, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, MessageSquare, AlertCircle, Edit3, Trash2, Wind, Briefcase, Smartphone, Activity, Coins, Camera, X, Heart, Home, Sparkles, ShieldCheck } from 'lucide-react';
 import { getCurrentUser, ROLES, USERS } from '../data/organization';
 import { mergeCapexProjects } from '../data/capexProjects';
 import { getUtilityChartData } from '../data/utilities';
 import { useProfileThumbByEmail } from '../hooks/useProfileThumbByEmail';
 import UserAvatar from '../components/UserAvatar';
-import { getMotivationForLogin, getPublicEducationalMotivation } from '../utils/motivation';
+import { getMotivationForLogin, getPublicEducationalMotivation, getPiketDutyQuote, getPiketDailyReminder } from '../utils/motivation';
 import { pushActionNotification } from '../utils/actionNotifications';
 import { SARMOK_DASHBOARD_API_URL, parseSarmokDashboardBody } from '../utils/sarmokDashboard';
 import type { SarmokDashboardData } from '../utils/sarmokDashboard';
@@ -1653,6 +1653,36 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
     }, 10000); // Berganti setiap 10 detik
     return () => clearInterval(intv);
   }, []);
+
+  const PIKET_SCHEDULE = [
+    { day: 'Senin', personnel: ['Chusni', 'Whyna', 'Rudi'], color: 'var(--accent-blue)' },
+    { day: 'Selasa', personnel: ['Bidin', 'Bagus', 'Rudi'], color: 'var(--accent-emerald)' },
+    { day: 'Rabu', personnel: ['Zakaria', 'Yoko', 'Rudi'], color: 'var(--accent-violet)' },
+    { day: 'Kamis', personnel: ['Chandra', 'Nico', 'Rudi'], color: 'var(--accent-amber)' },
+    { day: 'Jumat', personnel: ['Ayat', 'Amalia', 'Rudi'], color: 'var(--accent-rose)' },
+  ];
+  const todayDayLabel = new Intl.DateTimeFormat('id-ID', { weekday: 'long' }).format(new Date());
+  const todayPiket = PIKET_SCHEDULE.find(s => s.day.toLowerCase() === todayDayLabel.toLowerCase()) || null;
+  const isCurrentUserOnDuty = Boolean(
+    isLoggedIn && todayPiket && todayPiket.personnel.some(p =>
+      currentUser.nama.toLowerCase().includes(p.toLowerCase())
+    )
+  );
+  const todayDateKey = new Date().toISOString().slice(0, 10);
+  const piketDutyQuote = getPiketDutyQuote(currentUser.id, todayDateKey);
+  const piketDailyReminder = getPiketDailyReminder(todayDateKey);
+
+  const [showPiketGreeting, setShowPiketGreeting] = useState(false);
+  useEffect(() => {
+    if (!isCurrentUserOnDuty) return;
+    const flagKey = `piketGreetingShown:${currentUser.id}:${todayDateKey}`;
+    if (localStorage.getItem(flagKey)) return;
+    const timer = setTimeout(() => {
+      setShowPiketGreeting(true);
+      localStorage.setItem(flagKey, '1');
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, [isCurrentUserOnDuty, currentUser.id, todayDateKey]);
 
   const loginSessionSeed = localStorage.getItem('loginSessionSeed') || '';
   const motivationText = getMotivationForLogin(currentUser, `seed-${loginSessionSeed}-${motivationIndex}`);
@@ -3803,30 +3833,26 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         <div className="flex-row-responsive" style={{ padding: '1.25rem', gap: '2rem', alignItems: 'flex-start' }}>
           {/* Day Cards */}
           <div style={{ flex: 1.5, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
-            {[
-              { day: 'Senin', personnel: ['Chusni', 'Whyna', 'Rudi'], color: 'var(--accent-blue)' },
-              { day: 'Selasa', personnel: ['Bidin', 'Bagus', 'Rudi'], color: 'var(--accent-emerald)' },
-              { day: 'Rabu', personnel: ['Zakaria', 'Yoko', 'Rudi'], color: 'var(--accent-violet)' },
-              { day: 'Kamis', personnel: ['Chandra', 'Nico', 'Rudi'], color: 'var(--accent-amber)' },
-              { day: 'Jumat', personnel: ['Ayat', 'Amalia', 'Rudi'], color: 'var(--accent-rose)' },
-            ].map((item, idx) => {
-              const today = new Intl.DateTimeFormat('id-ID', { weekday: 'long' }).format(new Date());
-              const isToday = today.toLowerCase() === item.day.toLowerCase();
+            {PIKET_SCHEDULE.map((item, idx) => {
+              const isToday = todayDayLabel.toLowerCase() === item.day.toLowerCase();
+              const isCurrentUserDay = isLoggedIn && item.personnel.some(p =>
+                currentUser.nama.toLowerCase().includes(p.toLowerCase())
+              );
 
               return (
-                <div key={idx} style={{
+                <div key={idx} className={isToday ? 'piket-today-card' : ''} style={{
                   padding: '1rem',
                   borderRadius: '12px',
                   background: isToday ? `${item.color}15` : 'rgba(255,255,255,0.02)',
-                  border: `1px solid ${isToday ? item.color : 'var(--border-subtle)'}`,
+                  border: `1px solid ${isToday ? item.color : isCurrentUserDay ? `${item.color}55` : 'var(--border-subtle)'}`,
                   position: 'relative',
                   transition: 'all 0.3s ease',
-                  boxShadow: isToday ? `0 0 15px ${item.color}20` : 'none',
+                  boxShadow: isToday ? `0 0 18px ${item.color}33, 0 0 0 1px ${item.color}55 inset` : 'none',
                   transform: isToday ? 'scale(1.02)' : 'none',
                   zIndex: isToday ? 2 : 1
                 }}>
                   {isToday && (
-                    <div style={{
+                    <div className="piket-today-badge" style={{
                       position: 'absolute',
                       top: '-10px',
                       right: '10px',
@@ -3834,12 +3860,16 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                       color: 'white',
                       fontSize: '0.6rem',
                       fontWeight: 800,
-                      padding: '2px 8px',
+                      padding: '3px 10px',
                       borderRadius: '10px',
                       textTransform: 'uppercase',
-                      boxShadow: `0 2px 8px ${item.color}60`
+                      letterSpacing: '0.05em',
+                      boxShadow: `0 2px 8px ${item.color}60`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.3rem'
                     }}>
-                      Hari Ini
+                      <Sparkles size={10} /> Hari Ini
                     </div>
                   )}
                   <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.75rem', color: isToday ? item.color : 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -3848,8 +3878,21 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     {item.personnel.map((p, pIdx) => {
                       const user = USERS.find(u => u.nama.includes(p));
+                      const isMe = isLoggedIn && currentUser.nama.toLowerCase().includes(p.toLowerCase());
                       return (
-                        <div key={pIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.8rem', color: p === 'Rudi' ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
+                        <div key={pIdx} style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.6rem',
+                          fontSize: '0.8rem',
+                          color: isMe ? item.color : p === 'Rudi' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                          padding: isMe ? '4px 8px' : '0',
+                          margin: isMe ? '-4px -8px' : '0',
+                          borderRadius: isMe ? '8px' : '0',
+                          background: isMe ? `${item.color}1a` : 'transparent',
+                          border: isMe ? `1px solid ${item.color}55` : '1px solid transparent',
+                          transition: 'background 0.2s'
+                        }}>
                           <UserAvatar
                             name={user?.nama || p}
                             email={user?.email}
@@ -3857,7 +3900,9 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                             profileThumbByEmail={profileThumbByEmail}
                             size={22}
                           />
-                          <span style={{ fontWeight: p === 'Rudi' ? 600 : 400 }}>{p}</span>
+                          <span style={{ fontWeight: isMe ? 700 : p === 'Rudi' ? 600 : 400 }}>
+                            {p}{isMe ? ' (kamu)' : ''}
+                          </span>
                         </div>
                       );
                     })}
@@ -3891,9 +3936,47 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                   </div>
                 ))}
               </div>
-              <div style={{ marginTop: '1.25rem', padding: '0.75rem', borderRadius: '8px', background: 'var(--accent-amber-ghost)', border: '1px solid rgba(245, 158, 11, 0.2)', fontSize: '0.7rem', color: 'var(--accent-amber)', fontStyle: 'italic' }}>
-                * mari bekerja sama untuk kelancaran layanan excelent dari sarana
-              </div>
+              {isCurrentUserOnDuty ? (
+                <div style={{
+                  marginTop: '1.25rem',
+                  padding: '0.9rem 1rem',
+                  borderRadius: '12px',
+                  background: 'linear-gradient(135deg, rgba(16,185,129,0.18), rgba(59,130,246,0.10))',
+                  border: '1px solid rgba(16,185,129,0.4)',
+                  fontSize: '0.78rem',
+                  color: 'var(--text-primary)',
+                  display: 'flex',
+                  gap: '0.65rem',
+                  alignItems: 'flex-start'
+                }}>
+                  <ShieldCheck size={18} color="var(--accent-emerald)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <div>
+                    <div style={{ fontWeight: 800, color: 'var(--accent-emerald)', marginBottom: '0.25rem', letterSpacing: '0.02em' }}>
+                      Hari ini giliran kamu, {currentUser.nama.split(' ')[0]}!
+                    </div>
+                    <div style={{ lineHeight: 1.5, color: 'var(--text-secondary)' }}>
+                      {piketDutyQuote}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div style={{
+                  marginTop: '1.25rem',
+                  padding: '0.85rem 1rem',
+                  borderRadius: '12px',
+                  background: 'linear-gradient(135deg, rgba(245,158,11,0.14), rgba(244,63,94,0.06))',
+                  border: '1px solid rgba(245, 158, 11, 0.28)',
+                  fontSize: '0.75rem',
+                  color: 'var(--accent-amber)',
+                  display: 'flex',
+                  gap: '0.55rem',
+                  alignItems: 'flex-start',
+                  fontStyle: 'italic'
+                }}>
+                  <Sparkles size={15} style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <span style={{ lineHeight: 1.5 }}>{piketDailyReminder}</span>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -4483,6 +4566,164 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
             
             <div style={{ padding: '1.25rem 1.5rem', borderTop: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.02)', textAlign: 'right' }}>
               <button className="btn btn-primary" onClick={() => setSarmokRowDetailModal(null)} style={{ padding: '0.6rem 1.5rem', borderRadius: '12px' }}>Tutup</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPiketGreeting && todayPiket && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setShowPiketGreeting(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 10000,
+            background: 'rgba(2,6,23,0.78)',
+            backdropFilter: 'blur(14px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1.5rem'
+          }}
+        >
+          <div
+            className="glass-panel piket-greeting-modal"
+            onClick={(event) => event.stopPropagation()}
+            style={{
+              width: 'min(460px, 100%)',
+              padding: '0',
+              overflow: 'hidden',
+              border: `1px solid ${todayPiket.color}55`,
+              boxShadow: `0 24px 60px rgba(0,0,0,0.55), 0 0 0 1px ${todayPiket.color}33 inset`,
+            }}
+          >
+            <div style={{
+              padding: '1.5rem 1.5rem 1rem',
+              background: `linear-gradient(135deg, ${todayPiket.color}33, transparent)`,
+              borderBottom: `1px solid ${todayPiket.color}33`,
+              display: 'flex',
+              gap: '1rem',
+              alignItems: 'center'
+            }}>
+              <div style={{
+                width: '54px',
+                height: '54px',
+                borderRadius: '50%',
+                background: `${todayPiket.color}26`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: `2px solid ${todayPiket.color}`,
+                flexShrink: 0
+              }}>
+                <ShieldCheck size={26} color={todayPiket.color} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: todayPiket.color, marginBottom: '0.2rem' }}>
+                  PIKET HARI INI &middot; {todayPiket.day.toUpperCase()}
+                </div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.3 }}>
+                  Selamat bertugas, {currentUser.nama.split(' ')[0]}!
+                </div>
+              </div>
+              <button
+                onClick={() => setShowPiketGreeting(false)}
+                aria-label="Tutup"
+                style={{
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: 'var(--text-secondary)'
+                }}
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            <div style={{ padding: '1.25rem 1.5rem' }}>
+              <p style={{ margin: 0, fontSize: '0.88rem', lineHeight: 1.55, color: 'var(--text-secondary)' }}>
+                {piketDutyQuote}
+              </p>
+
+              <div style={{ marginTop: '1rem', padding: '0.85rem 1rem', borderRadius: '10px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.5rem' }}>
+                  Tim piket {todayPiket.day}
+                </div>
+                <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+                  {todayPiket.personnel.map((p) => {
+                    const u = USERS.find(x => x.nama.includes(p));
+                    const isMe = currentUser.nama.toLowerCase().includes(p.toLowerCase());
+                    return (
+                      <div key={p} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.4rem',
+                        padding: '4px 10px 4px 4px',
+                        borderRadius: '999px',
+                        background: isMe ? `${todayPiket.color}26` : 'rgba(255,255,255,0.04)',
+                        border: `1px solid ${isMe ? todayPiket.color : 'var(--border-subtle)'}`,
+                        fontSize: '0.78rem',
+                        fontWeight: isMe ? 700 : 500,
+                        color: isMe ? todayPiket.color : 'var(--text-secondary)'
+                      }}>
+                        <UserAvatar
+                          name={u?.nama || p}
+                          email={u?.email}
+                          photoUrl={u?.fotoProfil}
+                          profileThumbByEmail={profileThumbByEmail}
+                          size={22}
+                        />
+                        {p}{isMe ? ' (kamu)' : ''}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ padding: '0 1.5rem 1.25rem', display: 'flex', gap: '0.6rem', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowPiketGreeting(false)}
+                style={{
+                  padding: '0.55rem 1.1rem',
+                  borderRadius: '10px',
+                  background: 'transparent',
+                  border: '1px solid var(--border-subtle)',
+                  color: 'var(--text-secondary)',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                Nanti saja
+              </button>
+              <Link
+                to="/duty-notes"
+                onClick={() => setShowPiketGreeting(false)}
+                style={{
+                  padding: '0.55rem 1.1rem',
+                  borderRadius: '10px',
+                  background: todayPiket.color,
+                  color: 'white',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  textDecoration: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  boxShadow: `0 6px 18px ${todayPiket.color}55`
+                }}
+              >
+                <Edit3 size={14} /> Buka Catatan Piket
+              </Link>
             </div>
           </div>
         </div>

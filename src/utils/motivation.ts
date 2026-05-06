@@ -114,3 +114,34 @@ export const getPublicEducationalMotivation = (visitorSeed: string) => {
   const mixedSeed = hashString(`${baseSeed}|${dayKey}`);
   return pickByHash(PUBLIC_EDUCATIONAL_QUOTES, mixedSeed);
 };
+
+const PIKET_DUTY_QUOTES = [
+  'Hari ini kamu jaga ritme Sarpras — tim akan terbantu kalau respon kamu cepat dan rapi.',
+  'Saat kamu standby, satu peminjaman berjalan lancar bisa menyelamatkan kelas seharian.',
+  'Pelayanan terbaik bukan soal sibuk, tapi soal hadir saat dibutuhkan. Hari ini gilirannmu hadir.',
+  'Setiap barang yang dipinjam adalah kepercayaan kecil yang harus kamu kawal sampai kembali.',
+  'Catatan piket yang rapi hari ini menyelamatkan tim dari kebingungan besok.',
+  'Standby di Sarpras = standby untuk kelancaran sekolah. Tugas kecilmu hari ini berdampak besar.',
+  'Selamat bertugas! Layanan cepat dan ramah hari ini akan dikenang lebih lama dari yang kamu kira.',
+  'Konsistensi adalah pelayanan terbaik — sehari saja absen, ritme tim bisa pincang.',
+  'Hari ini kamu wajah Sarpras buat seluruh sekolah. Pastikan wajah itu siap dan ramah.',
+  'Handover yang bersih malam ini = tidur nyenyak buat petugas piket besok.'
+];
+
+const PIKET_PUBLIC_REMINDERS = [
+  'Mari bekerja sama untuk kelancaran layanan excellent dari Sarana.',
+  'Setiap detail piket hari ini memengaruhi pengalaman seluruh warga sekolah esok hari.',
+  'Standby tepat waktu adalah bentuk profesionalisme paling sederhana namun paling dirasakan.',
+  'Pelayanan Sarpras yang baik dimulai dari satu petugas yang hadir tepat waktu.',
+  'Layanan excellent bukan slogan — itu kebiasaan yang dibangun setiap shift piket.'
+];
+
+export const getPiketDutyQuote = (userId: string, dateKey: string) => {
+  const seed = hashString(`${userId || 'piket'}|${dateKey}`);
+  return pickByHash(PIKET_DUTY_QUOTES, seed);
+};
+
+export const getPiketDailyReminder = (dateKey: string) => {
+  const seed = hashString(`piket-public|${dateKey}`);
+  return pickByHash(PIKET_PUBLIC_REMINDERS, seed);
+};

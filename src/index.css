@@ -659,6 +659,51 @@ tr:hover td {
 .delay-300 { animation: fade-in-up 0.5s ease forwards 0.3s; opacity: 0; }
 .delay-400 { animation: fade-in-up 0.5s ease forwards 0.4s; opacity: 0; }
 
+@keyframes piket-pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 currentColor;
+    opacity: 1;
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(0,0,0,0);
+    opacity: 0.85;
+  }
+}
+
+@keyframes piket-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.piket-today-badge {
+  animation: piket-pulse-glow 1.8s ease-in-out infinite;
+}
+
+.piket-today-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.piket-today-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.08) 50%, transparent 70%);
+  background-size: 200% 100%;
+  animation: piket-shimmer 3.5s linear infinite;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+@keyframes piket-modal-pop {
+  0% { opacity: 0; transform: scale(0.9) translateY(20px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.piket-greeting-modal {
+  animation: piket-modal-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
 
 /* --- Mobile Responsive & Sliding Sidebar --- */
 
