@@ -120,6 +120,17 @@ const fetchProfileThumbMap = async (forceRefresh = false) => {
   return inflightRequest;
 };
 
+export const upsertProfileThumbForEmail = (email: string, picture: string) => {
+  const key = String(email || '').trim().toLowerCase();
+  if (!key || !picture) return;
+  const persisted = readCachedThumbMap();
+  persisted[key] = picture;
+  writeCachedThumbMap(persisted);
+  if (profileThumbCache) {
+    profileThumbCache = { ...profileThumbCache, [key]: picture };
+  }
+};
+
 export const useProfileThumbByEmail = () => {
   const [profileThumbByEmail, setProfileThumbByEmail] = useState<Record<string, string>>(
     () => profileThumbCache || readCachedThumbMap()

@@ -1,18 +1,22 @@
 import { USERS, getCurrentUser, ROLES } from '../data/organization';
-import { Search, ShieldCheck, Edit3, Calendar, Plus, X, Save } from 'lucide-react';
+import { Search, ShieldCheck, Edit3, Calendar, Plus, X, Save, Camera, Check } from 'lucide-react';
 import { useState } from 'react';
-import { useProfileThumbByEmail } from '../hooks/useProfileThumbByEmail';
+import { useProfileThumbByEmail, upsertProfileThumbForEmail } from '../hooks/useProfileThumbByEmail';
 import UserAvatar from '../components/UserAvatar';
+import { persistProfilePicture } from '../utils/logger';
 
 const Personnel = () => {
   const currentUser = getCurrentUser();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  
+
   // State for editing
   const [tempJobdesk, setTempJobdesk] = useState<string[]>([]);
   const [newJob, setNewJob] = useState('');
+  const [photoUrl, setPhotoUrl] = useState('');
+  const [photoSaving, setPhotoSaving] = useState(false);
+  const [photoSavedAt, setPhotoSavedAt] = useState<number | null>(null);
   const profileThumbByEmail = useProfileThumbByEmail();
 
   const isKaur = currentUser.roleAplikasi.includes('Koordinator');
@@ -34,7 +38,30 @@ const Personnel = () => {
   const handleManage = (user: any) => {
     setSelectedUser(user);
     setTempJobdesk([...user.scopePekerjaan]);
+    const existingPhoto = profileThumbByEmail[user.email?.toLowerCase()] || user.fotoProfil || '';
+    setPhotoUrl(existingPhoto);
+    setPhotoSavedAt(null);
     setIsModalOpen(true);
+  };
+
+  const handleSavePhoto = async () => {
+    if (!selectedUser || !photoUrl.trim()) return;
+    setPhotoSaving(true);
+    try {
+      await persistProfilePicture({
+        userId: selectedUser.id,
+        nama: selectedUser.nama,
+        jabatan: selectedUser.jabatan,
+        unit: selectedUser.unit,
+        role: selectedUser.roleAplikasi,
+        email: selectedUser.email,
+        profilePicture: photoUrl.trim(),
+      });
+      upsertProfileThumbForEmail(selectedUser.email, photoUrl.trim());
+      setPhotoSavedAt(Date.now());
+    } finally {
+      setPhotoSaving(false);
+    }
   };
 
   const handleAddJob = () => {
@@ -163,6 +190,45 @@ const Personnel = () => {
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>ID: {selectedUser.nip} | Unit {selectedUser.unit}</p>
               </div>
             </div>
+
+            {isPimpinan && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '1rem', borderRadius: '12px', background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.25)' }}>
+                <h3 style={{ fontSize: '0.95rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Camera size={16} color="var(--accent-violet)" /> Foto Profil Google
+                </h3>
+                <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                  Tempel URL foto Google personil ini (klik kanan foto Google → Salin alamat gambar). URL akan disimpan permanen di sheet <code>Profile_Pictures</code>.
+                </p>
+                <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+                  <UserAvatar
+                    name={selectedUser.nama}
+                    email={selectedUser.email}
+                    photoUrl={photoUrl || selectedUser.fotoProfil}
+                    profileThumbByEmail={profileThumbByEmail}
+                    size={48}
+                  />
+                  <input
+                    type="text"
+                    value={photoUrl}
+                    onChange={(e) => { setPhotoUrl(e.target.value); setPhotoSavedAt(null); }}
+                    placeholder="https://lh3.googleusercontent.com/a/..."
+                    style={{ flex: 1, background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', padding: '0.55rem 0.75rem', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '0.78rem' }}
+                  />
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleSavePhoto}
+                    disabled={photoSaving || !photoUrl.trim()}
+                    style={{ padding: '0.55rem 0.85rem', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                  >
+                    {photoSavedAt && Date.now() - photoSavedAt < 4000
+                      ? (<><Check size={14} /> Tersimpan</>)
+                      : photoSaving
+                        ? 'Menyimpan…'
+                        : (<><Save size={14} /> Simpan</>)}
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <h3 style={{ fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

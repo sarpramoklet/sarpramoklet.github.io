@@ -207,7 +207,7 @@ export const logLoginEvent = async (
   }
 };
 
-const persistProfilePicture = async (params: {
+export const persistProfilePicture = async (params: {
   userId: string;
   nama: string;
   jabatan: string;
@@ -217,7 +217,7 @@ const persistProfilePicture = async (params: {
   profilePicture: string;
 }) => {
   const timestamp = getTimestamp();
-  const recordId = `PIC-${params.userId || params.email}`;
+  const recordId = `PIC-${params.userId || params.email}-${Date.now()}`;
   const payload = {
     action: 'FINANCE_RECORD',
     sheetName: 'Profile_Pictures',
