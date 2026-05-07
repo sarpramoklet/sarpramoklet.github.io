@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Bell, MessageSquare, Heart, Clock, AlertCircle, Upload, Edit3, Trash2 } from 'lucide-react';
+import { Bell, MessageSquare, Heart, Clock, AlertCircle, Upload, Edit3, Trash2, X as XIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { ROLES, USERS } from '../data/organization';
 import { useProfileThumbByEmail } from '../hooks/useProfileThumbByEmail';
@@ -24,6 +24,29 @@ const startOfToday = () => {
   const next = new Date();
   next.setHours(0, 0, 0, 0);
   return next;
+};
+
+const DISMISSED_NOTIFICATIONS_STORAGE_KEY = 'dismissedNotifications.v1';
+
+const readDismissedKeys = (): Set<string> => {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const raw = window.localStorage.getItem(DISMISSED_NOTIFICATIONS_STORAGE_KEY);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw);
+    return new Set(Array.isArray(parsed) ? parsed.filter((entry) => typeof entry === 'string') : []);
+  } catch {
+    return new Set();
+  }
+};
+
+const writeDismissedKeys = (keys: Set<string>) => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(DISMISSED_NOTIFICATIONS_STORAGE_KEY, JSON.stringify(Array.from(keys)));
+  } catch {
+    // ignore
+  }
 };
 
 const iconByKey: Record<ActionNotificationIconKey, any> = {
@@ -261,6 +284,7 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const profileThumbByEmail = useProfileThumbByEmail();
+  const [dismissedKeys, setDismissedKeys] = useState<Set<string>>(() => readDismissedKeys());
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -272,13 +296,24 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const applyNotifications = (remoteNotifications: any[]) => {
+  const applyNotifications = (remoteNotifications: any[], dismissedOverride?: Set<string>) => {
     remoteNotificationsRef.current = remoteNotifications;
     const merged = mergeNotifications(remoteNotifications, hydrateActionNotifications());
     const todayStart = startOfToday().getTime();
+    const dismissed = dismissedOverride ?? dismissedKeys;
+    const visible = merged.filter((item) => !dismissed.has(item.dedupeKey || item.id));
 
-    setNotifications(merged.slice(0, 15));
-    setUnreadCount(merged.filter((item) => item.timestamp > todayStart).length);
+    setNotifications(visible.slice(0, 15));
+    setUnreadCount(visible.filter((item) => item.timestamp > todayStart).length);
+  };
+
+  const handleDismiss = (dedupeKey: string) => {
+    if (!dedupeKey) return;
+    const next = new Set(dismissedKeys);
+    next.add(dedupeKey);
+    writeDismissedKeys(next);
+    setDismissedKeys(next);
+    applyNotifications(remoteNotificationsRef.current, next);
   };
 
   const fetchNotifs = async () => {
@@ -501,9 +536,22 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
 
       if (shouldFetchAccessLogs && Array.isArray(accessLogsData)) {
         const distinctAccessLogMap = new Map<string, any>();
+        const selfNameLower = (currentUser?.nama || '').trim().toLowerCase();
+        const selfEmailLower = (currentUser?.email || '').trim().toLowerCase();
+        const selfIdLower = String(currentUser?.id || '').trim().toLowerCase();
 
         accessLogsData
-          .filter((log: Record<string, any>) => pickLogValue(log, ['Nama', 'nama']))
+          .filter((log: Record<string, any>) => {
+            if (!pickLogValue(log, ['Nama', 'nama'])) return false;
+            const logName = pickLogValue(log, ['Nama', 'nama']).trim().toLowerCase();
+            const logEmail = pickLogValue(log, ['Email', 'email']).trim().toLowerCase();
+            const logUserId = pickLogValue(log, ['ID_User', 'id_user', 'idUser']).trim().toLowerCase();
+            // Hide the current user's own activity (no point notifying yourself)
+            if (selfEmailLower && logEmail && logEmail === selfEmailLower) return false;
+            if (selfIdLower && logUserId && logUserId === selfIdLower) return false;
+            if (selfNameLower && logName && (logName === selfNameLower || logName.includes(selfNameLower) || selfNameLower.includes(logName))) return false;
+            return true;
+          })
           .map((log: Record<string, any>) => {
             const timestamp = parseAccessLogTimestamp(log);
             const presenter = getAccessLogPresentation(log);
@@ -697,22 +745,27 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
                </div>
             ) : notifications.map((notif, idx) => {
                const Icon = notif.icon;
+               const dedupeKey = notif.dedupeKey || notif.id;
                return (
-                 <div key={`${notif.id}-${idx}`} onClick={() => handleNav(notif.path)} style={{
+                 <div key={`${notif.id}-${idx}`} onClick={() => {
+                    handleDismiss(dedupeKey);
+                    handleNav(notif.path);
+                 }} style={{
                     padding: '0.85rem 1rem', display: 'flex', gap: '0.85rem', cursor: 'pointer',
                     borderBottom: '1px solid rgba(150,150,150,0.05)',
-                    transition: 'background 0.2s'
+                    transition: 'background 0.2s',
+                    position: 'relative'
                  }}
                  onMouseOver={(e) => e.currentTarget.style.background = 'rgba(150,150,150,0.08)'}
                  onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
                  >
-                    <div style={{ 
+                    <div style={{
                       width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0,
                       background: notif.bg || 'rgba(150,150,150,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center'
                     }}>
                       <Icon size={14} color={notif.color} />
                     </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ flex: 1, minWidth: 0, paddingRight: '1.25rem' }}>
                       <p style={{ margin: 0, fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {notif.title}
                       </p>
@@ -723,14 +776,56 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
                          {new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(notif.date)}
                       </p>
                     </div>
+                    <button
+                      type="button"
+                      aria-label="Tandai sudah dibaca"
+                      title="Tandai sudah dibaca"
+                      onClick={(e) => { e.stopPropagation(); handleDismiss(dedupeKey); }}
+                      style={{
+                        position: 'absolute', top: '8px', right: '8px',
+                        width: '22px', height: '22px', borderRadius: '50%',
+                        background: 'rgba(150,150,150,0.06)',
+                        border: '1px solid var(--border-subtle)',
+                        color: 'var(--text-muted)',
+                        cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        padding: 0,
+                        transition: 'background 0.15s, color 0.15s'
+                      }}
+                      onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(244,63,94,0.15)'; e.currentTarget.style.color = 'var(--accent-rose)'; }}
+                      onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(150,150,150,0.06)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+                    >
+                      <XIcon size={11} />
+                    </button>
                  </div>
                )
             })}
           </div>
 
-          <div style={{ padding: '0.75rem 1rem 0 1rem', borderTop: '1px solid var(--border-subtle)', textAlign: 'center' }}>
+          <div style={{ padding: '0.75rem 1rem 0 1rem', borderTop: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
+            <button
+              type="button"
+              onClick={() => {
+                const next = new Set(dismissedKeys);
+                notifications.forEach((notif) => next.add(notif.dedupeKey || notif.id));
+                writeDismissedKeys(next);
+                setDismissedKeys(next);
+                applyNotifications(remoteNotificationsRef.current, next);
+              }}
+              disabled={notifications.length === 0}
+              style={{
+                border: 'none',
+                background: 'transparent',
+                fontSize: '0.72rem',
+                color: notifications.length === 0 ? 'var(--text-muted)' : 'var(--text-secondary)',
+                fontWeight: 600,
+                cursor: notifications.length === 0 ? 'default' : 'pointer'
+              }}
+            >
+              Bersihkan Semua
+            </button>
             <button onClick={() => handleNav('/duty-notes')} style={{ border: 'none', background: 'transparent', fontSize: '0.75rem', color: 'var(--accent-blue)', fontWeight: 600, cursor: 'pointer' }}>
-               Kelola Seluruh Catatan &rarr;
+               Kelola Catatan &rarr;
             </button>
           </div>
         </div>
