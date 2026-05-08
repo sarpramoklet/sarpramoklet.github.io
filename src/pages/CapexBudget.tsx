@@ -5,7 +5,7 @@ import {
   ChevronDown, ChevronRight, DollarSign, Target, Activity, Plus, Trash2,
   Receipt, CalendarDays, FileText, Briefcase, Cpu, Zap
 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell, LabelList } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell, LabelList, LineChart, Line, Legend } from 'recharts';
 import { getCurrentUser, ROLES } from '../data/organization';
 import { DEFAULT_CAPEX_PROJECTS, encodeCapexProjectNama, getNextCapexProjectId, mergeCapexProjects, type CapexProjectRecord } from '../data/capexProjects';
 import { pushActionNotification } from '../utils/actionNotifications';
@@ -13,6 +13,7 @@ import { pushActionNotification } from '../utils/actionNotifications';
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
 const SHEET_REALISASI = 'Capex_Realisasi';
 const SHEET_PROYEK    = 'Progres_CAPEX';
+const SHEET_PROGRESS_HISTORY = 'Capex_Progress_History';
 
 /* ─── Static budget master (RKA Investasi 2026) ─── */
 interface BudgetItem {
@@ -31,6 +32,33 @@ const BUDGET_MASTER: BudgetItem[] = [
   { id: 'CAPEX-1235101', akun: '1235101', deskripsi: 'Alat Pengolah Data',     anggaran: 0          },
   { id: 'CAPEX-1236101', akun: '1236101', deskripsi: 'Alat Catu Daya',         anggaran: 0          },
 ];
+
+/* ─── Progress history (per progress save) ─── */
+interface CapexProgressHistoryEntry {
+  id: string;
+  projectId: string;
+  nama: string;
+  progress: number;
+  timestamp: string; // ISO
+  updatedBy: string;
+}
+
+const parseProgressHistoryRow = (row: any): CapexProgressHistoryEntry | null => {
+  const projectId = String(row.ProjectId || row.projectId || row.ProjectID || row.project_id || '').trim();
+  const progressRaw = Number(row.Progress ?? row.progress ?? row.PROGRESS ?? 0);
+  const timestampRaw = String(row.Timestamp || row.timestamp || row.UpdatedAt || row.updatedAt || '').trim();
+  if (!projectId || !timestampRaw) return null;
+  const ts = new Date(timestampRaw);
+  if (Number.isNaN(ts.getTime())) return null;
+  return {
+    id: String(row.ID || row.id || `${projectId}-${ts.getTime()}`),
+    projectId,
+    nama: String(row.Nama || row.nama || '').trim(),
+    progress: Number.isFinite(progressRaw) ? Math.max(0, Math.min(100, progressRaw)) : 0,
+    timestamp: ts.toISOString(),
+    updatedBy: String(row.UpdatedBy || row.updatedBy || '').trim(),
+  };
+};
 
 /* ─── Transaction (realisasi entry) ─── */
 interface RealisasiEntry {
@@ -81,6 +109,8 @@ const CapexBudget = () => {
   const [showProjectFormModal, setShowProjectFormModal] = useState(false);
   const [projectProgress, setProjectProgress] = useState(0);
   const [isSavingProject, setIsSavingProject] = useState(false);
+  const [progressHistory, setProgressHistory] = useState<CapexProgressHistoryEntry[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [projectForm, setProjectForm] = useState({
     nama: '',
     deskripsi: '',
@@ -193,9 +223,28 @@ const CapexBudget = () => {
     }
   };
 
-  useEffect(() => { 
-    fetchData(); 
+  const fetchProgressHistory = async () => {
+    setHistoryLoading(true);
+    try {
+      const resp = await fetch(`${API_URL}?sheetName=${SHEET_PROGRESS_HISTORY}`);
+      const data = await resp.json();
+      const rows: CapexProgressHistoryEntry[] = Array.isArray(data)
+        ? data.map(parseProgressHistoryRow).filter((row): row is CapexProgressHistoryEntry => row !== null)
+        : [];
+      rows.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      setProgressHistory(rows);
+    } catch (err) {
+      console.error('Error fetching progress history:', err);
+      setProgressHistory([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
     fetchProjects();
+    fetchProgressHistory();
   }, []);
 
   /* ── add entry ── */
@@ -374,6 +423,53 @@ const CapexBudget = () => {
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify(payload),
       });
+
+      // Append immutable history row so we can plot the progress curve
+      const historyId = `CAPEXPH-${Date.now()}-${editingProject.id}`;
+      const historyEntry: CapexProgressHistoryEntry = {
+        id: historyId,
+        projectId: editingProject.id,
+        nama: editingProject.nama,
+        progress: projectProgress,
+        timestamp: lastUpdated,
+        updatedBy,
+      };
+      const previousProgress = editingProject.progress;
+      if (projectProgress !== previousProgress) {
+        const historyPayload = {
+          action: 'FINANCE_RECORD',
+          sheetName: SHEET_PROGRESS_HISTORY,
+          sheet: SHEET_PROGRESS_HISTORY,
+          ID: historyId,
+          id: historyId,
+          ProjectId: editingProject.id,
+          projectId: editingProject.id,
+          Nama: encodeCapexProjectNama(editingProject),
+          nama: encodeCapexProjectNama(editingProject),
+          Progress: projectProgress,
+          progress: projectProgress,
+          PreviousProgress: previousProgress,
+          previousProgress: previousProgress,
+          Delta: projectProgress - previousProgress,
+          delta: projectProgress - previousProgress,
+          Timestamp: lastUpdated,
+          timestamp: lastUpdated,
+          UpdatedBy: updatedBy,
+          updatedBy,
+        };
+        try {
+          await fetch(API_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify(historyPayload),
+          });
+          setProgressHistory((prev) => [...prev, historyEntry]);
+        } catch (historyError) {
+          console.warn('Capex progress history append failed:', historyError);
+        }
+      }
+
       setProjects((prev) =>
         prev.map((project) =>
           project.id === editingProject.id
@@ -394,6 +490,7 @@ const CapexBudget = () => {
         bg: projectProgress >= 100 ? 'rgba(16, 185, 129, 0.1)' : 'var(--accent-blue-ghost)'
       });
       setTimeout(fetchProjects, 3000);
+      setTimeout(fetchProgressHistory, 4000);
       alert("Terima kasih! Data progres CAPEX berhasil diperbarui.");
     } catch {
       alert('Gagal menyimpan progres. Periksa koneksi.');
@@ -659,6 +756,134 @@ const CapexBudget = () => {
               </button>
             )}
           </div>
+
+          {/* Kurva Pergerakan Penyelesaian (timeline) */}
+          {(() => {
+            if (progressHistory.length === 0 && !historyLoading) return null;
+
+            // Build a timeline of distinct timestamps; for each, carry-forward
+            // the most recent progress per project so the line stays continuous.
+            const sortedHistory = progressHistory.slice().sort(
+              (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+            );
+            const projectIds = Array.from(new Set(sortedHistory.map((entry) => entry.projectId)));
+            const projectNameById = new Map<string, string>();
+            sortedHistory.forEach((entry) => projectNameById.set(entry.projectId, entry.nama));
+            projects.forEach((project) => projectNameById.set(project.id, project.nama));
+
+            // Top movers: 5 projects with the largest swing across the period
+            const swingByProject = new Map<string, number>();
+            projectIds.forEach((id) => {
+              const series = sortedHistory.filter((entry) => entry.projectId === id);
+              if (series.length === 0) return;
+              const min = Math.min(...series.map((entry) => entry.progress));
+              const max = Math.max(...series.map((entry) => entry.progress));
+              swingByProject.set(id, max - min);
+            });
+            const topMovers = Array.from(swingByProject.entries())
+              .sort((a, b) => b[1] - a[1])
+              .slice(0, 5)
+              .map(([id]) => id);
+
+            const lineColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#a78bfa'];
+            const carry = new Map<string, number>();
+            const dayBuckets = new Map<string, Record<string, number>>();
+            const dayLabel = (iso: string) => iso.slice(0, 10);
+            sortedHistory.forEach((entry) => {
+              carry.set(entry.projectId, entry.progress);
+              const day = dayLabel(entry.timestamp);
+              const existing = dayBuckets.get(day) || {};
+              topMovers.forEach((id) => {
+                if (carry.has(id)) existing[id] = carry.get(id)!;
+              });
+              const all: number[] = [];
+              projectIds.forEach((id) => { if (carry.has(id)) all.push(carry.get(id)!); });
+              existing.__avg = all.length ? all.reduce((s, v) => s + v, 0) / all.length : 0;
+              dayBuckets.set(day, existing);
+            });
+            const dayKeys = Array.from(dayBuckets.keys()).sort();
+            const chartData = dayKeys.map((day) => {
+              const bucket = dayBuckets.get(day) || {};
+              const point: Record<string, any> = { day };
+              topMovers.forEach((id) => { point[id] = bucket[id] ?? null; });
+              point.__avg = bucket.__avg ?? 0;
+              return point;
+            });
+
+            const totalUpdates = sortedHistory.length;
+            const lastUpdate = sortedHistory[sortedHistory.length - 1];
+
+            return (
+              <div className="glass-panel" style={{ padding: '1.25rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'flex-start', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
+                  <div>
+                    <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.05rem', color: 'var(--text-primary)' }}>
+                      <Activity size={18} color="var(--accent-emerald)" /> Kurva Pergerakan Penyelesaian
+                    </h3>
+                    <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                      Setiap perubahan progres tercatat ke <code>{SHEET_PROGRESS_HISTORY}</code>. Grafik menampilkan rata-rata seluruh proyek + 5 proyek dengan pergerakan terbesar.
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+                    <span className="badge badge-info" style={{ fontSize: '0.65rem' }}>{totalUpdates} catatan perubahan</span>
+                    {lastUpdate && (
+                      <span className="badge" style={{ fontSize: '0.65rem', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border-subtle)', color: 'var(--text-muted)' }}>
+                        Terakhir: {fmtDate(lastUpdate.timestamp)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {historyLoading && progressHistory.length === 0 ? (
+                  <div style={{ padding: '2rem', display: 'flex', justifyContent: 'center' }}><Loader2 className="animate-spin" color="var(--accent-emerald)" /></div>
+                ) : (
+                  <div style={{ width: '100%', height: '320px' }}>
+                    <ResponsiveContainer>
+                      <LineChart data={chartData} margin={{ top: 10, right: 30, left: -10, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" />
+                        <XAxis dataKey="day" stroke="var(--text-muted)" fontSize={11} tickFormatter={(d: string) => {
+                          const date = new Date(d);
+                          return Number.isNaN(date.getTime()) ? d : new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short' }).format(date);
+                        }} />
+                        <YAxis domain={[0, 100]} stroke="var(--text-muted)" fontSize={11} tickFormatter={(v) => `${v}%`} />
+                        <RechartsTooltip
+                          contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-focus)', borderRadius: '10px', fontSize: '12px' }}
+                          labelFormatter={(label) => {
+                            const raw = String(label ?? '');
+                            const date = new Date(raw);
+                            return Number.isNaN(date.getTime()) ? raw : new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).format(date);
+                          }}
+                          formatter={(value: any, name: any) => {
+                            if (value === null || value === undefined) return ['-', String(name)];
+                            const label = name === '__avg' ? 'Rata-rata semua proyek' : (projectNameById.get(String(name)) || String(name));
+                            return [`${Number(value).toFixed(1)}%`, label];
+                          }}
+                        />
+                        <Legend
+                          formatter={(value) => value === '__avg' ? 'Rata-rata semua' : (projectNameById.get(String(value)) || String(value)).slice(0, 36)}
+                          wrapperStyle={{ fontSize: '0.7rem' }}
+                        />
+                        <Line type="monotone" dataKey="__avg" stroke="var(--accent-emerald)" strokeWidth={3} dot={{ r: 3 }} activeDot={{ r: 5 }} connectNulls />
+                        {topMovers.map((id, idx) => (
+                          <Line
+                            key={id}
+                            type="monotone"
+                            dataKey={id}
+                            stroke={lineColors[idx % lineColors.length]}
+                            strokeWidth={1.6}
+                            strokeDasharray="4 3"
+                            dot={false}
+                            activeDot={{ r: 4 }}
+                            connectNulls
+                          />
+                        ))}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Grafik Proyek */}
           <div className="glass-panel" style={{ padding: '1.25rem' }}>
