@@ -43,7 +43,7 @@ const buildActivityLabel = ({ eventType, pageName, menuName, detail }: ActivityL
   }
 };
 
-const postLog = async (payload: Record<string, string>) => {
+const postLog = async (payload: Record<string, string | number>) => {
   try {
     await fetch(LOG_API_URL, {
       method: 'POST',
@@ -216,30 +216,48 @@ export const persistProfilePicture = async (params: {
   email: string;
   profilePicture: string;
 }) => {
-  const timestamp = getTimestamp();
-  const recordId = `PIC-${params.userId || params.email}-${Date.now()}`;
+  const timestamp = new Date().toISOString();
+  const emailKey = String(params.email || '').trim().toLowerCase();
+  if (!emailKey || !params.profilePicture) return;
+
+  // The Profile_Pictures sheet uses the default Apps Script schema
+  // (id, tanggal, keterangan, kategori, amount, type, debit, kredit).
+  // Map our fields to that schema so writes are not dropped:
+  //   id        -> stable PIC-<email> so re-saves overwrite the same row
+  //   tanggal   -> ISO timestamp of the latest update
+  //   keterangan -> the photo URL
+  //   kategori  -> email (lowercased) — used as the lookup key
+  //   type      -> 'profile_picture' marker so we can filter on read
+  const recordId = `PIC-${emailKey}`;
   const payload = {
     action: 'FINANCE_RECORD',
     sheetName: 'Profile_Pictures',
     sheet: 'Profile_Pictures',
-    upsertKey: 'Email',
 
     id: recordId,
     ID: recordId,
-    Timestamp: timestamp,
-    UpdatedAt: timestamp,
-    ID_User: params.userId,
+    tanggal: timestamp,
+    Tanggal: timestamp,
+    keterangan: params.profilePicture,
+    Keterangan: params.profilePicture,
+    kategori: emailKey,
+    Kategori: emailKey,
+    type: 'profile_picture',
+    Type: 'profile_picture',
+    amount: 1,
+    Amount: 1,
+
+    // Extra fields the Apps Script will ignore but useful if the schema
+    // ever grows: keep the rich metadata around.
     Nama: params.nama,
+    nama: params.nama,
+    Email: params.email,
+    email: params.email,
+    ID_User: params.userId,
     Jabatan: params.jabatan,
     Unit: params.unit,
     Role: params.role,
-    Email: params.email,
     ProfilePicture: params.profilePicture,
-
-    timestamp,
-    updatedAt: timestamp,
-    nama: params.nama,
-    email: params.email,
     profilePicture: params.profilePicture,
   };
 
