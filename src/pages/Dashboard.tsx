@@ -1624,7 +1624,7 @@ const buildUtilityChartFromRows = (rows: any[]): UtilityChartPoint[] => {
     monthTotals.set(bulan, current);
   });
 
-  const monthKeys = Array.from(monthTotals.keys()).sort((a, b) => a.localeCompare(b)).slice(-5);
+  const monthKeys = Array.from(monthTotals.keys()).sort((a, b) => a.localeCompare(b)).slice(-12);
   const referenceYear = monthKeys[monthKeys.length - 1]?.slice(0, 4) || '';
 
   return monthKeys.map((month) => {
