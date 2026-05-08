@@ -3556,7 +3556,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
               )}
             </div>
 
-            {/* Box 2: Room Reservation */}
+            {/* Box 2: Room Reservation — focus on Sedang Dipakai only */}
             <div className="glass-panel" style={{ padding: '0.75rem', border: '1px solid rgba(52,211,153,0.22)', background: 'rgba(52,211,153,0.025)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.55rem' }}>
                 <Calendar size={14} color="#10b981" />
@@ -3565,11 +3565,51 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
               {mokletService.loading && !mokletService.roomReservation ? (
                 <div style={{ display: 'flex', justifyContent: 'center', padding: '0.75rem' }}><Loader2 size={16} className="animate-spin" color="#10b981" /></div>
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '0.4rem', opacity: mokletService.loading ? 0.5 : 1, transition: 'opacity 0.2s' }}>
-                  {renderSarmokMetricCell(mokletService.roomReservation?.rejectedReservation ?? '-', '#fb7185', 'Ditolak', 'roomReservation', 'Peminjaman Ruang', 'Ditolak', SARMOK_ROOM_DETAIL_API_URL)}
-                  {renderSarmokMetricCell(mokletService.roomReservation?.waitingConfirmation ?? '-', '#f59e0b', 'Menunggu', 'roomReservation', 'Peminjaman Ruang', 'Menunggu Konfirmasi', SARMOK_ROOM_DETAIL_API_URL)}
-                  {renderSarmokMetricCell(mokletService.roomReservation?.activeReservation ?? '-', '#10b981', 'Berlangsung', 'roomReservation', 'Peminjaman Ruang', 'Sedang Berlangsung', SARMOK_ROOM_DETAIL_API_URL)}
-                  {renderSarmokMetricCell(mokletService.roomReservation?.inUseReservation ?? '-', '#14b8a6', 'Dipakai', 'roomReservation', 'Peminjaman Ruang', 'Sedang Dipakai', SARMOK_ROOM_DETAIL_API_URL)}
+                <div style={{ opacity: mokletService.loading ? 0.5 : 1, transition: 'opacity 0.2s' }}>
+                  <button
+                    type="button"
+                    onClick={() => openSarmokDetail('roomReservation', 'Peminjaman Ruang', 'Sedang Dipakai', SARMOK_ROOM_DETAIL_API_URL, '#14b8a6')}
+                    disabled={mokletService.loading}
+                    aria-label="Lihat detail Peminjaman Ruang Sedang Dipakai"
+                    title="Lihat detail Sedang Dipakai"
+                    style={{
+                      appearance: 'none',
+                      width: '100%',
+                      border: '1px solid rgba(20,184,166,0.35)',
+                      background: 'rgba(20,184,166,0.08)',
+                      padding: '0.65rem 0.8rem',
+                      borderRadius: '10px',
+                      cursor: mokletService.loading ? 'default' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '0.6rem',
+                      transition: 'background 0.18s, border-color 0.18s',
+                    }}
+                    onMouseEnter={(event) => {
+                      event.currentTarget.style.background = 'rgba(20,184,166,0.15)';
+                      event.currentTarget.style.borderColor = 'rgba(20,184,166,0.6)';
+                    }}
+                    onMouseLeave={(event) => {
+                      event.currentTarget.style.background = 'rgba(20,184,166,0.08)';
+                      event.currentTarget.style.borderColor = 'rgba(20,184,166,0.35)';
+                    }}
+                  >
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#14b8a6', flexShrink: 0 }} />
+                      <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.1rem', minWidth: 0 }}>
+                        <span style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>
+                          Sedang Dipakai
+                        </span>
+                        <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>
+                          ruang aktif sekarang
+                        </span>
+                      </span>
+                    </span>
+                    <span style={{ fontWeight: 800, fontSize: '1.55rem', color: '#14b8a6', lineHeight: 1, flexShrink: 0 }}>
+                      {mokletService.roomReservation?.inUseReservation ?? '-'}
+                    </span>
+                  </button>
                 </div>
               )}
             </div>
