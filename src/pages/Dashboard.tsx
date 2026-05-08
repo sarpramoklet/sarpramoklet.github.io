@@ -963,6 +963,101 @@ const parseSarmokDetailDate = (value: unknown) => {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
+const SARMOK_CREATED_FIELDS = [
+  'created_at', 'createdAt', 'created_date', 'createdDate',
+  'tanggal_pengajuan', 'tanggal_pengaduan', 'tanggal_pinjam', 'tanggal_complaint',
+  'tanggal', 'date', 'submission_at', 'submitted_at', 'request_at', 'requested_at'
+];
+const SARMOK_FIRST_ACTION_FIELDS = [
+  'verified_at', 'approved_at', 'process_at', 'processed_at',
+  'rejected_at', 'declined_at',
+  'start_at', 'borrow_at', 'in_progress_at', 'inProgressAt',
+  'updated_at', 'updatedAt'
+];
+
+export type SarmokResponseAnalysis = {
+  total: number;
+  handledCount: number;
+  pendingCount: number;
+  overduePending: number;
+  avgHours: number | null;
+  medianHours: number | null;
+  fastestHours: number | null;
+  slowestHours: number | null;
+  withinDayPct: number | null;
+};
+
+const pickFirstSarmokTimestamp = (row: any, paths: string[]): number | null => {
+  for (const path of paths) {
+    const value = pickDetailValue(row, [path]);
+    if (value === undefined || value === null || value === '') continue;
+    const parsed = parseSarmokDetailDate(value);
+    if (parsed) return parsed.getTime();
+  }
+  return null;
+};
+
+const analyzeSarmokResponse = (rows: any[]): SarmokResponseAnalysis => {
+  const responseHours: number[] = [];
+  let pending = 0;
+  let overduePending = 0;
+  const now = Date.now();
+  const HOUR = 1000 * 60 * 60;
+
+  rows.forEach((row) => {
+    const created = pickFirstSarmokTimestamp(row, SARMOK_CREATED_FIELDS);
+    if (!created) return;
+
+    const action = pickFirstSarmokTimestamp(row, SARMOK_FIRST_ACTION_FIELDS);
+    if (action && action >= created) {
+      const hours = (action - created) / HOUR;
+      if (hours >= 0 && hours < 24 * 60) responseHours.push(hours);
+    } else {
+      pending++;
+      const waitingHours = (now - created) / HOUR;
+      if (waitingHours > 24) overduePending++;
+    }
+  });
+
+  responseHours.sort((a, b) => a - b);
+  const total = responseHours.length + pending;
+  if (responseHours.length === 0) {
+    return {
+      total,
+      handledCount: 0,
+      pendingCount: pending,
+      overduePending,
+      avgHours: null,
+      medianHours: null,
+      fastestHours: null,
+      slowestHours: null,
+      withinDayPct: null,
+    };
+  }
+  const avg = responseHours.reduce((s, v) => s + v, 0) / responseHours.length;
+  const median = responseHours[Math.floor(responseHours.length / 2)];
+  const withinDay = responseHours.filter((h) => h <= 24).length;
+
+  return {
+    total,
+    handledCount: responseHours.length,
+    pendingCount: pending,
+    overduePending,
+    avgHours: avg,
+    medianHours: median,
+    fastestHours: responseHours[0],
+    slowestHours: responseHours[responseHours.length - 1],
+    withinDayPct: (withinDay / responseHours.length) * 100,
+  };
+};
+
+const formatResponseHours = (hours: number | null): string => {
+  if (hours === null || !Number.isFinite(hours)) return '-';
+  if (hours < 1) return `${Math.round(hours * 60)} mnt`;
+  if (hours < 24) return `${hours.toFixed(1)} jam`;
+  return `${(hours / 24).toFixed(1)} hari`;
+};
+
 const ROOM_BORROW_FIELDS = ['room.name', 'room.nama', 'room.number', 'room.code', 'room_id', 'room_name', 'room_number', 'room_code', 'classroom.name', 'classroom', 'space.name', 'space'];
 const TOOL_BORROW_FIELDS = ['tool.name', 'tool_id', 'tool_name', 'item.name', 'item_id', 'item_name', 'asset.name', 'asset_id', 'asset_name', 'goods.name', 'barang.name', 'sarpra_detail_borrow', 'detail_borrow', 'borrow_details', 'tools', 'items', 'assets', 'lends', 'lend'];
 
@@ -1618,6 +1713,11 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   });
   const [sarmokDetailModal, setSarmokDetailModal] = useState<SarmokDetailModal | null>(null);
   const [sarmokRowDetailModal, setSarmokRowDetailModal] = useState<any | null>(null);
+  const [sarmokAnalysis, setSarmokAnalysis] = useState<{
+    complaints: SarmokResponseAnalysis | null;
+    roomReservation: SarmokResponseAnalysis | null;
+    toolsLoan: SarmokResponseAnalysis | null;
+  }>({ complaints: null, roomReservation: null, toolsLoan: null });
 
   const [wifiData, setWifiData] = useState<any[]>([]);
   const [wifiLoading, setWifiLoading] = useState(false);
@@ -2221,6 +2321,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         }
 
         let complaintStats = normalizeSarmokComplaintStats(null, data.complaints);
+        let complaintPayload: unknown = null;
         const complaintSummaryUrl = buildSarmokDetailUrl(SARMOK_COMPLAINT_DETAIL_API_URL, 'complaints', 'All Status');
         try {
           const directComplaintResp = await fetch(complaintSummaryUrl, {
@@ -2232,20 +2333,23 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           });
 
           if (!directComplaintResp.ok) throw new Error(`Sarmok complaint API failed (${directComplaintResp.status})`);
-          complaintStats = normalizeSarmokComplaintStats(await readSarmokRawResponse(directComplaintResp), data.complaints);
+          complaintPayload = await readSarmokRawResponse(directComplaintResp);
+          complaintStats = normalizeSarmokComplaintStats(complaintPayload, data.complaints);
         } catch (complaintDirectError) {
           try {
             console.warn('Sarmok complaint direct fetch failed, trying proxy fallback:', complaintDirectError);
             const proxyUrl = `${FINANCE_API_URL}?proxyUrl=${encodeURIComponent(complaintSummaryUrl)}&authHeader=${encodeURIComponent(authHeader)}`;
             const proxyResp = await fetch(proxyUrl, { headers: { Accept: 'application/json' } });
             if (!proxyResp.ok) throw new Error(`Sarmok complaint proxy failed (${proxyResp.status})`);
-            complaintStats = normalizeSarmokComplaintStats(await readSarmokRawResponse(proxyResp), data.complaints);
+            complaintPayload = await readSarmokRawResponse(proxyResp);
+            complaintStats = normalizeSarmokComplaintStats(complaintPayload, data.complaints);
           } catch (complaintProxyError) {
             console.warn('Sarmok complaint summary failed, using dashboard fallback:', complaintProxyError);
           }
         }
 
         let roomStats = normalizeSarmokRoomStats(null, data.roomReservation);
+        let roomPayload: unknown = null;
         const roomSummaryUrl = buildSarmokDetailUrl(SARMOK_ROOM_DETAIL_API_URL, 'roomReservation', 'All Status');
         try {
           const directRoomResp = await fetch(roomSummaryUrl, {
@@ -2257,20 +2361,23 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           });
 
           if (!directRoomResp.ok) throw new Error(`Sarmok room API failed (${directRoomResp.status})`);
-          roomStats = normalizeSarmokRoomStats(await readSarmokRawResponse(directRoomResp), data.roomReservation);
+          roomPayload = await readSarmokRawResponse(directRoomResp);
+          roomStats = normalizeSarmokRoomStats(roomPayload, data.roomReservation);
         } catch (roomDirectError) {
           try {
             console.warn('Sarmok room direct fetch failed, trying proxy fallback:', roomDirectError);
             const proxyUrl = `${FINANCE_API_URL}?proxyUrl=${encodeURIComponent(roomSummaryUrl)}&authHeader=${encodeURIComponent(authHeader)}`;
             const proxyResp = await fetch(proxyUrl, { headers: { Accept: 'application/json' } });
             if (!proxyResp.ok) throw new Error(`Sarmok room proxy failed (${proxyResp.status})`);
-            roomStats = normalizeSarmokRoomStats(await readSarmokRawResponse(proxyResp), data.roomReservation);
+            roomPayload = await readSarmokRawResponse(proxyResp);
+            roomStats = normalizeSarmokRoomStats(roomPayload, data.roomReservation);
           } catch (roomProxyError) {
             console.warn('Sarmok room summary failed, using dashboard fallback:', roomProxyError);
           }
         }
 
         let toolsStats = normalizeSarmokToolsStats(null, data.toolsLoan);
+        let toolsPayload: unknown = null;
         const toolsSummaryUrl = buildSarmokDetailUrl(SARMOK_BORROW_DETAIL_API_URL, 'toolsLoan', 'All Status');
         try {
           const directToolsResp = await fetch(toolsSummaryUrl, {
@@ -2282,18 +2389,30 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           });
 
           if (!directToolsResp.ok) throw new Error(`Sarmok tools API failed (${directToolsResp.status})`);
-          toolsStats = normalizeSarmokToolsStats(await readSarmokRawResponse(directToolsResp), data.toolsLoan);
+          toolsPayload = await readSarmokRawResponse(directToolsResp);
+          toolsStats = normalizeSarmokToolsStats(toolsPayload, data.toolsLoan);
         } catch (toolsDirectError) {
           try {
             console.warn('Sarmok tools direct fetch failed, trying proxy fallback:', toolsDirectError);
             const proxyUrl = `${FINANCE_API_URL}?proxyUrl=${encodeURIComponent(toolsSummaryUrl)}&authHeader=${encodeURIComponent(authHeader)}`;
             const proxyResp = await fetch(proxyUrl, { headers: { Accept: 'application/json' } });
             if (!proxyResp.ok) throw new Error(`Sarmok tools proxy failed (${proxyResp.status})`);
-            toolsStats = normalizeSarmokToolsStats(await readSarmokRawResponse(proxyResp), data.toolsLoan);
+            toolsPayload = await readSarmokRawResponse(proxyResp);
+            toolsStats = normalizeSarmokToolsStats(toolsPayload, data.toolsLoan);
           } catch (toolsProxyError) {
             console.warn('Sarmok tools summary failed, using dashboard fallback:', toolsProxyError);
           }
         }
+
+        const complaintRows = complaintPayload ? normalizeSarmokDetailRows(complaintPayload) : [];
+        const roomRows = roomPayload ? filterSarmokRowsByKind(normalizeSarmokDetailRows(roomPayload), 'roomReservation') : [];
+        const toolRows = toolsPayload ? filterSarmokRowsByKind(normalizeSarmokDetailRows(toolsPayload), 'toolsLoan') : [];
+
+        setSarmokAnalysis({
+          complaints: complaintRows.length ? analyzeSarmokResponse(complaintRows) : null,
+          roomReservation: roomRows.length ? analyzeSarmokResponse(roomRows) : null,
+          toolsLoan: toolRows.length ? analyzeSarmokResponse(toolRows) : null,
+        });
 
         setMokletService({
           complaints: complaintStats,
@@ -3474,6 +3593,95 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
             </div>
 
           </div>
+
+          {(sarmokAnalysis.complaints || sarmokAnalysis.roomReservation || sarmokAnalysis.toolsLoan) && (
+            <div style={{ marginTop: '1rem', padding: '0.85rem 1rem', borderRadius: '12px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-subtle)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Activity size={14} color="var(--accent-cyan)" />
+                  <span style={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--text-primary)' }}>
+                    Analisa Kecepatan Respon
+                  </span>
+                </div>
+                <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                  Dihitung dari selisih waktu pengajuan vs aksi pertama (verifikasi/proses/tolak).
+                </span>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.6rem' }}>
+                {([
+                  { key: 'complaints' as const, label: 'Pengaduan', color: '#f97316', data: sarmokAnalysis.complaints },
+                  { key: 'roomReservation' as const, label: 'Peminjaman Ruang', color: '#10b981', data: sarmokAnalysis.roomReservation },
+                  { key: 'toolsLoan' as const, label: 'Peminjaman Alat', color: '#3b82f6', data: sarmokAnalysis.toolsLoan },
+                ]).map((module) => {
+                  const a = module.data;
+                  if (!a) {
+                    return (
+                      <div key={module.key} style={{ padding: '0.7rem 0.8rem', borderRadius: '10px', background: `${module.color}08`, border: `1px solid ${module.color}25` }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.35rem' }}>
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: module.color }} />
+                          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: module.color }}>{module.label}</span>
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                          Data analisa belum tersedia.
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  const slaTone = a.withinDayPct === null
+                    ? 'var(--text-muted)'
+                    : a.withinDayPct >= 80
+                      ? 'var(--accent-emerald)'
+                      : a.withinDayPct >= 50
+                        ? 'var(--accent-amber)'
+                        : 'var(--accent-rose)';
+
+                  return (
+                    <div key={module.key} style={{ padding: '0.7rem 0.8rem', borderRadius: '10px', background: `${module.color}0a`, border: `1px solid ${module.color}28` }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem', marginBottom: '0.45rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: module.color }} />
+                          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: module.color }}>{module.label}</span>
+                        </div>
+                        <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>
+                          {a.handledCount}/{a.total} ditangani
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '0.35rem 0.6rem' }}>
+                        <div>
+                          <div style={{ fontSize: '0.58rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 700 }}>Rata-rata</div>
+                          <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.1 }}>{formatResponseHours(a.avgHours)}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '0.58rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 700 }}>Median</div>
+                          <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.1 }}>{formatResponseHours(a.medianHours)}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '0.58rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 700 }}>Tercepat</div>
+                          <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--accent-emerald)', lineHeight: 1.1 }}>{formatResponseHours(a.fastestHours)}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '0.58rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 700 }}>Terlambat</div>
+                          <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--accent-rose)', lineHeight: 1.1 }}>{formatResponseHours(a.slowestHours)}</div>
+                        </div>
+                      </div>
+
+                      <div style={{ marginTop: '0.5rem', display: 'flex', justifyContent: 'space-between', gap: '0.4rem', alignItems: 'center', fontSize: '0.62rem' }}>
+                        <span style={{ color: slaTone, fontWeight: 700 }}>
+                          {a.withinDayPct !== null ? `${a.withinDayPct.toFixed(0)}% direspon ≤ 24 jam` : 'Belum cukup data SLA'}
+                        </span>
+                        <span style={{ color: a.overduePending > 0 ? 'var(--accent-rose)' : 'var(--text-muted)', fontWeight: 700 }}>
+                          {a.overduePending > 0 ? `${a.overduePending} pending >24j` : `${a.pendingCount} pending`}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
       {classroomMonitorSection}
