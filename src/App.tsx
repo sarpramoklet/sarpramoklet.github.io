@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import Sidebar from './components/Sidebar';
+import QuickActionsBar from './components/QuickActionsBar';
 import Dashboard from './pages/Dashboard';
 import MeetingDashboard from './pages/MeetingDashboard';
 import Tickets from './pages/Tickets';
@@ -128,6 +129,7 @@ function App() {
     <Router>
       <ScrollToTop />
       <RouteActivityTracker isLoggedIn={isLoggedIn} />
+      <QuickActionsBar isLoggedIn={isLoggedIn} />
       <div className="app-layout">
         <Sidebar 
           isOpen={isSidebarOpen} 

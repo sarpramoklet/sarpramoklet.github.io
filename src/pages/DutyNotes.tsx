@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Plus, Search, Loader2, X, RefreshCw, Edit3, Trash2, Heart } from 'lucide-react';
 import { USERS, getCurrentUser } from '../data/organization';
 import { useProfileThumbByEmail } from '../hooks/useProfileThumbByEmail';
@@ -48,6 +49,19 @@ const DutyNotes = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingNote, setEditingNote] = useState<any>(null);
   const profileThumbByEmail = useProfileThumbByEmail();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Deep link from QuickActionsBar: /duty-notes?add=1 opens the add modal
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('add') === '1') {
+      setIsModalOpen(true);
+      params.delete('add');
+      const rest = params.toString();
+      navigate({ pathname: location.pathname, search: rest ? `?${rest}` : '' }, { replace: true });
+    }
+  }, [location.search, location.pathname, navigate]);
 
   const currentUser = getCurrentUser();
 
