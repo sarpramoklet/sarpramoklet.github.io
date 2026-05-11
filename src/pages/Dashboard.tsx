@@ -3547,8 +3547,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
               {mokletService.loading && !mokletService.complaints ? (
                 <div style={{ display: 'flex', justifyContent: 'center', padding: '0.75rem' }}><Loader2 size={16} className="animate-spin" color="#f97316" /></div>
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '0.4rem', opacity: mokletService.loading ? 0.5 : 1, transition: 'opacity 0.2s' }}>
-                  {renderSarmokMetricCell(mokletService.complaints?.rejected ?? '-', '#fb7185', 'Ditolak', 'complaints', 'Pengaduan', 'Ditolak', SARMOK_COMPLAINT_DETAIL_API_URL)}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '0.4rem', opacity: mokletService.loading ? 0.5 : 1, transition: 'opacity 0.2s' }}>
                   {renderSarmokMetricCell(mokletService.complaints?.pending ?? '-', '#f97316', 'Menunggu', 'complaints', 'Pengaduan', 'Menunggu Konfirmasi', SARMOK_COMPLAINT_DETAIL_API_URL)}
                   {renderSarmokMetricCell(mokletService.complaints?.inProgress ?? '-', '#3b82f6', 'Diproses', 'complaints', 'Pengaduan', 'Sedang Diproses', SARMOK_COMPLAINT_DETAIL_API_URL)}
                   {renderSarmokMetricCell(mokletService.complaints?.complete ?? '-', '#22c55e', 'Selesai', 'complaints', 'Pengaduan', 'Selesai', SARMOK_COMPLAINT_DETAIL_API_URL)}
