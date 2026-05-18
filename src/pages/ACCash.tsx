@@ -322,10 +322,15 @@ const ACCash = () => {
     setShowModal(true);
   };
 
-  const filteredTransactions = transactions.filter(t => 
-    t.keterangan.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    t.tanggal.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Balance dihitung ascending (oldest -> newest) lewat calculateBalances,
+  // tapi tampilan tabel pakai newest -> oldest agar transaksi terbaru di atas.
+  const filteredTransactions = transactions
+    .filter((t) =>
+      t.keterangan.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.tanggal.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .slice()
+    .reverse();
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
