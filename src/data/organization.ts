@@ -262,3 +262,27 @@ export const getCurrentUser = (): User => {
 
   return USERS[0]; // Default / Hadi
 };
+
+export const FINANCE_ALLOWED_EMAILS: ReadonlyArray<string> = [
+  'hadi@smktelkom-mlg.sch.id',
+  'ekon.a.poernomo@smktelkom-mlg.sch.id',
+  'whyna@smktelkom-mlg.sch.id',
+  'chusni@smktelkom-mlg.sch.id',
+];
+
+const FINANCE_ALLOWED_SET = new Set(FINANCE_ALLOWED_EMAILS.map((email) => email.toLowerCase()));
+
+export const canAccessFinanceData = (input?: User | string | null): boolean => {
+  const email = typeof input === 'string'
+    ? input
+    : input?.email;
+
+  if (!email) {
+    if (typeof window === 'undefined') return false;
+    const stored = window.localStorage.getItem('userEmail');
+    if (!stored) return false;
+    return FINANCE_ALLOWED_SET.has(stored.trim().toLowerCase());
+  }
+
+  return FINANCE_ALLOWED_SET.has(email.trim().toLowerCase());
+};

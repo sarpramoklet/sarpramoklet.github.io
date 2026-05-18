@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { NAVIGATION } from '../navigation';
 import { UserCircle2, X, Sun, Moon, LogOut, LogIn } from 'lucide-react';
-import { getCurrentUser, ROLES } from '../data/organization';
+import { canAccessFinanceData, getCurrentUser, ROLES } from '../data/organization';
 import { useProfileThumbByEmail } from '../hooks/useProfileThumbByEmail';
 import UserAvatar from './UserAvatar';
 import { logButtonClick, logLogoutEvent, logMenuClick } from '../utils/logger';
@@ -185,6 +185,11 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
               // pimpinanOnly items: hanya Pimpinan (Waka)
               if (item.pimpinanOnly) {
                 return user.roleAplikasi === ROLES.PIMPINAN;
+              }
+
+              // financeOnly items (Kas Sarpras, TU, AC): hanya Waka + 3 Kaur (whitelist email)
+              if (item.financeOnly) {
+                return canAccessFinanceData(user);
               }
 
               // leaderOnly items: hanya Waka (Pimpinan) + 3 Kaur + Amalia (PIC Admin)

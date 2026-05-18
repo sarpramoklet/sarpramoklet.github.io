@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, LabelList, LineChart, Line, Legend } from 'recharts';
 import { UserCircle2, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, MessageSquare, AlertCircle, Edit3, Trash2, Wind, Briefcase, Smartphone, Activity, Coins, Camera, X, Heart, Home, Sparkles, ShieldCheck } from 'lucide-react';
-import { getCurrentUser, ROLES, USERS } from '../data/organization';
+import { canAccessFinanceData, getCurrentUser, ROLES, USERS } from '../data/organization';
 import { mergeCapexProjects } from '../data/capexProjects';
 import { getUtilityChartData } from '../data/utilities';
 import { useProfileThumbByEmail } from '../hooks/useProfileThumbByEmail';
@@ -1675,7 +1675,7 @@ const getCapexProgressColor = (progress: number) => {
 const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => {
   const currentUser = getCurrentUser();
   const isPimpinan = currentUser.roleAplikasi === ROLES.PIMPINAN;
-  const isAuthorizedFinance = isPimpinan || currentUser.roleAplikasi === ROLES.PIC_ADMIN;
+  const isAuthorizedFinance = canAccessFinanceData(currentUser);
 
   const [financeLoading, setFinanceLoading] = useState(true);
   const [internalFinance, setInternalFinance] = useState({ balance: 0, expense: 0, categories: [] as any[] });

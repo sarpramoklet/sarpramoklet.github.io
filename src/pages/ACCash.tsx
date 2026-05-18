@@ -5,7 +5,7 @@ import {
   Calendar, Info, AlertCircle
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
-import { getCurrentUser, ROLES } from '../data/organization';
+import { canAccessFinanceData, getCurrentUser } from '../data/organization';
 import { pushActionNotification } from '../utils/actionNotifications';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
@@ -74,7 +74,7 @@ const todayIso = () => new Date().toISOString().slice(0, 10);
 
 const ACCash = () => {
   const currentUser = getCurrentUser();
-  const isAdmin = currentUser.roleAplikasi === ROLES.PIMPINAN || currentUser.roleAplikasi === ROLES.PIC_ADMIN;
+  const isAdmin = canAccessFinanceData(currentUser);
   
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState<Transaction[]>([]);

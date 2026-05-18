@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertCircle, Loader2, MessageSquare, RefreshCw, ShieldCheck, Sparkles } from 'lucide-react';
-import { getCurrentUser, ROLES } from '../data/organization';
+import { canAccessFinanceData, getCurrentUser } from '../data/organization';
 import {
   DASHBOARD_SECTION_LABELS,
   fetchDashboardSnapshot,
@@ -89,11 +89,7 @@ interface SarmokAssistantProps {
 
 const SarmokAssistant = ({ isLoggedIn = false }: SarmokAssistantProps) => {
   const user = isLoggedIn ? getCurrentUser() : null;
-  const canViewFinance = Boolean(
-    isLoggedIn &&
-    user &&
-    (user.roleAplikasi === ROLES.PIMPINAN || user.roleAplikasi === ROLES.PIC_ADMIN)
-  );
+  const canViewFinance = Boolean(isLoggedIn && user && canAccessFinanceData(user));
   const starterPrompts = getStarterPrompts(canViewFinance);
 
   const [scopeId, setScopeId] = useState<string>(() => getChatScopeId(isLoggedIn));

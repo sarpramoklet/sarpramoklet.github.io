@@ -5,7 +5,7 @@ import {
   Calendar, Info
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
-import { getCurrentUser, ROLES } from '../data/organization';
+import { canAccessFinanceData, getCurrentUser } from '../data/organization';
 import { pushActionNotification } from '../utils/actionNotifications';
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec";
@@ -67,7 +67,7 @@ const SEED_DATA: Transaction[] = [
 
 const OperationalCash = () => {
   const currentUser = getCurrentUser();
-  const isAuthorized = currentUser.roleAplikasi === ROLES.PIMPINAN || currentUser.roleAplikasi === ROLES.PIC_ADMIN;
+  const isAuthorized = canAccessFinanceData(currentUser);
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);

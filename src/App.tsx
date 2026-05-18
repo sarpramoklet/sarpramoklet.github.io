@@ -28,7 +28,7 @@ import ClassroomMonitor from './pages/ClassroomMonitor';
 import ClassroomPriorityFocus from './pages/ClassroomPriorityFocus';
 import Login from './pages/Login';
 import SarmokAssistant from './pages/SarmokAssistant';
-import { getCurrentUser, ROLES } from './data/organization';
+import { canAccessFinanceData, getCurrentUser, ROLES } from './data/organization';
 import { NAVIGATION } from './navigation';
 import { logAccess } from './utils/logger';
 
@@ -79,6 +79,13 @@ const PimpinanRoute = ({ isLoggedIn, children }: { isLoggedIn: boolean, children
   if (!isLoggedIn) return <Navigate to="/login" replace />;
   const currentUser = getCurrentUser();
   if (currentUser?.roleAplikasi !== ROLES.PIMPINAN) return <Navigate to="/" replace />;
+  return children;
+};
+
+// Finance Route Component (kas data: Pimpinan + 3 Kaur saja)
+const FinanceRoute = ({ isLoggedIn, children }: { isLoggedIn: boolean, children: React.ReactNode }) => {
+  if (!isLoggedIn) return <Navigate to="/login" replace />;
+  if (!canAccessFinanceData(getCurrentUser())) return <Navigate to="/" replace />;
   return children;
 };
 
@@ -195,9 +202,9 @@ function App() {
               <Route path="/utilities" element={<ProtectedRoute isLoggedIn={isLoggedIn}><Utilities /></ProtectedRoute>} />
               <Route path="/assets" element={<ProtectedRoute isLoggedIn={isLoggedIn}><Assets /></ProtectedRoute>} />
               <Route path="/personnel" element={<ProtectedRoute isLoggedIn={isLoggedIn}><Personnel /></ProtectedRoute>} />
-              <Route path="/finance" element={<ProtectedRoute isLoggedIn={isLoggedIn}><Finance /></ProtectedRoute>} />
-              <Route path="/operational-cash" element={<ProtectedRoute isLoggedIn={isLoggedIn}><OperationalCash /></ProtectedRoute>} />
-              <Route path="/ac-cash" element={<ProtectedRoute isLoggedIn={isLoggedIn}><ACCash /></ProtectedRoute>} />
+              <Route path="/finance" element={<FinanceRoute isLoggedIn={isLoggedIn}><Finance /></FinanceRoute>} />
+              <Route path="/operational-cash" element={<FinanceRoute isLoggedIn={isLoggedIn}><OperationalCash /></FinanceRoute>} />
+              <Route path="/ac-cash" element={<FinanceRoute isLoggedIn={isLoggedIn}><ACCash /></FinanceRoute>} />
               <Route path="/ac-history" element={<ProtectedRoute isLoggedIn={isLoggedIn}><ACHistory /></ProtectedRoute>} />
               <Route path="/logs" element={<PimpinanRoute isLoggedIn={isLoggedIn}><AccessLogs /></PimpinanRoute>} />
               <Route path="/assignment" element={<ProtectedRoute isLoggedIn={isLoggedIn}><Assignment /></ProtectedRoute>} />
