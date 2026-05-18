@@ -19,7 +19,17 @@ type ChatMessage = {
   suggestions?: string[];
 };
 
-const STORAGE_KEY = 'sarmokAssistantChat.v1';
+const STORAGE_PREFIX = 'sarmokAssistantChat.v2';
+const LEGACY_STORAGE_KEY = 'sarmokAssistantChat.v1';
+
+const getChatScopeId = (isLoggedIn: boolean) => {
+  if (typeof window === 'undefined') return 'public';
+  if (!isLoggedIn) return 'public';
+  const email = (window.localStorage.getItem('userEmail') || '').trim().toLowerCase();
+  return email ? `user:${email}` : 'public';
+};
+
+const getChatStorageKey = (scopeId: string) => `${STORAGE_PREFIX}:${scopeId}`;
 
 const getStarterPrompts = (canViewFinance: boolean) => (
   canViewFinance
@@ -38,11 +48,15 @@ const createWelcomeMessage = (canViewFinance: boolean): ChatMessage => ({
   suggestions: getStarterPrompts(canViewFinance),
 });
 
-const readStoredMessages = (canViewFinance: boolean) => {
+const readStoredMessages = (canViewFinance: boolean, scopeId: string) => {
   if (typeof window === 'undefined') return [createWelcomeMessage(canViewFinance)];
 
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (window.localStorage.getItem(LEGACY_STORAGE_KEY)) {
+      window.localStorage.removeItem(LEGACY_STORAGE_KEY);
+    }
+
+    const raw = window.localStorage.getItem(getChatStorageKey(scopeId));
     if (!raw) return [createWelcomeMessage(canViewFinance)];
 
     const parsed = JSON.parse(raw);
@@ -82,7 +96,8 @@ const SarmokAssistant = ({ isLoggedIn = false }: SarmokAssistantProps) => {
   );
   const starterPrompts = getStarterPrompts(canViewFinance);
 
-  const [messages, setMessages] = useState<ChatMessage[]>(() => readStoredMessages(canViewFinance));
+  const [scopeId, setScopeId] = useState<string>(() => getChatScopeId(isLoggedIn));
+  const [messages, setMessages] = useState<ChatMessage[]>(() => readStoredMessages(canViewFinance, getChatScopeId(isLoggedIn)));
   const [draft, setDraft] = useState('');
   const [snapshot, setSnapshot] = useState<DashboardAssistantSnapshot | null>(null);
   const [syncing, setSyncing] = useState(false);
@@ -111,9 +126,16 @@ const SarmokAssistant = ({ isLoggedIn = false }: SarmokAssistantProps) => {
   }, []);
 
   useEffect(() => {
+    const nextScope = getChatScopeId(isLoggedIn);
+    if (nextScope === scopeId) return;
+    setScopeId(nextScope);
+    setMessages(readStoredMessages(canViewFinance, nextScope));
+  }, [isLoggedIn, canViewFinance, scopeId]);
+
+  useEffect(() => {
     if (typeof window === 'undefined') return;
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(messages.slice(-30)));
-  }, [messages]);
+    window.localStorage.setItem(getChatStorageKey(scopeId), JSON.stringify(messages.slice(-30)));
+  }, [messages, scopeId]);
 
   useEffect(() => {
     scrollAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });

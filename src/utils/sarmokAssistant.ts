@@ -494,37 +494,39 @@ const buildActionLines = (snapshot: DashboardAssistantSnapshot, sections: Dashbo
 const detectSections = (query: string, canViewFinance: boolean) => {
   const sections = new Set<DashboardSectionKey>();
 
-  if (includesAny(query, ['sarmok', 'layanan', 'pengaduan', 'complaint', 'reservasi', 'peminjaman alat', 'pinjam alat', 'tools loan'])) {
+  if (includesAny(query, ['sarmok', 'layanan', 'pengaduan', 'aduan', 'komplain', 'complaint', 'reservasi', 'booking ruang', 'peminjaman alat', 'pinjam alat', 'tools loan', 'borrow'])) {
     sections.add('mokletService');
   }
-  if (includesAny(query, ['kelas', 'classroom', 'wali kelas', 'sampah', 'lampu', 'tv', 'kipas', 'kotoran'])) {
+  if (includesAny(query, ['kelas', 'classroom', 'wali kelas', 'sampah', 'lampu', 'tv', 'kipas', 'kotoran', 'temuan', 'rapih', 'kebersihan', 'pantauan kelas', 'monitor kelas'])) {
     sections.add('classroom');
   }
-  if (includesAny(query, ['ac', 'air conditioner', 'pendinginan'])) {
+  if (includesAny(query, [' ac ', ' ac.', ' ac,', ' ac?', ' ac!', 'air conditioner', 'pendinginan', 'pendingin', 'ruangan dingin', 'monitor ac'])) {
+    sections.add('ac');
+  } else if (/(^| )ac( |$)/.test(query)) {
     sections.add('ac');
   }
-  if (includesAny(query, ['capex', 'proyek', 'anggaran proyek'])) {
+  if (includesAny(query, ['capex', 'proyek', 'anggaran proyek', 'pengerjaan', 'project'])) {
     sections.add('capex');
   }
-  if (includesAny(query, ['wifi', 'wi fi', 'client', 'klien'])) {
+  if (includesAny(query, ['wifi', 'wi fi', 'client', 'klien', 'device', 'perangkat terhubung', 'koneksi user'])) {
     sections.add('wifi');
   }
-  if (includesAny(query, ['jaringan', 'network', 'rx', 'tx', 'astinet', 'indibizz'])) {
+  if (includesAny(query, ['jaringan', 'network', 'rx', 'tx', 'astinet', 'indibizz', 'bandwidth', 'traffic', 'ont'])) {
     sections.add('network');
   }
-  if (includesAny(query, ['utilitas', 'pln', 'pdam', 'listrik', 'air'])) {
+  if (includesAny(query, ['utilitas', 'pln', 'pdam', 'listrik', 'air', 'tagihan', 'meteran'])) {
     sections.add('utilities');
   }
-  if (includesAny(query, ['piket', 'catatan piket', 'note piket'])) {
+  if (includesAny(query, ['piket', 'catatan piket', 'note piket', 'temuan piket', 'logbook'])) {
     sections.add('piket');
   }
-  if (canViewFinance && includesAny(query, ['keuangan', 'kas', 'saldo', 'belanja', 'tu', 'operasional'])) {
+  if (canViewFinance && includesAny(query, ['keuangan', 'kas', 'saldo', 'belanja', 'pengeluaran', 'tu ', 'operasional', 'finansial', 'budget', 'anggaran kas', 'kategori belanja'])) {
     sections.add('finance');
   }
-  if (includesAny(query, ['personel', 'pegawai', 'staff', 'anggota tim'])) {
+  if (includesAny(query, ['personel', 'pegawai', 'staff', 'staf', 'anggota tim', 'rekan', 'tim sarpras', 'unit'])) {
     sections.add('personnel');
   }
-  if (includesAny(query, ['jadwal piket', 'petugas piket', 'siapa piket'])) {
+  if (includesAny(query, ['jadwal piket', 'petugas piket', 'siapa piket', 'siapa yang piket', 'rotasi piket', 'tugas hari ini'])) {
     sections.add('duty');
   }
 
@@ -532,15 +534,322 @@ const detectSections = (query: string, canViewFinance: boolean) => {
 };
 
 const isGreeting = (query: string) => {
-  return includesAny(query, ['halo', 'hai', 'selamat', 'bisa apa', 'siapa kamu', 'asisten']);
+  return /^(halo|hai|hi|hello|selamat|pagi|siang|sore|malam|assalamualaikum)\b/.test(query)
+    || includesAny(query, ['siapa kamu', 'siapa anda', 'kenalan', 'perkenalkan']);
+};
+
+const wantsHelp = (query: string) => {
+  return includesAny(query, ['bantuan', 'help', 'fitur', 'bisa apa', 'kemampuan', 'apa saja yang bisa', 'apa yg bisa', 'cara pakai', 'panduan']);
 };
 
 const wantsPriority = (query: string) => {
-  return includesAny(query, ['prioritas', 'urgent', 'fokus', 'kritis', 'masalah utama']);
+  return includesAny(query, ['prioritas', 'urgent', 'fokus', 'kritis', 'masalah utama', 'paling penting', 'paling mendesak', 'mendesak']);
 };
 
 const wantsAction = (query: string) => {
-  return includesAny(query, ['tindak lanjut', 'aksi', 'instruksi', 'apa yang harus', 'langkah', 'follow up']);
+  return includesAny(query, ['tindak lanjut', 'aksi', 'instruksi', 'apa yang harus', 'apa yg harus', 'langkah', 'follow up', 'rekomendasi', 'saran', 'solusi', 'next step']);
+};
+
+const wantsCount = (query: string) => {
+  return includesAny(query, ['berapa', 'jumlah', 'total', 'ada berapa', 'banyak', 'kuantitas', 'count']);
+};
+
+const wantsTrend = (query: string) => {
+  return includesAny(query, ['trend', 'tren', 'naik', 'turun', 'perubahan', 'perbandingan', 'banding', 'dibanding', 'kenaikan', 'penurunan', 'delta', 'selisih']);
+};
+
+const wantsLatest = (query: string) => {
+  return includesAny(query, ['terbaru', 'terakhir', 'paling baru', 'recent', 'latest', 'last']);
+};
+
+const wantsWorst = (query: string) => {
+  return includesAny(query, ['paling rusak', 'paling bermasalah', 'paling tertinggal', 'paling parah', 'terburuk', 'terendah', 'paling lambat']);
+};
+
+const wantsBest = (query: string) => {
+  return includesAny(query, ['paling baik', 'terbaik', 'tertinggi', 'paling cepat', 'paling progres', 'leading', 'top']);
+};
+
+const detectRoomNumbers = (query: string): number[] => {
+  const matches: number[] = [];
+  const regex = /(?:ruang|kelas|r\.?|kls)\s*0*(\d{1,2})\b/g;
+  let m;
+  while ((m = regex.exec(query)) !== null) {
+    const num = parseInt(m[1], 10);
+    if (num >= 1 && num <= 40) matches.push(num);
+  }
+  return Array.from(new Set(matches));
+};
+
+const buildHelpReply = (snapshot: DashboardAssistantSnapshot, canViewFinance: boolean, defaultSections: DashboardSectionKey[]) => {
+  const lines = [
+    'Saya bisa membantu di area berikut:',
+    '- Ringkasan keseluruhan dashboard (contoh: "ringkas dashboard hari ini")',
+    '- Prioritas / fokus utama (contoh: "prioritas kelas dan AC")',
+    '- Tindak lanjut yang disarankan (contoh: "apa yang harus dilakukan untuk piket")',
+    '- Detail satu area (contoh: "rincian utilitas", "status AC", "catatan piket terbaru")',
+    '- Jawaban angka spesifik (contoh: "berapa pengaduan menunggu", "ada berapa AC rusak")',
+    '- Tren / perbandingan (contoh: "PLN naik atau turun", "trend wifi minggu ini")',
+    '- Lookup per ruang (contoh: "kondisi AC ruang 12", "temuan kelas 7")',
+    canViewFinance
+      ? '- Kas Sarpras, Kas TU, Kas AC, kategori belanja terbesar'
+      : '- Area keuangan hanya terbuka untuk role pimpinan/admin saat login.',
+    buildSourceFooter(snapshot, defaultSections),
+  ];
+  return lines;
+};
+
+const buildRoomLookup = (snapshot: DashboardAssistantSnapshot, rooms: number[]) => {
+  const lines = [`Lookup ${rooms.length > 1 ? 'ruang' : 'Ruang'} ${rooms.join(', ')}`];
+
+  rooms.forEach((roomNumber) => {
+    const block: string[] = [`- Ruang ${roomNumber}:`];
+
+    if (isSectionAvailable(snapshot, 'classroom')) {
+      const matchedTop = snapshot.classroom.topIssueRooms.find((row) => {
+        const idMatch = (row.room || '').match(/(\d{1,2})/);
+        if (!idMatch) return false;
+        return parseInt(idMatch[1], 10) === roomNumber;
+      });
+      if (matchedTop) {
+        block.push(`  · Pantauan kelas: ${matchedTop.total} temuan${matchedTop.summary ? ` (${matchedTop.summary})` : ''}${matchedTop.waliKelas ? `, wali ${matchedTop.waliKelas}` : ''}.`);
+      } else {
+        block.push('  · Pantauan kelas: tidak ada dalam daftar 5 ruang tertinggi pada snapshot ini.');
+      }
+    }
+
+    if (isSectionAvailable(snapshot, 'ac')) {
+      const acRow = snapshot.ac.troubleRooms.find((row) => row.ruang === roomNumber);
+      if (acRow) {
+        block.push(`  · AC: kondisi ${acRow.kondisi}, ${acRow.pk}, status ${acRow.status}.`);
+      } else {
+        block.push('  · AC: tidak masuk daftar trouble (kemungkinan baik atau belum terpasang).');
+      }
+    }
+
+    lines.push(...block);
+  });
+
+  return lines;
+};
+
+const buildCountAnswer = (
+  snapshot: DashboardAssistantSnapshot,
+  sections: DashboardSectionKey[],
+  query: string,
+  canViewFinance: boolean
+): string[] | null => {
+  const allowed = new Set(sections);
+  const lines: string[] = ['Hitungan cepat'];
+  let added = 0;
+
+  const push = (line: string) => {
+    lines.push(`- ${line}`);
+    added += 1;
+  };
+
+  if (allowed.has('mokletService') && isSectionAvailable(snapshot, 'mokletService')) {
+    const m = snapshot.mokletService;
+    if (includesAny(query, ['pengaduan', 'aduan', 'komplain'])) {
+      push(`Pengaduan: ${m.complaints.pending} menunggu, ${m.complaints.inProgress} diproses, ${m.complaints.complete} selesai, ${m.complaints.rejected} ditolak.`);
+    }
+    if (includesAny(query, ['reservasi', 'ruang', 'booking'])) {
+      push(`Reservasi ruang: ${m.roomReservation.waitingConfirmation} menunggu, ${m.roomReservation.activeReservation} aktif, ${m.roomReservation.inUseReservation} dipakai.`);
+    }
+    if (includesAny(query, ['alat', 'pinjam', 'borrow'])) {
+      push(`Peminjaman alat: ${m.toolsLoan.waitingConfirmation} menunggu, ${m.toolsLoan.haveNotReturn} belum kembali, ${m.toolsLoan.returned} kembali.`);
+    }
+  }
+
+  if (allowed.has('classroom') && isSectionAvailable(snapshot, 'classroom')) {
+    const c = snapshot.classroom;
+    push(`Kelas: ${c.issueRooms} ruang bermasalah, ${c.cleanRooms} aman, total ${c.totalFindings} temuan dari ${c.monitoredRooms}/${c.referenceRooms} ruang.`);
+  }
+
+  if (allowed.has('ac') && isSectionAvailable(snapshot, 'ac')) {
+    const a = snapshot.ac;
+    push(`AC: ${a.baik} baik, ${a.perbaikan} perbaikan, ${a.rusak} rusak, ${a.terpasang}/${a.total} terpasang.`);
+  }
+
+  if (allowed.has('capex') && isSectionAvailable(snapshot, 'capex')) {
+    const cx = snapshot.capex;
+    push(`CAPEX: ${cx.totalProjects} proyek (${cx.completedProjects} selesai, ${cx.priorityProjects} di bawah 50%), rata-rata progres ${cx.averageProgress.toFixed(1)}%.`);
+  }
+
+  if (allowed.has('wifi') && isSectionAvailable(snapshot, 'wifi')) {
+    push(`Wi-Fi: ${snapshot.wifi.latestCount.toLocaleString('id-ID')} klien (${snapshot.wifi.latestDate}), puncak ${snapshot.wifi.peakCount.toLocaleString('id-ID')} (${snapshot.wifi.peakDate}).`);
+  }
+
+  if (allowed.has('piket') && isSectionAvailable(snapshot, 'piket')) {
+    push(`Catatan piket terbaru: ${snapshot.piket.recentNotes.length} entri tersimpan dalam snapshot.`);
+  }
+
+  if (allowed.has('finance') && canViewFinance && snapshot.finance) {
+    push(`Saldo: Sarpras ${formatIDR(snapshot.finance.internal.balance)}, TU ${formatIDR(snapshot.finance.tu.balance)}, AC ${formatIDR(snapshot.finance.ac.balance)}.`);
+  }
+
+  if (allowed.has('personnel') && isSectionAvailable(snapshot, 'personnel')) {
+    push(`Personel aktif: ${snapshot.personnel.total} orang lintas unit.`);
+  }
+
+  if (allowed.has('duty') && isSectionAvailable(snapshot, 'duty')) {
+    push(`Piket ${snapshot.duty.day}: ${snapshot.duty.personnel.length} petugas (${snapshot.duty.personnel.join(', ') || 'belum terjadwal'}).`);
+  }
+
+  return added > 0 ? lines : null;
+};
+
+const buildTrendAnswer = (
+  snapshot: DashboardAssistantSnapshot,
+  sections: DashboardSectionKey[]
+): string[] | null => {
+  const allowed = new Set(sections);
+  const lines: string[] = ['Pergerakan / tren'];
+  let added = 0;
+  const push = (line: string) => {
+    lines.push(`- ${line}`);
+    added += 1;
+  };
+
+  if (allowed.has('utilities') && isSectionAvailable(snapshot, 'utilities')) {
+    const u = snapshot.utilities;
+    push(`PLN ${u.latestLabel}: ${formatIDR(u.latestPLN)} (${formatSignedDelta(u.deltaPLN)} dibanding ${u.previousLabel || 'periode sebelumnya'}).`);
+    push(`PDAM ${u.latestLabel}: ${formatIDR(u.latestPDAM)} (${formatSignedDelta(u.deltaPDAM)} dibanding ${u.previousLabel || 'periode sebelumnya'}).`);
+  }
+
+  if (allowed.has('wifi') && isSectionAvailable(snapshot, 'wifi')) {
+    push(`Wi-Fi ${snapshot.wifi.latestDate}: ${snapshot.wifi.latestCount.toLocaleString('id-ID')} klien — ${formatSignedDelta(snapshot.wifi.delta, 'klien')} dari pengamatan sebelumnya.`);
+  }
+
+  if (allowed.has('capex') && isSectionAvailable(snapshot, 'capex')) {
+    const cx = snapshot.capex;
+    push(`CAPEX: rata-rata progres ${cx.averageProgress.toFixed(1)}% (${cx.completedProjects} selesai, ${cx.priorityProjects} masih <50%).`);
+  }
+
+  return added > 0 ? lines : null;
+};
+
+const buildLatestAnswer = (
+  snapshot: DashboardAssistantSnapshot,
+  sections: DashboardSectionKey[]
+): string[] | null => {
+  const allowed = new Set(sections);
+  const lines: string[] = ['Update terbaru'];
+  let added = 0;
+  const push = (line: string) => {
+    lines.push(`- ${line}`);
+    added += 1;
+  };
+
+  if (allowed.has('piket') && isSectionAvailable(snapshot, 'piket') && snapshot.piket.recentNotes.length > 0) {
+    const note = snapshot.piket.recentNotes[0];
+    push(`Catatan piket: ${note.tanggal} · ${note.petugas} · ${note.kategori}: ${note.isi}`);
+  }
+
+  if (allowed.has('classroom') && isSectionAvailable(snapshot, 'classroom')) {
+    push(`Pantauan kelas: ${formatDateLabel(snapshot.classroom.latestDate)}, ${snapshot.classroom.issueRooms} ruang bermasalah dari ${snapshot.classroom.monitoredRooms} terpantau.`);
+  }
+
+  if (allowed.has('wifi') && isSectionAvailable(snapshot, 'wifi')) {
+    push(`Wi-Fi: ${snapshot.wifi.latestCount.toLocaleString('id-ID')} klien pada ${snapshot.wifi.latestDate}.`);
+  }
+
+  if (allowed.has('network') && isSectionAvailable(snapshot, 'network')) {
+    push(`Jaringan: snapshot ${formatDateLabel(snapshot.network.latestDate)}, RX ${formatTraffic(snapshot.network.totalRx)} TX ${formatTraffic(snapshot.network.totalTx)}.`);
+  }
+
+  if (allowed.has('utilities') && isSectionAvailable(snapshot, 'utilities')) {
+    push(`Utilitas ${snapshot.utilities.latestLabel}: PLN ${formatIDR(snapshot.utilities.latestPLN)}, PDAM ${formatIDR(snapshot.utilities.latestPDAM)}.`);
+  }
+
+  return added > 0 ? lines : null;
+};
+
+const buildWorstAnswer = (
+  snapshot: DashboardAssistantSnapshot,
+  sections: DashboardSectionKey[]
+): string[] | null => {
+  const allowed = new Set(sections);
+  const lines: string[] = ['Titik paling perlu perhatian'];
+  let added = 0;
+  const push = (line: string) => {
+    lines.push(`- ${line}`);
+    added += 1;
+  };
+
+  if (allowed.has('classroom') && isSectionAvailable(snapshot, 'classroom') && snapshot.classroom.topIssueRooms.length > 0) {
+    const top = snapshot.classroom.topIssueRooms[0];
+    push(`Kelas: ${top.label} dengan ${top.total} temuan${top.summary ? ` (${top.summary})` : ''}.`);
+  }
+
+  if (allowed.has('ac') && isSectionAvailable(snapshot, 'ac') && snapshot.ac.troubleRooms.length > 0) {
+    push(`AC: ${buildTroubleRoomList(snapshot.ac.troubleRooms)}.`);
+  }
+
+  if (allowed.has('capex') && isSectionAvailable(snapshot, 'capex') && snapshot.capex.topLagging.length > 0) {
+    push(`CAPEX paling tertinggal: ${snapshot.capex.topLagging.slice(0, 3).map((p) => `${p.nama} (${p.progress}%)`).join(', ')}.`);
+  }
+
+  if (allowed.has('utilities') && isSectionAvailable(snapshot, 'utilities')) {
+    const u = snapshot.utilities;
+    const upward = [
+      u.deltaPLN && u.deltaPLN > 0 ? `PLN +${formatIDR(u.deltaPLN)}` : null,
+      u.deltaPDAM && u.deltaPDAM > 0 ? `PDAM +${formatIDR(u.deltaPDAM)}` : null,
+    ].filter(Boolean) as string[];
+    if (upward.length > 0) push(`Utilitas naik: ${upward.join(', ')}.`);
+  }
+
+  return added > 0 ? lines : null;
+};
+
+const buildBestAnswer = (
+  snapshot: DashboardAssistantSnapshot,
+  sections: DashboardSectionKey[]
+): string[] | null => {
+  const allowed = new Set(sections);
+  const lines: string[] = ['Yang sedang on-track'];
+  let added = 0;
+  const push = (line: string) => {
+    lines.push(`- ${line}`);
+    added += 1;
+  };
+
+  if (allowed.has('capex') && isSectionAvailable(snapshot, 'capex') && snapshot.capex.topLeading.length > 0) {
+    push(`CAPEX terdepan: ${snapshot.capex.topLeading.slice(0, 3).map((p) => `${p.nama} (${p.progress}%)`).join(', ')}.`);
+  }
+
+  if (allowed.has('classroom') && isSectionAvailable(snapshot, 'classroom') && snapshot.classroom.cleanRooms > 0) {
+    push(`Kelas aman tanpa temuan: ${snapshot.classroom.cleanRooms} ruang.`);
+  }
+
+  if (allowed.has('ac') && isSectionAvailable(snapshot, 'ac')) {
+    push(`AC kondisi baik: ${snapshot.ac.baik} unit dari ${snapshot.ac.terpasang} terpasang.`);
+  }
+
+  if (allowed.has('wifi') && isSectionAvailable(snapshot, 'wifi')) {
+    push(`Puncak Wi-Fi: ${snapshot.wifi.peakCount.toLocaleString('id-ID')} klien pada ${snapshot.wifi.peakDate}.`);
+  }
+
+  return added > 0 ? lines : null;
+};
+
+const buildContextualSuggestions = (sections: DashboardSectionKey[], canViewFinance: boolean) => {
+  if (sections.length === 0) return buildQuickSuggestions(canViewFinance);
+
+  const out: string[] = [];
+  const has = (key: DashboardSectionKey) => sections.includes(key);
+
+  if (has('classroom')) out.push('Ruang mana paling bermasalah?');
+  if (has('ac')) out.push('Berapa AC rusak sekarang?');
+  if (has('capex')) out.push('CAPEX paling lambat siapa?');
+  if (has('utilities')) out.push('PLN naik atau turun?');
+  if (has('wifi')) out.push('Trend klien Wi-Fi minggu ini?');
+  if (has('mokletService')) out.push('Tindak lanjut layanan Sarmok');
+  if (has('piket')) out.push('Catatan piket terbaru');
+  if (canViewFinance && has('finance')) out.push('Kategori belanja terbesar bulan ini');
+
+  if (out.length === 0) return buildQuickSuggestions(canViewFinance);
+  return out.slice(0, 4);
 };
 
 export const shouldRefreshAssistantSnapshot = (message: string, snapshot: DashboardAssistantSnapshot | null) => {
@@ -566,52 +875,108 @@ export const buildSarmokAssistantReply = ({
   canViewFinance: boolean;
 }): DashboardAssistantReply => {
   const query = normalizeQuery(message);
-  const baseSuggestions = buildQuickSuggestions(canViewFinance);
   const defaultSections: DashboardSectionKey[] = canViewFinance
     ? ['mokletService', 'classroom', 'ac', 'capex', 'wifi', 'network', 'utilities', 'piket', 'finance', 'personnel', 'duty']
     : ['mokletService', 'classroom', 'ac', 'capex', 'wifi', 'network', 'utilities', 'piket', 'personnel', 'duty'];
 
   if (!query || isGreeting(query)) {
     const intro = [
-      'Saya membaca data dashboard dari snapshot live, lalu merangkumnya tanpa menebak-nebak angka.',
-      'Saya bisa bantu ringkasan, prioritas, tindak lanjut, atau fokus ke area tertentu seperti kelas, AC, layanan Sarmok, jaringan, utilitas, piket, dan keuangan sesuai akses.',
+      'Halo! Saya Asisten Sarmok. Saya membaca snapshot live dashboard dan merangkumnya tanpa mengarang angka.',
+      'Saya bisa bantu ringkasan, prioritas, tindak lanjut, jawaban angka spesifik, tren, atau lookup per ruang. Cukup tanya, contoh: "berapa pengaduan menunggu", "kondisi AC ruang 12", atau "PLN naik atau turun bulan ini".',
       buildSourceFooter(snapshot, defaultSections),
     ].join('\n');
 
     return {
       text: intro,
       sections: defaultSections,
-      suggestions: baseSuggestions,
+      suggestions: buildQuickSuggestions(canViewFinance),
+    };
+  }
+
+  if (wantsHelp(query)) {
+    const helpLines = buildHelpReply(snapshot, canViewFinance, defaultSections);
+    return {
+      text: helpLines.join('\n'),
+      sections: defaultSections,
+      suggestions: buildQuickSuggestions(canViewFinance),
     };
   }
 
   const sections = detectSections(query, canViewFinance);
-  const targetSections = sections.length > 0
-    ? sections
-    : defaultSections;
+  const rooms = detectRoomNumbers(query);
+  const targetSections = sections.length > 0 ? sections : defaultSections;
 
   let lines: string[] = [];
 
-  if (wantsPriority(query)) {
-    lines = buildPriorityLines(snapshot, targetSections, canViewFinance);
-  } else if (wantsAction(query)) {
-    lines = buildActionLines(snapshot, targetSections, canViewFinance);
-  } else if (sections.length === 0) {
-    lines = buildOverviewLines(snapshot, canViewFinance);
-  } else {
-    targetSections.forEach((section) => {
-      if (section === 'mokletService') lines.push(...buildMokletServiceDetail(snapshot));
-      if (section === 'classroom') lines.push(...buildClassroomDetail(snapshot));
-      if (section === 'ac') lines.push(...buildACDetail(snapshot));
-      if (section === 'capex') lines.push(...buildCapexDetail(snapshot));
-      if (section === 'wifi') lines.push(...buildWifiDetail(snapshot));
-      if (section === 'network') lines.push(...buildNetworkDetail(snapshot));
-      if (section === 'utilities') lines.push(...buildUtilitiesDetail(snapshot));
-      if (section === 'piket') lines.push(...buildPiketDetail(snapshot));
-      if (section === 'finance') lines.push(...buildFinanceDetail(snapshot, canViewFinance));
-      if (section === 'personnel') lines.push(...buildPersonnelDetail(snapshot));
-      if (section === 'duty') lines.push(...buildDutyDetail(snapshot));
-    });
+  if (rooms.length > 0) {
+    lines.push(...buildRoomLookup(snapshot, rooms));
+  }
+
+  const wantsPri = wantsPriority(query);
+  const wantsAct = wantsAction(query);
+  const wantsCnt = wantsCount(query);
+  const wantsTrd = wantsTrend(query);
+  const wantsLat = wantsLatest(query);
+  const wantsWst = wantsWorst(query);
+  const wantsBst = wantsBest(query);
+  const hasSpecialIntent = wantsPri || wantsAct || wantsCnt || wantsTrd || wantsLat || wantsWst || wantsBst;
+
+  if (wantsCnt) {
+    const countLines = buildCountAnswer(snapshot, targetSections, query, canViewFinance);
+    if (countLines) lines.push(...countLines);
+  }
+
+  if (wantsTrd) {
+    const trendLines = buildTrendAnswer(snapshot, targetSections);
+    if (trendLines) lines.push(...trendLines);
+  }
+
+  if (wantsLat) {
+    const latestLines = buildLatestAnswer(snapshot, targetSections);
+    if (latestLines) lines.push(...latestLines);
+  }
+
+  if (wantsWst) {
+    const worstLines = buildWorstAnswer(snapshot, targetSections);
+    if (worstLines) lines.push(...worstLines);
+  }
+
+  if (wantsBst) {
+    const bestLines = buildBestAnswer(snapshot, targetSections);
+    if (bestLines) lines.push(...bestLines);
+  }
+
+  if (wantsPri) {
+    lines.push(...buildPriorityLines(snapshot, targetSections, canViewFinance));
+  }
+
+  if (wantsAct) {
+    lines.push(...buildActionLines(snapshot, targetSections, canViewFinance));
+  }
+
+  if (!hasSpecialIntent && rooms.length === 0) {
+    if (sections.length === 0) {
+      lines.push(...buildOverviewLines(snapshot, canViewFinance));
+    } else {
+      targetSections.forEach((section) => {
+        if (section === 'mokletService') lines.push(...buildMokletServiceDetail(snapshot));
+        if (section === 'classroom') lines.push(...buildClassroomDetail(snapshot));
+        if (section === 'ac') lines.push(...buildACDetail(snapshot));
+        if (section === 'capex') lines.push(...buildCapexDetail(snapshot));
+        if (section === 'wifi') lines.push(...buildWifiDetail(snapshot));
+        if (section === 'network') lines.push(...buildNetworkDetail(snapshot));
+        if (section === 'utilities') lines.push(...buildUtilitiesDetail(snapshot));
+        if (section === 'piket') lines.push(...buildPiketDetail(snapshot));
+        if (section === 'finance') lines.push(...buildFinanceDetail(snapshot, canViewFinance));
+        if (section === 'personnel') lines.push(...buildPersonnelDetail(snapshot));
+        if (section === 'duty') lines.push(...buildDutyDetail(snapshot));
+      });
+    }
+  }
+
+  if (lines.length === 0) {
+    lines.push('Saya belum menemukan area dashboard yang cocok dengan pertanyaan ini. Coba sebut bagiannya, misal kelas, AC, layanan Sarmok, jaringan, utilitas, piket, kas, atau gunakan kata "berapa", "trend", "prioritas", "tindak lanjut".');
+    lines.push(...buildOverviewLines(snapshot, canViewFinance));
   }
 
   const availabilityNotes = buildAvailabilityNotes(snapshot, targetSections);
@@ -624,6 +989,6 @@ export const buildSarmokAssistantReply = ({
   return {
     text: lines.join('\n'),
     sections: targetSections,
-    suggestions: baseSuggestions,
+    suggestions: buildContextualSuggestions(sections, canViewFinance),
   };
 };
