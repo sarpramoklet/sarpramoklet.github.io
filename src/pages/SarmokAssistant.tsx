@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertCircle, Loader2, MessageSquare, RefreshCw, ShieldCheck, Sparkles } from 'lucide-react';
+import { AlertCircle, Loader2, MessageSquare, RefreshCw, ShieldCheck, Sparkles, Trash2 } from 'lucide-react';
 import { canAccessFinanceData, getCurrentUser } from '../data/organization';
 import {
   DASHBOARD_SECTION_LABELS,
@@ -137,6 +137,20 @@ const SarmokAssistant = ({ isLoggedIn = false }: SarmokAssistantProps) => {
     scrollAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages, responding]);
 
+  const handleClearChat = () => {
+    if (responding) return;
+    const confirmed = typeof window !== 'undefined'
+      ? window.confirm('Hapus seluruh histori percakapan dan kembali ke sambutan awal? Tindakan ini hanya menghapus chat di perangkat ini untuk akun yang sedang login.')
+      : true;
+    if (!confirmed) return;
+
+    setDraft('');
+    setMessages([createWelcomeMessage(canViewFinance)]);
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(getChatStorageKey(scopeId));
+    }
+  };
+
   const handleSend = async (forcedPrompt?: string) => {
     const content = (forcedPrompt ?? draft).trim();
     if (!content || responding) return;
@@ -240,6 +254,23 @@ const SarmokAssistant = ({ isLoggedIn = false }: SarmokAssistantProps) => {
             >
               {syncing ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
               Refresh Data
+            </button>
+
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={handleClearChat}
+              disabled={responding || messages.length <= 1}
+              title={messages.length <= 1 ? 'Belum ada riwayat untuk dihapus' : 'Hapus seluruh percakapan di akun ini'}
+              style={{
+                padding: '0.7rem 0.95rem',
+                fontSize: '0.82rem',
+                borderColor: 'rgba(244,63,94,0.32)',
+                color: 'var(--accent-rose)',
+              }}
+            >
+              <Trash2 size={15} />
+              Clear Chat
             </button>
 
             <Link to="/" className="btn btn-primary" style={{ padding: '0.7rem 0.95rem', fontSize: '0.82rem' }}>
