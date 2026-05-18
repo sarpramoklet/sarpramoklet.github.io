@@ -37,14 +37,19 @@ const getStarterPrompts = (canViewFinance: boolean) => (
     : ['Ringkas dashboard hari ini', 'Prioritas kelas dan AC', 'Rekap layanan Sarmok', 'Catatan piket terbaru']
 );
 
+const getWelcomeGreeting = () => {
+  const h = new Date().getHours();
+  if (h < 11) return 'Selamat pagi';
+  if (h < 15) return 'Selamat siang';
+  if (h < 18) return 'Selamat sore';
+  return 'Selamat malam';
+};
+
 const createWelcomeMessage = (canViewFinance: boolean): ChatMessage => ({
   id: 'assistant-welcome',
   role: 'assistant',
   createdAt: new Date().toISOString(),
-  text: [
-    'Saya siap membaca snapshot dashboard live dan merangkumnya tanpa mengarang angka.',
-    'Coba minta ringkasan, prioritas, tindak lanjut, atau fokus ke area tertentu seperti kelas, AC, layanan Sarmok, utilitas, jaringan, piket, dan keuangan sesuai akses.',
-  ].join('\n'),
+  text: `${getWelcomeGreeting()}! Ngobrol santai saja — saya cek live dashboard real-time. Tanya yang singkat ("berapa pengaduan menunggu", "AC ruang 12 gimana") atau yang luas ("ringkas dashboard hari ini") — saya menyesuaikan.${canViewFinance ? ' Area kas juga terbuka untuk akun ini.' : ''}`,
   suggestions: getStarterPrompts(canViewFinance),
 });
 
@@ -188,10 +193,12 @@ const SarmokAssistant = ({ isLoggedIn = false }: SarmokAssistantProps) => {
       return;
     }
 
+    const previousAssistant = [...messages].reverse().find((m) => m.role === 'assistant');
     const reply = buildSarmokAssistantReply({
       message: content,
       snapshot: activeSnapshot,
       canViewFinance,
+      previousSections: previousAssistant?.sections,
     });
 
     setMessages((current) => [

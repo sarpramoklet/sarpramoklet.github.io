@@ -13,6 +13,20 @@ export type DashboardAssistantReply = {
   suggestions: string[];
 };
 
+const pickOne = <T,>(arr: readonly T[]): T => arr[Math.floor(Math.random() * arr.length)];
+
+const OPENERS_AFFIRM = ['Sip', 'Oke', 'Baik', 'Tentu', 'Siap'] as const;
+const OPENERS_INFO = ['Saat ini', 'Per snapshot terbaru,', 'Sekarang ini', 'Hari ini'] as const;
+const OPENERS_THINKING = ['Coba saya rangkum', 'Saya cek ya', 'Sebentar saya lihat'] as const;
+
+const timeOfDayGreeting = () => {
+  const h = new Date().getHours();
+  if (h < 11) return 'Selamat pagi';
+  if (h < 15) return 'Selamat siang';
+  if (h < 18) return 'Selamat sore';
+  return 'Selamat malam';
+};
+
 const DASHBOARD_SECTION_ORDER: DashboardSectionKey[] = [
   'mokletService',
   'classroom',
@@ -570,6 +584,27 @@ const wantsBest = (query: string) => {
   return includesAny(query, ['paling baik', 'terbaik', 'tertinggi', 'paling cepat', 'paling progres', 'leading', 'top']);
 };
 
+const isThanks = (query: string) =>
+  /\b(makasih|terima kasih|thanks|thx|ty|nuhun|matur|suwun)\b/.test(query);
+
+const isFarewell = (query: string) =>
+  /\b(bye|dadah|sampai jumpa|udahan|selesai|cukup|udah cukup|done)\b/.test(query);
+
+const isAffirmation = (query: string) =>
+  /^(oke|ok|sip|baik|siap|mantap|noted|got it|setuju)\b/.test(query) && query.split(' ').length <= 3;
+
+const isApology = (query: string) =>
+  /\b(maaf|sorry|mohon maaf)\b/.test(query);
+
+const isPraise = (query: string) =>
+  /\b(bagus|keren|mantap banget|hebat|pintar|good job|nice|cakep|josss)\b/.test(query);
+
+const wantsContinuation = (query: string) =>
+  /\b(itu|tadi|sebelum|sebelumnya|nya|lanjut|lebih detail|rincian|info lebih|lebih lanjut|elaborate|jelasin)\b/.test(query);
+
+const wantsRefreshNote = (query: string) =>
+  includesAny(query, ['kapan update', 'kapan sinkron', 'kapan refresh', 'kapan terakhir', 'sumber data']);
+
 const detectRoomNumbers = (query: string): number[] => {
   const matches: number[] = [];
   const regex = /(?:ruang|kelas|r\.?|kls)\s*0*(\d{1,2})\b/g;
@@ -597,6 +632,52 @@ const buildHelpReply = (snapshot: DashboardAssistantSnapshot, canViewFinance: bo
     buildSourceFooter(snapshot, defaultSections),
   ];
   return lines;
+};
+
+const buildSmalltalkReply = (query: string, snapshot: DashboardAssistantSnapshot, canViewFinance: boolean): string | null => {
+  if (isThanks(query)) {
+    return pickOne([
+      'Sama-sama. Kalau ada area lain yang mau dilihat, tinggal sebut saja.',
+      'Sip, dengan senang hati. Mau lanjut ke kelas, AC, atau utilitas?',
+      'Sama-sama 🙏 — siap bantu kapan pun.',
+    ]);
+  }
+
+  if (isFarewell(query)) {
+    return pickOne([
+      'Oke, saya tutup dulu ya. Buka kembali kapan saja.',
+      'Siap, sampai ketemu lagi. Snapshot akan otomatis disegarkan saat Anda kembali.',
+    ]);
+  }
+
+  if (isAffirmation(query)) {
+    return pickOne([
+      'Siap. Mau saya gali area mana berikutnya?',
+      'Oke. Sebut topiknya — kelas, AC, layanan Sarmok, utilitas, atau yang lain.',
+      'Noted. Saya tunggu pertanyaan berikutnya.',
+    ]);
+  }
+
+  if (isPraise(query)) {
+    return pickOne([
+      'Makasih, senang bisa bantu. Lanjut tanya saja.',
+      'Sip, semoga membantu kerja tim. Mau lihat area apa lagi?',
+    ]);
+  }
+
+  if (isApology(query)) {
+    return pickOne([
+      'Santai saja, tidak apa-apa. Mau saya bantu apa berikutnya?',
+      'Tidak masalah. Tanya ulang dengan kata kunci area dashboard biar saya bidik lebih akurat.',
+    ]);
+  }
+
+  if (wantsRefreshNote(query)) {
+    return `Snapshot ini disinkronkan pada ${formatTimestamp(snapshot.generatedAt)}. Tekan tombol Refresh Data atau ketik "refresh" supaya saya ambil ulang sebelum menjawab.`;
+  }
+
+  if (canViewFinance) return null;
+  return null;
 };
 
 const buildRoomLookup = (snapshot: DashboardAssistantSnapshot, rooms: number[]) => {
@@ -833,6 +914,123 @@ const buildBestAnswer = (
   return added > 0 ? lines : null;
 };
 
+const buildShortProseAnswer = (
+  snapshot: DashboardAssistantSnapshot,
+  section: DashboardSectionKey,
+  query: string,
+  canViewFinance: boolean,
+  intent: 'count' | 'latest' | 'trend' | 'worst' | 'best' | 'who'
+): string | null => {
+  if (!isSectionAvailable(snapshot, section) && section !== 'finance') {
+    return null;
+  }
+
+  if (section === 'mokletService') {
+    const m = snapshot.mokletService;
+    if (includesAny(query, ['pengaduan', 'aduan', 'komplain'])) {
+      return `Sekarang ada ${m.complaints.pending} pengaduan menunggu verifikasi${m.complaints.inProgress > 0 ? `, dan ${m.complaints.inProgress} lagi sedang diproses` : ''}. ${m.complaints.complete} sudah selesai${m.complaints.rejected > 0 ? `, ${m.complaints.rejected} ditolak` : ''}.`;
+    }
+    if (includesAny(query, ['reservasi', 'booking', 'ruang aktif', 'ruang dipakai'])) {
+      return `Reservasi ruang aktif sekarang: ${m.roomReservation.activeReservation} aktif, ${m.roomReservation.inUseReservation} sedang dipakai, ${m.roomReservation.waitingConfirmation} masih menunggu konfirmasi.`;
+    }
+    if (includesAny(query, ['alat', 'pinjam', 'borrow'])) {
+      return `Peminjaman alat: ${m.toolsLoan.haveNotReturn} belum kembali, ${m.toolsLoan.waitingConfirmation} menunggu konfirmasi. ${m.toolsLoan.returned} sudah dikembalikan.`;
+    }
+    return `Layanan Sarmok: ${m.complaints.pending + m.complaints.inProgress} pengaduan aktif, ${m.roomReservation.waitingConfirmation + m.roomReservation.activeReservation} reservasi ruang berjalan, dan ${m.toolsLoan.haveNotReturn} alat belum kembali.`;
+  }
+
+  if (section === 'classroom') {
+    const c = snapshot.classroom;
+    if (intent === 'worst' && c.topIssueRooms.length > 0) {
+      const top = c.topIssueRooms[0];
+      return `Ruang paling bermasalah pantauan ${formatDateLabel(c.latestDate)} adalah ${top.label} dengan ${top.total} temuan${top.summary ? ` — ${top.summary}` : ''}${top.waliKelas ? ` (wali ${top.waliKelas})` : ''}.`;
+    }
+    if (intent === 'count') {
+      return `Pantauan ${formatDateLabel(c.latestDate)}: ${c.issueRooms} ruang bermasalah dari ${c.monitoredRooms} terpantau, total ${c.totalFindings} temuan.`;
+    }
+    return `Update pantauan kelas terakhir ${formatDateLabel(c.latestDate)}, ${c.issueRooms} ruang bermasalah${c.topIssueRooms[0] ? `; tertinggi di ${c.topIssueRooms[0].label}` : ''}.`;
+  }
+
+  if (section === 'ac') {
+    const a = snapshot.ac;
+    if (intent === 'worst' && a.troubleRooms.length > 0) {
+      return `Ada ${a.troubleRooms.length} ruang trouble AC sekarang: ${buildTroubleRoomList(a.troubleRooms)}.`;
+    }
+    if (intent === 'count') {
+      return `AC: ${a.baik} unit baik, ${a.perbaikan} perbaikan, ${a.rusak} rusak, dari ${a.terpasang}/${a.total} ruang yang sudah terpasang.`;
+    }
+    return `${a.terpasang} dari ${a.total} ruang sudah terpasang AC. Saat ini ${a.baik} kondisi baik dan ${a.troubleRooms.length} ruang masuk daftar trouble.`;
+  }
+
+  if (section === 'capex') {
+    const cx = snapshot.capex;
+    if (intent === 'worst' && cx.topLagging.length > 0) {
+      return `Proyek paling tertinggal: ${cx.topLagging.slice(0, 3).map((p) => `${p.nama} (${p.progress}%)`).join(', ')}.`;
+    }
+    if (intent === 'best' && cx.topLeading.length > 0) {
+      return `Proyek terdepan: ${cx.topLeading.slice(0, 3).map((p) => `${p.nama} (${p.progress}%)`).join(', ')}.`;
+    }
+    return `CAPEX: ${cx.totalProjects} proyek total, rata-rata progres ${cx.averageProgress.toFixed(1)}%. ${cx.completedProjects} selesai, ${cx.priorityProjects} masih di bawah 50%.`;
+  }
+
+  if (section === 'wifi') {
+    const w = snapshot.wifi;
+    if (intent === 'trend' && w.delta !== null) {
+      return `Klien Wi-Fi pada ${w.latestDate} ada ${w.latestCount.toLocaleString('id-ID')}, ${formatSignedDelta(w.delta, 'klien')} dari pengamatan sebelumnya.`;
+    }
+    return `Pada ${w.latestDate} tercatat ${w.latestCount.toLocaleString('id-ID')} klien Wi-Fi. Puncak monitoring ${w.peakCount.toLocaleString('id-ID')} di ${w.peakDate}.`;
+  }
+
+  if (section === 'network') {
+    const n = snapshot.network;
+    return `Snapshot jaringan ${formatDateLabel(n.latestDate)}: RX total ${formatTraffic(n.totalRx)} dan TX total ${formatTraffic(n.totalTx)}${n.topRx[0] ? `, jalur RX teratas ${n.topRx[0].label} ${formatTraffic(n.topRx[0].value)}` : ''}.`;
+  }
+
+  if (section === 'utilities') {
+    const u = snapshot.utilities;
+    if (intent === 'trend') {
+      const parts: string[] = [];
+      if (u.deltaPLN !== null) parts.push(`PLN ${formatSignedDelta(u.deltaPLN)} (${formatIDR(u.latestPLN)})`);
+      if (u.deltaPDAM !== null) parts.push(`PDAM ${formatSignedDelta(u.deltaPDAM)} (${formatIDR(u.latestPDAM)})`);
+      return `Dibanding ${u.previousLabel || 'periode sebelumnya'}, di ${u.latestLabel}: ${parts.join(' dan ')}.`;
+    }
+    return `Tagihan ${u.latestLabel}: PLN ${formatIDR(u.latestPLN)}, PDAM ${formatIDR(u.latestPDAM)}.`;
+  }
+
+  if (section === 'piket') {
+    const notes = snapshot.piket.recentNotes;
+    if (notes.length === 0) return 'Belum ada catatan piket pada snapshot ini.';
+    if (intent === 'latest') {
+      const n = notes[0];
+      return `Catatan piket terbaru — ${n.tanggal}, ${n.petugas} (${n.kategori}): ${n.isi}.`;
+    }
+    return `Ada ${notes.length} catatan piket terbaru. Yang teratas: ${notes[0].petugas} — ${notes[0].isi}.`;
+  }
+
+  if (section === 'finance') {
+    if (!canViewFinance || !snapshot.finance) {
+      return 'Data keuangan tidak terbuka untuk akun ini, jadi saya tidak menyertakannya. Hubungi pimpinan kalau memang perlu nominal.';
+    }
+    const f = snapshot.finance;
+    if (intent === 'best' && f.internal.topCategories?.[0]) {
+      const top = f.internal.topCategories[0];
+      return `Kategori belanja terbesar di kas internal: ${top.name} sebesar ${formatIDR(top.value)}.`;
+    }
+    return `Saldo Sarpras ${formatIDR(f.internal.balance)}, Kas TU ${formatIDR(f.tu.balance)}, Kas AC ${formatIDR(f.ac.balance)}.`;
+  }
+
+  if (section === 'personnel') {
+    return `Total ${snapshot.personnel.total} personel aktif di dashboard${snapshot.personnel.byUnit[0] ? `, unit terbesar ${snapshot.personnel.byUnit[0].unit} (${snapshot.personnel.byUnit[0].count} orang)` : ''}.`;
+  }
+
+  if (section === 'duty') {
+    if (snapshot.duty.personnel.length === 0) return `Hari ${snapshot.duty.day} belum ada jadwal piket terisi.`;
+    return `Piket hari ${snapshot.duty.day} hari ini: ${snapshot.duty.personnel.join(', ')}.`;
+  }
+
+  return null;
+};
+
 const buildContextualSuggestions = (sections: DashboardSectionKey[], canViewFinance: boolean) => {
   if (sections.length === 0) return buildQuickSuggestions(canViewFinance);
 
@@ -869,48 +1067,60 @@ export const buildSarmokAssistantReply = ({
   message,
   snapshot,
   canViewFinance,
+  previousSections,
 }: {
   message: string;
   snapshot: DashboardAssistantSnapshot;
   canViewFinance: boolean;
+  previousSections?: DashboardSectionKey[];
 }): DashboardAssistantReply => {
   const query = normalizeQuery(message);
   const defaultSections: DashboardSectionKey[] = canViewFinance
     ? ['mokletService', 'classroom', 'ac', 'capex', 'wifi', 'network', 'utilities', 'piket', 'finance', 'personnel', 'duty']
     : ['mokletService', 'classroom', 'ac', 'capex', 'wifi', 'network', 'utilities', 'piket', 'personnel', 'duty'];
 
-  if (!query || isGreeting(query)) {
-    const intro = [
-      'Halo! Saya Asisten Sarmok. Saya membaca snapshot live dashboard dan merangkumnya tanpa mengarang angka.',
-      'Saya bisa bantu ringkasan, prioritas, tindak lanjut, jawaban angka spesifik, tren, atau lookup per ruang. Cukup tanya, contoh: "berapa pengaduan menunggu", "kondisi AC ruang 12", atau "PLN naik atau turun bulan ini".',
-      buildSourceFooter(snapshot, defaultSections),
-    ].join('\n');
+  // 1) Smalltalk / non-data turns — short, warm, no footer.
+  const smalltalk = buildSmalltalkReply(query, snapshot, canViewFinance);
+  if (smalltalk) {
+    return {
+      text: smalltalk,
+      sections: previousSections && previousSections.length > 0 ? previousSections : [],
+      suggestions: previousSections && previousSections.length > 0
+        ? buildContextualSuggestions(previousSections, canViewFinance)
+        : buildQuickSuggestions(canViewFinance),
+    };
+  }
 
+  // 2) Greeting → time-aware sapaan, ringkas, tanpa info dump.
+  if (!query || isGreeting(query)) {
+    const intro = `${timeOfDayGreeting()}! Saya Asisten Sarmok. Mau saya rangkum dashboard hari ini, atau langsung ke area tertentu seperti kelas, AC, layanan Sarmok, jaringan, utilitas, atau piket? Tinggal tanya santai saja.`;
     return {
       text: intro,
-      sections: defaultSections,
+      sections: [],
       suggestions: buildQuickSuggestions(canViewFinance),
     };
   }
 
+  // 3) Help / kemampuan
   if (wantsHelp(query)) {
-    const helpLines = buildHelpReply(snapshot, canViewFinance, defaultSections);
     return {
-      text: helpLines.join('\n'),
+      text: buildHelpReply(snapshot, canViewFinance, defaultSections).join('\n'),
       sections: defaultSections,
       suggestions: buildQuickSuggestions(canViewFinance),
     };
   }
 
-  const sections = detectSections(query, canViewFinance);
+  // 4) Detect sections, with context continuation fallback.
+  let sections = detectSections(query, canViewFinance);
+  const usingContinuation = sections.length === 0
+    && wantsContinuation(query)
+    && previousSections && previousSections.length > 0;
+  if (usingContinuation && previousSections) {
+    sections = previousSections.filter((s) => canViewFinance || s !== 'finance');
+  }
+
   const rooms = detectRoomNumbers(query);
   const targetSections = sections.length > 0 ? sections : defaultSections;
-
-  let lines: string[] = [];
-
-  if (rooms.length > 0) {
-    lines.push(...buildRoomLookup(snapshot, rooms));
-  }
 
   const wantsPri = wantsPriority(query);
   const wantsAct = wantsAction(query);
@@ -919,42 +1129,117 @@ export const buildSarmokAssistantReply = ({
   const wantsLat = wantsLatest(query);
   const wantsWst = wantsWorst(query);
   const wantsBst = wantsBest(query);
-  const hasSpecialIntent = wantsPri || wantsAct || wantsCnt || wantsTrd || wantsLat || wantsWst || wantsBst;
+
+  // 5) Single-room single answer — prose.
+  if (rooms.length === 1) {
+    const room = rooms[0];
+    const cls = isSectionAvailable(snapshot, 'classroom')
+      ? snapshot.classroom.topIssueRooms.find((r) => {
+          const match = (r.room || '').match(/(\d{1,2})/);
+          return match ? parseInt(match[1], 10) === room : false;
+        })
+      : null;
+    const acRow = isSectionAvailable(snapshot, 'ac')
+      ? snapshot.ac.troubleRooms.find((r) => r.ruang === room)
+      : null;
+    const parts: string[] = [];
+    if (cls) {
+      parts.push(`pantauan kelas mencatat ${cls.total} temuan${cls.summary ? ` (${cls.summary})` : ''}${cls.waliKelas ? `, wali ${cls.waliKelas}` : ''}`);
+    } else {
+      parts.push('pantauan kelas tidak menempatkannya di 5 ruang tertinggi snapshot ini, jadi besar kemungkinan aman');
+    }
+    if (acRow) {
+      parts.push(`AC sedang ${acRow.kondisi.toLowerCase()} (${acRow.pk}, ${acRow.status.toLowerCase()})`);
+    } else {
+      parts.push('AC tidak masuk daftar trouble');
+    }
+    return {
+      text: `Untuk Ruang ${room}: ${parts.join('. ')}.`,
+      sections: ['classroom', 'ac'],
+      suggestions: buildContextualSuggestions(['classroom', 'ac'], canViewFinance),
+    };
+  }
+
+  // 6) Multi-room lookup — list.
+  if (rooms.length > 1) {
+    const lines = buildRoomLookup(snapshot, rooms);
+    return {
+      text: lines.join('\n'),
+      sections: ['classroom', 'ac'],
+      suggestions: buildContextualSuggestions(['classroom', 'ac'], canViewFinance),
+    };
+  }
+
+  // 7) Narrow query — 1 section + 1 of (count/trend/latest/worst/best) → short prose.
+  const narrowIntents = [wantsCnt, wantsTrd, wantsLat, wantsWst, wantsBst].filter(Boolean).length;
+  if (sections.length === 1 && narrowIntents === 1 && !wantsPri && !wantsAct) {
+    const intent = wantsCnt ? 'count' : wantsTrd ? 'trend' : wantsLat ? 'latest' : wantsWst ? 'worst' : 'best';
+    const prose = buildShortProseAnswer(snapshot, sections[0], query, canViewFinance, intent);
+    if (prose) {
+      return {
+        text: prose,
+        sections,
+        suggestions: buildContextualSuggestions(sections, canViewFinance),
+      };
+    }
+  }
+
+  // 8) Single-section no special intent → tetap prose ringkas.
+  if (sections.length === 1 && narrowIntents === 0 && !wantsPri && !wantsAct) {
+    const prose = buildShortProseAnswer(snapshot, sections[0], query, canViewFinance, 'count');
+    if (prose) {
+      return {
+        text: usingContinuation ? `Lanjut ke topik tadi — ${prose.charAt(0).toLowerCase()}${prose.slice(1)}` : prose,
+        sections,
+        suggestions: buildContextualSuggestions(sections, canViewFinance),
+      };
+    }
+  }
+
+  // 9) Pertanyaan luas / multi-intent → struktur list dengan opener percakapan.
+  const lines: string[] = [];
+
+  // Opener percakapan supaya tidak kaku.
+  const openWith: string[] = [];
+  if (wantsPri || wantsAct) {
+    openWith.push(pickOne(OPENERS_AFFIRM));
+  } else if (sections.length === 0) {
+    openWith.push(pickOne(OPENERS_THINKING));
+  } else {
+    openWith.push(pickOne(OPENERS_INFO));
+  }
+  const opener = openWith.join(' ').trim();
+  if (opener) lines.push(`${opener}.`);
 
   if (wantsCnt) {
-    const countLines = buildCountAnswer(snapshot, targetSections, query, canViewFinance);
-    if (countLines) lines.push(...countLines);
+    const out = buildCountAnswer(snapshot, targetSections, query, canViewFinance);
+    if (out) lines.push(...out);
   }
-
   if (wantsTrd) {
-    const trendLines = buildTrendAnswer(snapshot, targetSections);
-    if (trendLines) lines.push(...trendLines);
+    const out = buildTrendAnswer(snapshot, targetSections);
+    if (out) lines.push(...out);
   }
-
   if (wantsLat) {
-    const latestLines = buildLatestAnswer(snapshot, targetSections);
-    if (latestLines) lines.push(...latestLines);
+    const out = buildLatestAnswer(snapshot, targetSections);
+    if (out) lines.push(...out);
   }
-
   if (wantsWst) {
-    const worstLines = buildWorstAnswer(snapshot, targetSections);
-    if (worstLines) lines.push(...worstLines);
+    const out = buildWorstAnswer(snapshot, targetSections);
+    if (out) lines.push(...out);
   }
-
   if (wantsBst) {
-    const bestLines = buildBestAnswer(snapshot, targetSections);
-    if (bestLines) lines.push(...bestLines);
+    const out = buildBestAnswer(snapshot, targetSections);
+    if (out) lines.push(...out);
   }
-
   if (wantsPri) {
     lines.push(...buildPriorityLines(snapshot, targetSections, canViewFinance));
   }
-
   if (wantsAct) {
     lines.push(...buildActionLines(snapshot, targetSections, canViewFinance));
   }
 
-  if (!hasSpecialIntent && rooms.length === 0) {
+  const hasSpecialIntent = wantsPri || wantsAct || wantsCnt || wantsTrd || wantsLat || wantsWst || wantsBst;
+  if (!hasSpecialIntent) {
     if (sections.length === 0) {
       lines.push(...buildOverviewLines(snapshot, canViewFinance));
     } else {
@@ -974,9 +1259,12 @@ export const buildSarmokAssistantReply = ({
     }
   }
 
-  if (lines.length === 0) {
-    lines.push('Saya belum menemukan area dashboard yang cocok dengan pertanyaan ini. Coba sebut bagiannya, misal kelas, AC, layanan Sarmok, jaringan, utilitas, piket, kas, atau gunakan kata "berapa", "trend", "prioritas", "tindak lanjut".');
-    lines.push(...buildOverviewLines(snapshot, canViewFinance));
+  if (lines.length <= 1) {
+    return {
+      text: 'Hmm, saya belum menangkap area dashboard yang dimaksud. Coba sebut topiknya — misal "kelas", "AC", "layanan Sarmok", "jaringan", "utilitas", "piket", atau "kas". Atau ketik "ringkas dashboard hari ini" supaya saya rangkum semuanya.',
+      sections: [],
+      suggestions: buildQuickSuggestions(canViewFinance),
+    };
   }
 
   const availabilityNotes = buildAvailabilityNotes(snapshot, targetSections);
@@ -984,7 +1272,11 @@ export const buildSarmokAssistantReply = ({
     lines.push(...availabilityNotes);
   }
 
-  lines.push(buildSourceFooter(snapshot, targetSections));
+  // Footer hanya untuk jawaban luas (overview / multi-section) atau saat user menanyakan sumber.
+  const shouldShowFooter = sections.length === 0 || sections.length >= 2 || wantsRefreshNote(query);
+  if (shouldShowFooter) {
+    lines.push(buildSourceFooter(snapshot, targetSections));
+  }
 
   return {
     text: lines.join('\n'),
