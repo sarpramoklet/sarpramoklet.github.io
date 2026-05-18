@@ -1804,26 +1804,75 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   const formatTxDate = (raw: any) => {
     const s = String(raw || '').trim();
     if (!s) return '-';
-    const d = new Date(s);
-    if (!isNaN(d.getTime())) {
-      return new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: '2-digit' }).format(d);
+    const ms = parseRowDateMs(s);
+    if (!isNaN(ms)) {
+      return new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: '2-digit' }).format(new Date(ms));
     }
     return s;
   };
 
+  const ID_MONTH_TO_NUM: Record<string, number> = {
+    jan: 1, feb: 2, mar: 3, apr: 4, mei: 5, may: 5, jun: 6, jul: 7,
+    agt: 8, agu: 8, aug: 8, sep: 9, okt: 10, oct: 10, nov: 11, des: 12, dec: 12,
+  };
+
+  // Mengubah string tanggal apapun (ISO, "19-Jan", "28 Apr 26", "18 Mei",
+  // "5/3/2026") jadi epoch ms. Return NaN kalau tidak bisa.
+  const parseRowDateMs = (raw: string): number => {
+    const s = String(raw || '').trim();
+    if (!s) return NaN;
+
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+      const d = new Date(s);
+      if (!isNaN(d.getTime())) return d.getTime();
+    }
+
+    const dashMonth = s.match(/^(\d{1,2})[-\s/]+([A-Za-z]{3,})(?:[-\s/]+(\d{2,4}))?$/);
+    if (dashMonth) {
+      const day = parseInt(dashMonth[1], 10);
+      const month = ID_MONTH_TO_NUM[dashMonth[2].slice(0, 3).toLowerCase()];
+      if (month && day >= 1 && day <= 31) {
+        const yearRaw = dashMonth[3] ? parseInt(dashMonth[3], 10) : new Date().getFullYear();
+        const year = yearRaw < 100 ? 2000 + yearRaw : yearRaw;
+        return new Date(year, month - 1, day).getTime();
+      }
+    }
+
+    const numeric = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{2,4})$/);
+    if (numeric) {
+      const day = parseInt(numeric[1], 10);
+      const month = parseInt(numeric[2], 10);
+      const yearRaw = parseInt(numeric[3], 10);
+      const year = yearRaw < 100 ? 2000 + yearRaw : yearRaw;
+      if (day >= 1 && day <= 31 && month >= 1 && month <= 12) {
+        return new Date(year, month - 1, day).getTime();
+      }
+    }
+
+    const fallback = new Date(s).getTime();
+    return isNaN(fallback) ? NaN : fallback;
+  };
+
+  // Cari row terbaru berdasarkan tanggal. Kalau tanggal tidak parse-able,
+  // pakai timestamp dari ID (mis. AC-1747234567890), lalu insertion order
+  // sebagai tiebreaker terakhir.
   const pickLatestRow = (rows: any[], isValid: (row: any) => boolean) => {
     const valid = rows.filter(isValid);
     if (valid.length === 0) return null;
-    const dated = valid.map((row, idx) => {
-      const ts = new Date(pickDateField(row)).getTime();
-      return { row, idx, ts };
+
+    const scored = valid.map((row, idx) => {
+      const dateMs = parseRowDateMs(pickDateField(row));
+      if (!isNaN(dateMs)) return { row, score: dateMs };
+
+      const idStr = String(row.id || row.ID || '');
+      const idMatch = idStr.match(/(\d{13,})/);
+      if (idMatch) return { row, score: Number(idMatch[1]) };
+
+      return { row, score: idx };
     });
-    const parseable = dated.filter((d) => !isNaN(d.ts));
-    if (parseable.length > 0) {
-      parseable.sort((a, b) => a.ts - b.ts);
-      return parseable[parseable.length - 1].row;
-    }
-    return valid[valid.length - 1];
+
+    scored.sort((a, b) => a.score - b.score);
+    return scored[scored.length - 1].row;
   };
 
   const txAmountText = (amount: number, type: 'in' | 'out' | 'unknown') => {
