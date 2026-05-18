@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, NotebookPen } from 'lucide-react';
+import { Home, MessageSquare, NotebookPen } from 'lucide-react';
 import { getCurrentUser } from '../data/organization';
 
 const PIKET_SCHEDULE: { day: string; personnel: string[] }[] = [
@@ -26,12 +26,12 @@ const QuickActionsBar = ({ isLoggedIn }: Props) => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
-  if (!isLoggedIn) return null;
   if (pathname === '/login') return null;
 
-  const currentUser = getCurrentUser();
+  const currentUser = isLoggedIn ? getCurrentUser() : null;
   const onDuty = currentUser ? isUserOnDutyToday(currentUser.nama) : false;
   const isOnDashboard = pathname === '/' || pathname === '';
+  const isOnAssistant = pathname.startsWith('/assistant');
   const isOnDutyNotes = pathname.startsWith('/duty-notes');
 
   const piketTarget = onDuty && !isOnDutyNotes ? '/duty-notes?add=1' : '/duty-notes';
@@ -50,14 +50,26 @@ const QuickActionsBar = ({ isLoggedIn }: Props) => {
 
       <button
         type="button"
-        className={`quick-actions-item quick-actions-item--piket ${isOnDutyNotes ? 'is-active' : ''} ${onDuty ? 'is-spotlight' : ''}`}
-        onClick={() => navigate(piketTarget)}
-        aria-label={onDuty ? 'Tambah Catatan Piket' : 'Buka Catatan Piket'}
+        className={`quick-actions-item quick-actions-item--assistant ${isOnAssistant ? 'is-active' : ''}`}
+        onClick={() => navigate('/assistant')}
+        aria-label="Buka Asisten Sarmok"
       >
-        <NotebookPen size={20} />
-        <span>Note Piket</span>
-        {onDuty && <span className="quick-actions-dot" aria-hidden="true" />}
+        <MessageSquare size={20} />
+        <span>Chat</span>
       </button>
+
+      {isLoggedIn && (
+        <button
+          type="button"
+          className={`quick-actions-item quick-actions-item--piket ${isOnDutyNotes ? 'is-active' : ''} ${onDuty ? 'is-spotlight' : ''}`}
+          onClick={() => navigate(piketTarget)}
+          aria-label={onDuty ? 'Tambah Catatan Piket' : 'Buka Catatan Piket'}
+        >
+          <NotebookPen size={20} />
+          <span>Note Piket</span>
+          {onDuty && <span className="quick-actions-dot" aria-hidden="true" />}
+        </button>
+      )}
     </nav>
   );
 };

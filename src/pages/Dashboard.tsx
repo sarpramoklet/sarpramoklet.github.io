@@ -3536,6 +3536,16 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           <p className="page-subtitle" style={{ margin: 0, maxWidth: '800px' }}>
             Monitor penugasan, progres rutin, dan proyek tim IT, Lab & Sarana Prasarana.
           </p>
+          <div style={{ marginTop: '0.95rem' }}>
+            <Link
+              to="/assistant"
+              className="btn btn-outline"
+              style={{ padding: '0.7rem 0.95rem', fontSize: '0.8rem', borderColor: 'rgba(6,182,212,0.32)', color: 'var(--accent-cyan)', background: 'rgba(6,182,212,0.06)' }}
+            >
+              <MessageSquare size={16} />
+              Chat Dengan Asisten Sarmok
+            </Link>
+          </div>
           {!isLoggedIn && (
             <div
               className="glass-panel"

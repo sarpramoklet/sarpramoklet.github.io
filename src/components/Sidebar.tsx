@@ -170,8 +170,8 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
 
             // Filter logic
             const filteredItems = NAVIGATION.filter((item: any) => {
-              // Mode publik: hanya tampilkan Dashboard
-              if (!isLoggedIn) return item.path === '/';
+              // Mode publik: tampilkan entry yang aman untuk semua pengunjung
+              if (!isLoggedIn) return item.path === '/' || item.path === '/assistant';
 
               // Hide Performance for Petugas Piket as requested
               if (isPetugasPiket && item.name === 'Kinerja Personel') return false;
@@ -207,7 +207,7 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
               if (user.unit === 'Semua Unit') return true;
               
               // Common menus for all authenticated staff
-              const alwaysVisible = ['Dashboard', 'Rapat Bulanan', 'Catatan Piket'];
+              const alwaysVisible = ['Dashboard', 'Rapat Bulanan', 'Catatan Piket', 'Asisten Sarmok'];
 
               // Unit based access
               if (user.unit === 'Laboratorium') {

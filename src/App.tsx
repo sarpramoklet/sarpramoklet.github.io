@@ -3,6 +3,7 @@ import { HashRouter as Router, Routes, Route, Navigate, useLocation } from 'reac
 import { Menu } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import QuickActionsBar from './components/QuickActionsBar';
+import AssistantLauncher from './components/AssistantLauncher';
 import Dashboard from './pages/Dashboard';
 import MeetingDashboard from './pages/MeetingDashboard';
 import Tickets from './pages/Tickets';
@@ -26,6 +27,7 @@ import CapexBudget from './pages/CapexBudget';
 import ClassroomMonitor from './pages/ClassroomMonitor';
 import ClassroomPriorityFocus from './pages/ClassroomPriorityFocus';
 import Login from './pages/Login';
+import SarmokAssistant from './pages/SarmokAssistant';
 import { getCurrentUser, ROLES } from './data/organization';
 import { NAVIGATION } from './navigation';
 import { logAccess } from './utils/logger';
@@ -130,6 +132,7 @@ function App() {
       <ScrollToTop />
       <RouteActivityTracker isLoggedIn={isLoggedIn} />
       <QuickActionsBar isLoggedIn={isLoggedIn} />
+      <AssistantLauncher />
       <div className="app-layout">
         <Sidebar 
           isOpen={isSidebarOpen} 
@@ -202,6 +205,7 @@ function App() {
               <Route path="/sop" element={<ProtectedRoute isLoggedIn={isLoggedIn}><DummyPage title="SOP & Dokumen" /></ProtectedRoute>} />
               <Route path="/notifications" element={<ProtectedRoute isLoggedIn={isLoggedIn}><DummyPage title="Notifikasi Pribadi" /></ProtectedRoute>} />
               <Route path="/duty-notes" element={<ProtectedRoute isLoggedIn={isLoggedIn}><DutyNotes /></ProtectedRoute>} />
+              <Route path="/assistant" element={<SarmokAssistant isLoggedIn={isLoggedIn} />} />
               <Route path="/classroom-monitor" element={<ProtectedRoute isLoggedIn={isLoggedIn}><ClassroomMonitor /></ProtectedRoute>} />
               <Route path="/classroom-monitor/focus" element={<ProtectedRoute isLoggedIn={isLoggedIn}><ClassroomPriorityFocus /></ProtectedRoute>} />
               <Route path="/maintenance" element={<ProtectedRoute isLoggedIn={isLoggedIn}><DummyPage title="Jadwal Maintenance" /></ProtectedRoute>} />

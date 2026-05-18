@@ -722,7 +722,7 @@ tr:hover td {
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45),
     0 0 0 1px rgba(255, 255, 255, 0.04) inset;
-  width: min(360px, calc(100vw - 1.5rem));
+  width: min(460px, calc(100vw - 1.5rem));
 }
 
 .quick-actions-item {
@@ -760,6 +760,25 @@ tr:hover td {
   border-color: rgba(59, 130, 246, 0.45);
 }
 
+.quick-actions-item--assistant {
+  background: rgba(6, 182, 212, 0.14);
+  border-color: rgba(6, 182, 212, 0.32);
+  color: #67e8f9;
+}
+
+.quick-actions-item--assistant:hover {
+  background: rgba(6, 182, 212, 0.22);
+  color: #a5f3fc;
+  border-color: rgba(6, 182, 212, 0.45);
+}
+
+.quick-actions-item--assistant.is-active {
+  background: rgba(6, 182, 212, 0.32);
+  color: #a5f3fc;
+  border-color: rgba(6, 182, 212, 0.55);
+  box-shadow: 0 4px 14px rgba(6, 182, 212, 0.28);
+}
+
 .quick-actions-item--piket.is-spotlight {
   background: linear-gradient(135deg, rgba(16, 185, 129, 0.92), rgba(20, 184, 166, 0.92));
   color: white;
@@ -792,6 +811,48 @@ tr:hover td {
   box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.78);
 }
 
+.assistant-launcher {
+  position: fixed;
+  right: 1.25rem;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
+  z-index: 970;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(6, 182, 212, 0.28);
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.96), rgba(37, 99, 235, 0.92));
+  color: #ecfeff;
+  box-shadow: 0 16px 34px rgba(2, 132, 199, 0.34);
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+}
+
+.assistant-launcher:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 38px rgba(2, 132, 199, 0.42);
+  filter: brightness(1.05);
+}
+
+.assistant-launcher__icon {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  flex-shrink: 0;
+}
+
+.assistant-launcher__text {
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
 @media (max-width: 768px) {
   .quick-actions-bar {
     width: calc(100vw - 1.25rem);
@@ -802,6 +863,16 @@ tr:hover td {
 
   .content-container {
     padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 6rem) !important;
+  }
+
+  .assistant-launcher {
+    right: 0.75rem;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 5.75rem);
+    padding: 0.8rem 0.95rem;
+  }
+
+  .assistant-launcher__text {
+    font-size: 0.76rem;
   }
 }
 
