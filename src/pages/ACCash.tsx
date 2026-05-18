@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
-import { 
-  Wind, Plus, Search, Filter, Loader2, Download, Trash2, Edit3, 
+import {
+  Wind, Plus, Search, Filter, Loader2, Download, Trash2, Edit3,
   Save, X, ArrowUpCircle, ArrowDownCircle, Wallet, TrendingUp,
-  Calendar, Info
+  Calendar, Info, AlertCircle
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import { getCurrentUser, ROLES } from '../data/organization';
@@ -29,6 +29,49 @@ const SEED_DATA: Transaction[] = [
   { id: 'AC-6', tanggal: '5-Mar', keterangan: 'Jatah AC Maret 2026', debit: 1667000, kredit: 0, saldo: 2226000 },
 ];
 
+const MONTH_ID_TO_NUM: Record<string, number> = {
+  jan: 1, feb: 2, mar: 3, apr: 4, mei: 5, jun: 6, jul: 7, agt: 8, agu: 8, sep: 9, okt: 10, nov: 11, des: 12,
+};
+
+// Best-effort parser: returns YYYY-MM-DD if the input can be understood,
+// otherwise null. Handles ISO, "19-Jan", "5 Mar 2026", "23-Feb", etc.
+const parseToIsoDate = (raw: string, fallbackYear?: number): string | null => {
+  const value = String(raw || '').trim();
+  if (!value) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+
+  const isoLike = new Date(value);
+  if (!Number.isNaN(isoLike.getTime()) && /\d{4}/.test(value)) {
+    return isoLike.toISOString().slice(0, 10);
+  }
+
+  const dashMonth = value.match(/^(\d{1,2})[-\s/]+([A-Za-z]{3,})(?:[-\s/]+(\d{2,4}))?$/);
+  if (dashMonth) {
+    const day = parseInt(dashMonth[1], 10);
+    const monthKey = dashMonth[2].slice(0, 3).toLowerCase();
+    const month = MONTH_ID_TO_NUM[monthKey];
+    if (!month) return null;
+    const yearRaw = dashMonth[3] ? parseInt(dashMonth[3], 10) : (fallbackYear ?? new Date().getFullYear());
+    const year = yearRaw < 100 ? 2000 + yearRaw : yearRaw;
+    if (day < 1 || day > 31) return null;
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  }
+
+  const numericDmy = value.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{2,4})$/);
+  if (numericDmy) {
+    const day = parseInt(numericDmy[1], 10);
+    const month = parseInt(numericDmy[2], 10);
+    const yearRaw = parseInt(numericDmy[3], 10);
+    const year = yearRaw < 100 ? 2000 + yearRaw : yearRaw;
+    if (day < 1 || day > 31 || month < 1 || month > 12) return null;
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  }
+
+  return null;
+};
+
+const todayIso = () => new Date().toISOString().slice(0, 10);
+
 const ACCash = () => {
   const currentUser = getCurrentUser();
   const isAdmin = currentUser.roleAplikasi === ROLES.PIMPINAN || currentUser.roleAplikasi === ROLES.PIC_ADMIN;
@@ -40,21 +83,47 @@ const ACCash = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingTrx, setEditingTrx] = useState<Transaction | null>(null);
 
-  // Form state
-  const [formData, setFormData] = useState({
-    tanggal: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }),
+  // Form state — tanggal disimpan ISO (YYYY-MM-DD) supaya date picker bisa pakai.
+  type EntryType = 'masuk' | 'keluar';
+  const [formData, setFormData] = useState<{
+    tanggal: string;
+    keterangan: string;
+    type: EntryType;
+    nominal: string;
+  }>({
+    tanggal: todayIso(),
     keterangan: '',
-    debit: 0,
-    kredit: 0
+    type: 'keluar',
+    nominal: '',
   });
+  const [formError, setFormError] = useState('');
+
+  const resetForm = () => {
+    setFormData({ tanggal: todayIso(), keterangan: '', type: 'keluar', nominal: '' });
+    setEditingTrx(null);
+    setFormError('');
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    resetForm();
+  };
 
   useEffect(() => {
     fetchData();
   }, []);
 
+  // Sort chronologically (so saldo carry-forward makes sense) lalu hitung
+  // running balance. Baris dengan tanggal yang tidak bisa di-parse jatuh ke
+  // belakang (sort stable supaya urutan input awal tetap).
   const calculateBalances = (data: Transaction[]) => {
+    const sorted = data.slice().sort((a, b) => {
+      const aIso = parseToIsoDate(a.tanggal) || '9999-12-31';
+      const bIso = parseToIsoDate(b.tanggal) || '9999-12-31';
+      return aIso.localeCompare(bIso);
+    });
     let currentBalance = 0;
-    return data.map(item => {
+    return sorted.map((item) => {
       currentBalance = currentBalance + (item.debit || 0) - (item.kredit || 0);
       return { ...item, saldo: currentBalance };
     });
@@ -118,70 +187,72 @@ const ACCash = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError('');
+
+    const keterangan = formData.keterangan.trim();
+    const nominal = Number(String(formData.nominal).replace(/[^\d.-]/g, ''));
+    const tanggalIso = parseToIsoDate(formData.tanggal);
+
+    if (!tanggalIso) { setFormError('Tanggal tidak valid.'); return; }
+    if (!keterangan) { setFormError('Deskripsi wajib diisi.'); return; }
+    if (!Number.isFinite(nominal) || nominal <= 0) { setFormError('Nominal harus lebih dari 0.'); return; }
+
     setIsSubmitting(true);
-    
     const id = editingTrx ? editingTrx.id : `AC-${Date.now()}`;
-    
-    // Recalculate balance for the new entry based on last entry
-    const lastBalance = transactions.length > 0 ? transactions[transactions.length - 1].saldo : 0;
-    const newSaldo = lastBalance + Number(formData.debit) - Number(formData.kredit);
+    const debit = formData.type === 'masuk' ? nominal : 0;
+    const kredit = formData.type === 'keluar' ? nominal : 0;
 
     const newRecord = {
       action: 'FINANCE_RECORD',
       sheetName: 'Kas_AC',
-      id: id,
+      id,
       ID: id,
-      ...formData,
-      debit: Number(formData.debit),
-      kredit: Number(formData.kredit),
-      saldo: newSaldo
+      tanggal: tanggalIso,
+      Tanggal: tanggalIso,
+      keterangan,
+      Keterangan: keterangan,
+      debit,
+      Debit: debit,
+      kredit,
+      Kredit: kredit,
     };
 
     try {
       await fetch(API_URL, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify(newRecord)
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(newRecord),
       });
-      
-      // Update local state
-      if (editingTrx) {
-        setTransactions(prev => prev.map(t => t.id === id ? { ...t, ...formData, debit: Number(formData.debit), kredit: Number(formData.kredit), saldo: newSaldo } : t));
-      } else {
-        const newTrx = { id, ...formData, debit: Number(formData.debit), kredit: Number(formData.kredit), saldo: newSaldo, hasRealId: true };
-        setTransactions(prev => [...prev, newTrx]);
-      }
-      
+
+      // Local update: replace or append, then re-sort + re-balance.
+      setTransactions((prev) => {
+        const baseline = editingTrx
+          ? prev.map((t) => (t.id === id ? { ...t, tanggal: tanggalIso, keterangan, debit, kredit } : t))
+          : [...prev, { id, tanggal: tanggalIso, keterangan, debit, kredit, saldo: 0, hasRealId: true }];
+        return calculateBalances(baseline);
+      });
+
       const isEditing = Boolean(editingTrx);
-      const nominalDisplay = (Number(formData.debit) || Number(formData.kredit)).toLocaleString('id-ID');
+      const nominalDisplay = nominal.toLocaleString('id-ID');
       pushActionNotification({
         id: `ac:${id}:${Date.now()}`,
         dedupeKey: isEditing ? `ac-upd:${id}` : `ac-new:${id}`,
         type: isEditing ? 'ac_cash_updated' : 'ac_cash_created',
         title: isEditing ? '✏️ Kas AC Diperbarui' : '❄️ Transaksi Kas AC Baru',
-        message: `${currentUser.nama.split(',')[0]} ${isEditing ? 'memperbarui' : 'mencatat'} transaksi AC: "${(formData.keterangan || '').substring(0, 35)}" - Rp ${nominalDisplay}.`,
+        message: `${currentUser.nama.split(',')[0]} ${isEditing ? 'memperbarui' : 'mencatat'} transaksi AC: "${keterangan.substring(0, 35)}" - Rp ${nominalDisplay}.`,
         path: '/ac-cash',
         iconKey: isEditing ? 'edit' : 'message',
-        color: isEditing ? 'var(--accent-blue)' : 'var(--accent-blue)',
-        bg: isEditing ? 'var(--accent-blue-ghost)' : 'rgba(59, 130, 246, 0.1)'
+        color: 'var(--accent-blue)',
+        bg: isEditing ? 'var(--accent-blue-ghost)' : 'rgba(59, 130, 246, 0.1)',
       });
 
-      setShowModal(false);
-      setEditingTrx(null);
-      setFormData({ 
-        tanggal: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }), 
-        keterangan: '', 
-        debit: 0, 
-        kredit: 0 
-      });
-      
-      // Refresh to ensure spreadsheet consistency
+      closeModal();
+      // Refresh to ensure spreadsheet consistency (no-cors so we can't read response)
       setTimeout(fetchData, 2000);
-      alert("Terima kasih! Data kas perawatan AC berhasil diperbarui.");
     } catch (error) {
-      console.error("Error saving AC cash entry:", error);
-      alert("Gagal menghubungi server database.");
+      console.error('Error saving AC cash entry:', error);
+      setFormError('Gagal menghubungi server database.');
     } finally {
       setIsSubmitting(false);
     }
@@ -232,12 +303,22 @@ const ACCash = () => {
 
   const handleEdit = (trx: Transaction) => {
     setEditingTrx(trx);
+    setFormError('');
+    const iso = parseToIsoDate(trx.tanggal) || todayIso();
+    const isMasuk = (trx.debit || 0) > 0 && (trx.kredit || 0) === 0;
     setFormData({
-      tanggal: trx.tanggal,
+      tanggal: iso,
       keterangan: trx.keterangan,
-      debit: trx.debit,
-      kredit: trx.kredit
+      type: isMasuk ? 'masuk' : 'keluar',
+      nominal: String(isMasuk ? trx.debit : trx.kredit || 0),
     });
+    setShowModal(true);
+  };
+
+  const handleOpenNew = () => {
+    setEditingTrx(null);
+    setFormError('');
+    setFormData({ tanggal: todayIso(), keterangan: '', type: 'keluar', nominal: '' });
     setShowModal(true);
   };
 
@@ -283,7 +364,7 @@ const ACCash = () => {
             <Download size={18} /> <span className="mobile-hide">Export PDF</span>
           </button>
           {isAdmin && (
-            <button className="btn btn-primary" onClick={() => { setEditingTrx(null); setShowModal(true); }} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <button className="btn btn-primary" onClick={handleOpenNew} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Plus size={18} /> <span>Transaksi Baru</span>
             </button>
           )}
@@ -444,65 +525,130 @@ const ACCash = () => {
         </div>
       </div>
 
-      {/* Entry Modal */}
+      {/* Entry Modal — anchored near top so virtual keyboard tidak push form keluar layar */}
       {showModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '1rem' }}>
-          <div className="glass-panel animate-scale-in" style={{ width: '100%', maxWidth: '450px', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div
+          onClick={closeModal}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.8)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'flex-start',
+            zIndex: 1000,
+            padding: '1rem',
+            paddingTop: 'max(env(safe-area-inset-top, 0px), 2rem)',
+            overflowY: 'auto'
+          }}
+        >
+          <div
+            onClick={(event) => event.stopPropagation()}
+            className="glass-panel animate-scale-in"
+            style={{ width: '100%', maxWidth: '460px', padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1.25rem', marginTop: 0 }}
+          >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2 style={{ fontSize: '1.25rem', margin: 0 }}>{editingTrx ? 'Edit Transaksi' : 'Transaksi Baru Kas AC'}</h2>
-              <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }} title="Tutup modal"><X size={24} /></button>
+              <h2 style={{ fontSize: '1.2rem', margin: 0 }}>{editingTrx ? 'Edit Transaksi Kas AC' : 'Transaksi Baru Kas AC'}</h2>
+              <button onClick={closeModal} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }} title="Tutup modal"><X size={22} /></button>
             </div>
 
-            <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Tanggal (Contoh: 19-Jan)</label>
-                <input 
-                  type="text" 
+            <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                <label htmlFor="ac-tanggal" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Tanggal</label>
+                <input
+                  id="ac-tanggal"
+                  type="date"
                   value={formData.tanggal}
-                  onChange={(e) => setFormData({...formData, tanggal: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, tanggal: e.target.value })}
+                  max={todayIso()}
                   required
-                  style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', padding: '0.75rem', borderRadius: '8px', color: 'white' }}
+                  style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', padding: '0.7rem 0.75rem', borderRadius: '8px', color: 'var(--text-primary)', colorScheme: 'dark' }}
                 />
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Deskripsi Keperluan / Jatah</label>
-                <input 
-                  type="text" 
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                <label htmlFor="ac-keterangan" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Deskripsi Keperluan / Jatah</label>
+                <input
+                  id="ac-keterangan"
+                  type="text"
                   value={formData.keterangan}
-                  onChange={(e) => setFormData({...formData, keterangan: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, keterangan: e.target.value })}
                   required
-                  placeholder="Contoh: Pembayaran Service AC Lab..."
-                  style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', padding: '0.75rem', borderRadius: '8px', color: 'white' }}
+                  placeholder="Contoh: Service AC R.28"
+                  style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', padding: '0.7rem 0.75rem', borderRadius: '8px', color: 'var(--text-primary)' }}
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Debit (Masuk)</label>
-                  <input 
-                    type="number" 
-                    value={formData.debit}
-                    onChange={(e) => setFormData({...formData, debit: Number(e.target.value)})}
-                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', padding: '0.75rem', borderRadius: '8px', color: 'white' }}
-                  />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Kredit (Keluar)</label>
-                  <input 
-                    type="number" 
-                    value={formData.kredit}
-                    onChange={(e) => setFormData({...formData, kredit: Number(e.target.value)})}
-                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', padding: '0.75rem', borderRadius: '8px', color: 'white' }}
-                  />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Jenis Transaksi</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                  {([
+                    { key: 'masuk' as const, label: 'Masuk (Debit)', color: 'var(--accent-emerald)', icon: ArrowUpCircle },
+                    { key: 'keluar' as const, label: 'Keluar (Kredit)', color: 'var(--accent-rose)', icon: ArrowDownCircle },
+                  ]).map((opt) => {
+                    const Icon = opt.icon;
+                    const active = formData.type === opt.key;
+                    return (
+                      <button
+                        key={opt.key}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, type: opt.key })}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.4rem',
+                          padding: '0.6rem 0.5rem',
+                          borderRadius: '8px',
+                          border: `1px solid ${active ? opt.color : 'var(--border-subtle)'}`,
+                          background: active ? `${opt.color}22` : 'transparent',
+                          color: active ? opt.color : 'var(--text-secondary)',
+                          fontWeight: 700,
+                          fontSize: '0.8rem',
+                          cursor: 'pointer',
+                          transition: 'background 0.18s, border-color 0.18s, color 0.18s',
+                        }}
+                      >
+                        <Icon size={15} />
+                        {opt.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                <label htmlFor="ac-nominal" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Nominal (Rp)</label>
+                <input
+                  id="ac-nominal"
+                  type="number"
+                  min={1}
+                  step={1000}
+                  value={formData.nominal}
+                  onChange={(e) => setFormData({ ...formData, nominal: e.target.value })}
+                  required
+                  placeholder="0"
+                  style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', padding: '0.7rem 0.75rem', borderRadius: '8px', color: 'var(--text-primary)' }}
+                />
+                {formData.nominal && Number(formData.nominal) > 0 && (
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    {formatCurrency(Number(formData.nominal))}
+                  </div>
+                )}
+              </div>
+
+              {formError && (
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', padding: '0.6rem 0.75rem', borderRadius: '8px', background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.35)', color: 'var(--accent-rose)', fontSize: '0.78rem' }}>
+                  <AlertCircle size={14} style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <span>{formError}</span>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem' }}>
                 <button type="submit" disabled={isSubmitting} className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }}>
                   {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <><Save size={18} /> Simpan</>}
                 </button>
-                <button type="button" onClick={() => setShowModal(false)} className="btn btn-outline" style={{ flex: 1, justifyContent: 'center' }}>Batal</button>
+                <button type="button" onClick={closeModal} className="btn btn-outline" style={{ flex: 1, justifyContent: 'center' }}>Batal</button>
               </div>
             </form>
           </div>
