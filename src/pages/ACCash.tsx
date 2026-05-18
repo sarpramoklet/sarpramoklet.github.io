@@ -623,7 +623,8 @@ const ACCash = () => {
                   id="ac-nominal"
                   type="number"
                   min={1}
-                  step={1000}
+                  step={1}
+                  inputMode="numeric"
                   value={formData.nominal}
                   onChange={(e) => setFormData({ ...formData, nominal: e.target.value })}
                   required
