@@ -6,8 +6,6 @@ import {
   type DashboardDutyNoteSnapshot,
   type DashboardSectionKey,
 } from './dashboardSnapshot';
-import { getGeminiApiKey } from './env';
-import { generateGeminiTextReply } from './gemini';
 
 export type DashboardAssistantReply = {
   text: string;
@@ -176,67 +174,67 @@ const buildPiketExcerpt = (notes: DashboardDutyNoteSnapshot[]) => {
 };
 
 const buildOverviewLines = (snapshot: DashboardAssistantSnapshot, canViewFinance: boolean) => {
-  const lines = [`Snapshot dashboard aktif per ${formatTimestamp(snapshot.generatedAt)}.`];
+  const lines = [`Berikut adalah ringkasan snapshot dashboard aktif per **${formatTimestamp(snapshot.generatedAt)}**:`];
 
   if (isSectionAvailable(snapshot, 'mokletService')) {
     const service = snapshot.mokletService;
     lines.push(
-      `- Layanan Sarmok: ${service.complaints.pending} pengaduan menunggu, ${service.complaints.inProgress} diproses, ${service.roomReservation.waitingConfirmation} reservasi ruang menunggu, ${service.toolsLoan.haveNotReturn} alat belum kembali.`
+      `- **Layanan Sarmok**: Terdapat **${service.complaints.pending}** pengaduan pending, **${service.complaints.inProgress}** diproses, **${service.roomReservation.waitingConfirmation}** reservasi pending, dan **${service.toolsLoan.haveNotReturn}** alat belum kembali.`
     );
   }
 
   if (isSectionAvailable(snapshot, 'classroom')) {
     const classroom = snapshot.classroom;
     lines.push(
-      `- Pantauan kelas ${formatDateLabel(classroom.latestDate)}: ${classroom.issueRooms} ruang bermasalah dari ${classroom.monitoredRooms} ruang terpantau, total ${classroom.totalFindings} temuan.`
+      `- **Pantauan Kelas** (${formatDateLabel(classroom.latestDate)}): **${classroom.issueRooms}** ruang bermasalah dari **${classroom.monitoredRooms}** terpantau, total ada **${classroom.totalFindings}** temuan.`
     );
   }
 
   if (isSectionAvailable(snapshot, 'ac')) {
     const ac = snapshot.ac;
-    lines.push(`- Monitor AC: ${ac.baik} unit baik, ${ac.perbaikan} perbaikan, ${ac.rusak} rusak, ${ac.terpasang}/${ac.total} ruang sudah terpasang.`);
+    lines.push(`- **Monitor AC**: **${ac.baik}** unit baik, **${ac.perbaikan}** perbaikan, **${ac.rusak}** rusak, dari total **${ac.terpasang}/${ac.total}** ruang terpasang AC.`);
   }
 
   if (isSectionAvailable(snapshot, 'capex')) {
     const capex = snapshot.capex;
     lines.push(
-      `- CAPEX: rata-rata progres ${capex.averageProgress.toFixed(1)}%, ${capex.completedProjects}/${capex.totalProjects} proyek selesai, ${capex.priorityProjects} proyek masih di bawah 50%.`
+      `- **CAPEX**: Rata-rata progres **${capex.averageProgress.toFixed(1)}%**, **${capex.completedProjects}/${capex.totalProjects}** proyek selesai, dan **${capex.priorityProjects}** proyek di bawah 50%.`
     );
   }
 
   if (isSectionAvailable(snapshot, 'wifi')) {
     const wifi = snapshot.wifi;
-    lines.push(`- Wi-Fi: ${wifi.latestCount.toLocaleString('id-ID')} klien pada ${wifi.latestDate}, ${formatSignedDelta(wifi.delta, 'dari pengamatan sebelumnya')}.`);
+    lines.push(`- **Wi-Fi**: Tercatat **${wifi.latestCount.toLocaleString('id-ID')}** klien aktif (${wifi.latestDate}), yaitu **${formatSignedDelta(wifi.delta, 'klien')}** dibanding sebelumnya.`);
   }
 
   if (isSectionAvailable(snapshot, 'network')) {
     const network = snapshot.network;
-    lines.push(`- Jaringan: RX ${formatTraffic(network.totalRx)} dan TX ${formatTraffic(network.totalTx)} pada snapshot ${formatDateLabel(network.latestDate)}.`);
+    lines.push(`- **Jaringan**: Kecepatan RX **${formatTraffic(network.totalRx)}** dan TX **${formatTraffic(network.totalTx)}** pada ${formatDateLabel(network.latestDate)}.`);
   }
 
   if (isSectionAvailable(snapshot, 'utilities')) {
     const utilities = snapshot.utilities;
     lines.push(
-      `- Utilitas ${utilities.latestLabel}: PLN ${formatIDR(utilities.latestPLN)} dan PDAM ${formatIDR(utilities.latestPDAM)}.`
+      `- **Utilitas** (${utilities.latestLabel}): PLN **${formatIDR(utilities.latestPLN)}** dan PDAM **${formatIDR(utilities.latestPDAM)}**.`
     );
   }
 
   if (isSectionAvailable(snapshot, 'piket')) {
-    lines.push(`- Catatan piket: ${buildPiketExcerpt(snapshot.piket.recentNotes)}.`);
+    lines.push(`- **Catatan Piket**: ${buildPiketExcerpt(snapshot.piket.recentNotes)}.`);
   }
 
   if (canViewFinance && snapshot.finance) {
     lines.push(
-      `- Keuangan: saldo Sarpras ${formatIDR(snapshot.finance.internal.balance)}, TU ${formatIDR(snapshot.finance.tu.balance)}, dan AC ${formatIDR(snapshot.finance.ac.balance)}.`
+      `- **Keuangan**: Saldo Sarpras **${formatIDR(snapshot.finance.internal.balance)}**, TU **${formatIDR(snapshot.finance.tu.balance)}**, dan AC **${formatIDR(snapshot.finance.ac.balance)}**.`
     );
   }
 
   if (isSectionAvailable(snapshot, 'personnel')) {
-    lines.push(`- Personel: ${snapshot.personnel.total} orang aktif dalam dashboard lintas unit.`);
+    lines.push(`- **Personel**: Total **${snapshot.personnel.total}** orang aktif dalam dashboard lintas unit.`);
   }
 
   if (isSectionAvailable(snapshot, 'duty')) {
-    lines.push(`- Jadwal piket ${snapshot.duty.day}: ${snapshot.duty.personnel.join(', ') || 'belum terjadwal'}.`);
+    lines.push(`- **Jadwal Piket** (${snapshot.duty.day}): **${snapshot.duty.personnel.join(', ') || 'belum terjadwal'}**.`);
   }
 
   return lines;
@@ -507,7 +505,7 @@ const buildActionLines = (snapshot: DashboardAssistantSnapshot, sections: Dashbo
   return lines;
 };
 
-const detectSections = (query: string, canViewFinance: boolean) => {
+export const detectSections = (query: string, canViewFinance: boolean) => {
   const sections = new Set<DashboardSectionKey>();
 
   if (includesAny(query, ['sarmok', 'layanan', 'pengaduan', 'aduan', 'komplain', 'complaint', 'reservasi', 'booking ruang', 'peminjaman alat', 'pinjam alat', 'tools loan', 'borrow'])) {
@@ -1033,7 +1031,7 @@ const buildShortProseAnswer = (
   return null;
 };
 
-const buildContextualSuggestions = (sections: DashboardSectionKey[], canViewFinance: boolean) => {
+export const buildContextualSuggestions = (sections: DashboardSectionKey[], canViewFinance: boolean) => {
   if (sections.length === 0) return buildQuickSuggestions(canViewFinance);
 
   const out: string[] = [];
@@ -1065,73 +1063,17 @@ export const shouldRefreshAssistantSnapshot = (message: string, snapshot: Dashbo
   return Date.now() - generatedAt > 2 * 60 * 1000;
 };
 
-export const buildSarmokAssistantReply = async ({
+export const buildSarmokAssistantReply = ({
   message,
   snapshot,
   canViewFinance,
   previousSections,
-  history = [],
 }: {
   message: string;
   snapshot: DashboardAssistantSnapshot;
   canViewFinance: boolean;
   previousSections?: DashboardSectionKey[];
-  history?: { role: 'user' | 'assistant'; text: string }[];
-}): Promise<DashboardAssistantReply> => {
-  const apiKey = getGeminiApiKey();
-  if (apiKey) {
-    try {
-      const sanitizedSnapshot = { ...snapshot };
-      if (!canViewFinance) {
-        sanitizedSnapshot.finance = null;
-      }
-
-      const systemInstruction = `
-Anda adalah Asisten Sarmok (Asisten Sarana Prasarana SMK Telkom Malang), asisten kecerdasan buatan untuk Command Center SMK Telkom Malang.
-Anda bertugas merangkum, menganalisis, dan memberikan rekomendasi tindakan terkait sarana prasarana sekolah secara hangat, cerdas, solutif, dan sangat manusiawi (human-like).
-
-Gunakan data snapshot dashboard aktif berikut untuk menjawab pertanyaan pengguna:
-${JSON.stringify(sanitizedSnapshot, null, 2)}
-
-PANDUAN JAWABAN:
-1. Jawablah menggunakan bahasa Indonesia yang ramah, hangat, dan luwes (tidak kaku/formal berlebihan). Berinteraksilah seolah Anda sedang mengobrol dengan rekan kerja.
-2. Selalu gunakan data snapshot di atas. Jangan mengarang angka atau status. Jika suatu bagian data bernilai "unavailable" atau belum tersinkronisasi, katakan apa adanya secara jujur dan tawarkan bantuan untuk area yang aktif.
-3. Jika pengguna menanyakan Keuangan (finance) sedangkan "canViewFinance" bernilai false (atau finance bernilai null), jelaskan secara sopan bahwa informasi keuangan sensitif ini disembunyikan untuk sesi login saat ini.
-4. Format tulisan Anda agar sangat rapi dan enak dibaca dengan Markdown:
-   - Gunakan bullet points atau daftar untuk rincian data.
-   - Gunakan teks tebal (**tebal**) untuk angka penting, nama ruangan, atau status kritis.
-   - Buat tabel Markdown yang rapi bila membandingkan nominal atau daftar ruangan bermasalah agar mudah dipahami secara visual.
-5. Berikan rekomendasi tindakan (actionable insights) yang konkret berdasarkan masalah yang terlihat di data. Misalnya, jika ada pengaduan pending, AC rusak, proyek capex terlambat, atau kelas kotor, sarankan tindakan yang tepat (seperti koordinasi dengan tim piket atau unit terkait).
-6. Berikan respons sapaan atau percakapan ringan yang bersahabat (smalltalk) jika disapa, lalu arahkan kembali ke area dashboard apa saja yang bisa Anda bantu analisis.
-`.trim();
-
-      const contents = history.map((msg) => ({
-        role: msg.role === 'user' ? ('user' as const) : ('model' as const),
-        parts: [{ text: msg.text }],
-      }));
-
-      contents.push({
-        role: 'user' as const,
-        parts: [{ text: message }],
-      });
-
-      const geminiText = await generateGeminiTextReply({
-        apiKey,
-        systemInstruction,
-        contents,
-      });
-
-      const detected = detectSections(message, canViewFinance);
-      return {
-        text: geminiText,
-        sections: detected.length > 0 ? detected : (previousSections || []),
-        suggestions: buildContextualSuggestions(detected.length > 0 ? detected : (previousSections || []), canViewFinance),
-      };
-    } catch (error) {
-      console.error('Error generating Gemini reply, falling back to rule-based:', error);
-    }
-  }
-
+}): DashboardAssistantReply => {
   const query = normalizeQuery(message);
   const defaultSections: DashboardSectionKey[] = canViewFinance
     ? ['mokletService', 'classroom', 'ac', 'capex', 'wifi', 'network', 'utilities', 'piket', 'finance', 'personnel', 'duty']
