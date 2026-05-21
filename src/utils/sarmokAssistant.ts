@@ -6,6 +6,8 @@ import {
   type DashboardDutyNoteSnapshot,
   type DashboardSectionKey,
 } from './dashboardSnapshot';
+import { getGeminiApiKey } from './env';
+import { generateGeminiTextReply } from './gemini';
 
 export type DashboardAssistantReply = {
   text: string;
@@ -1063,17 +1065,73 @@ export const shouldRefreshAssistantSnapshot = (message: string, snapshot: Dashbo
   return Date.now() - generatedAt > 2 * 60 * 1000;
 };
 
-export const buildSarmokAssistantReply = ({
+export const buildSarmokAssistantReply = async ({
   message,
   snapshot,
   canViewFinance,
   previousSections,
+  history = [],
 }: {
   message: string;
   snapshot: DashboardAssistantSnapshot;
   canViewFinance: boolean;
   previousSections?: DashboardSectionKey[];
-}): DashboardAssistantReply => {
+  history?: { role: 'user' | 'assistant'; text: string }[];
+}): Promise<DashboardAssistantReply> => {
+  const apiKey = getGeminiApiKey();
+  if (apiKey) {
+    try {
+      const sanitizedSnapshot = { ...snapshot };
+      if (!canViewFinance) {
+        sanitizedSnapshot.finance = null;
+      }
+
+      const systemInstruction = `
+Anda adalah Asisten Sarmok (Asisten Sarana Prasarana SMK Telkom Malang), asisten kecerdasan buatan untuk Command Center SMK Telkom Malang.
+Anda bertugas merangkum, menganalisis, dan memberikan rekomendasi tindakan terkait sarana prasarana sekolah secara hangat, cerdas, solutif, dan sangat manusiawi (human-like).
+
+Gunakan data snapshot dashboard aktif berikut untuk menjawab pertanyaan pengguna:
+${JSON.stringify(sanitizedSnapshot, null, 2)}
+
+PANDUAN JAWABAN:
+1. Jawablah menggunakan bahasa Indonesia yang ramah, hangat, dan luwes (tidak kaku/formal berlebihan). Berinteraksilah seolah Anda sedang mengobrol dengan rekan kerja.
+2. Selalu gunakan data snapshot di atas. Jangan mengarang angka atau status. Jika suatu bagian data bernilai "unavailable" atau belum tersinkronisasi, katakan apa adanya secara jujur dan tawarkan bantuan untuk area yang aktif.
+3. Jika pengguna menanyakan Keuangan (finance) sedangkan "canViewFinance" bernilai false (atau finance bernilai null), jelaskan secara sopan bahwa informasi keuangan sensitif ini disembunyikan untuk sesi login saat ini.
+4. Format tulisan Anda agar sangat rapi dan enak dibaca dengan Markdown:
+   - Gunakan bullet points atau daftar untuk rincian data.
+   - Gunakan teks tebal (**tebal**) untuk angka penting, nama ruangan, atau status kritis.
+   - Buat tabel Markdown yang rapi bila membandingkan nominal atau daftar ruangan bermasalah agar mudah dipahami secara visual.
+5. Berikan rekomendasi tindakan (actionable insights) yang konkret berdasarkan masalah yang terlihat di data. Misalnya, jika ada pengaduan pending, AC rusak, proyek capex terlambat, atau kelas kotor, sarankan tindakan yang tepat (seperti koordinasi dengan tim piket atau unit terkait).
+6. Berikan respons sapaan atau percakapan ringan yang bersahabat (smalltalk) jika disapa, lalu arahkan kembali ke area dashboard apa saja yang bisa Anda bantu analisis.
+`.trim();
+
+      const contents = history.map((msg) => ({
+        role: msg.role === 'user' ? ('user' as const) : ('model' as const),
+        parts: [{ text: msg.text }],
+      }));
+
+      contents.push({
+        role: 'user' as const,
+        parts: [{ text: message }],
+      });
+
+      const geminiText = await generateGeminiTextReply({
+        apiKey,
+        systemInstruction,
+        contents,
+      });
+
+      const detected = detectSections(message, canViewFinance);
+      return {
+        text: geminiText,
+        sections: detected.length > 0 ? detected : (previousSections || []),
+        suggestions: buildContextualSuggestions(detected.length > 0 ? detected : (previousSections || []), canViewFinance),
+      };
+    } catch (error) {
+      console.error('Error generating Gemini reply, falling back to rule-based:', error);
+    }
+  }
+
   const query = normalizeQuery(message);
   const defaultSections: DashboardSectionKey[] = canViewFinance
     ? ['mokletService', 'classroom', 'ac', 'capex', 'wifi', 'network', 'utilities', 'piket', 'finance', 'personnel', 'duty']

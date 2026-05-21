@@ -139,3 +139,67 @@ export const generateGeminiJsonFromImage = async ({
 
   throw lastError || new Error('Tidak ada model Gemini yang tersedia untuk membaca gambar saat ini.');
 };
+
+export const generateGeminiTextReply = async ({
+  apiKey,
+  systemInstruction,
+  contents,
+  temperature = 0.7,
+}: {
+  apiKey: string;
+  systemInstruction: string;
+  contents: { role: 'user' | 'model'; parts: { text: string }[] }[];
+  temperature?: number;
+}) => {
+  const candidates = await buildModelCandidates(apiKey);
+  let lastError: Error | null = null;
+
+  for (const model of candidates) {
+    try {
+      const response = await fetch(`${GEMINI_API_BASE}/models/${model}:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents,
+          systemInstruction: {
+            parts: [{ text: systemInstruction }],
+          },
+          generationConfig: {
+            temperature,
+            topP: 0.9,
+            maxOutputTokens: 2048,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        const message = err?.error?.message || `HTTP ${response.status}`;
+        if (shouldRetryWithAnotherModel(message)) {
+          modelCache.delete(apiKey);
+          lastError = new Error(message);
+          continue;
+        }
+        throw new Error(message);
+      }
+
+      const result = await response.json();
+      const text = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) {
+        throw new Error('Gemini API returned an empty response.');
+      }
+
+      modelCache.set(apiKey, model);
+      return text;
+    } catch (error: any) {
+      const message = error?.message || 'Gagal berkomunikasi dengan Gemini.';
+      if (shouldRetryWithAnotherModel(message)) {
+        lastError = new Error(message);
+        continue;
+      }
+      throw error instanceof Error ? error : new Error(message);
+    }
+  }
+
+  throw lastError || new Error('Tidak ada model Gemini yang tersedia untuk menjawab saat ini.');
+};
