@@ -190,7 +190,7 @@ const parseAccessLogTimestamp = (log: Record<string, any>) => {
 };
 
 const KNOWN_ROUTE_PATHS = [
-  '/meeting', '/it', '/lab', '/sarpras', '/performance', '/tickets',
+  '/meeting', '/it', '/lab', '/sarpras', '/performance',
   '/utilities', '/assets', '/personnel', '/finance', '/operational-cash',
   '/ac-cash', '/ac-monitor', '/ac-history', '/logs', '/assignment',
   '/sop', '/duty-notes', '/classroom-monitor', '/capex',
@@ -218,7 +218,7 @@ const resolveAccessLogPath = (log: Record<string, any>): string => {
     if (pageOrMenu.includes('lab')) return '/lab';
     if (pageOrMenu.includes('sarpras')) return '/sarpras';
     if (pageOrMenu.includes('kinerja')) return '/performance';
-    if (pageOrMenu.includes('tiket') || pageOrMenu.includes('layanan')) return '/tickets';
+    if (pageOrMenu.includes('tiket') || pageOrMenu.includes('layanan')) return '/';
     if (pageOrMenu.includes('utilitas') || pageOrMenu.includes('tagihan')) return '/utilities';
     if (pageOrMenu.includes('aset') || pageOrMenu.includes('inventaris')) return '/assets';
     if (pageOrMenu.includes('personel')) return '/personnel';

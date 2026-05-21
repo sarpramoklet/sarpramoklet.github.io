@@ -6,7 +6,6 @@ import QuickActionsBar from './components/QuickActionsBar';
 import AssistantLauncher from './components/AssistantLauncher';
 import Dashboard from './pages/Dashboard';
 import MeetingDashboard from './pages/MeetingDashboard';
-import Tickets from './pages/Tickets';
 import ITPage from './pages/ITPage';
 import LabPage from './pages/LabPage';
 import SarprasPage from './pages/SarprasPage';
@@ -198,7 +197,7 @@ function App() {
 
               {/* Protected Routes */}
               <Route path="/performance" element={<ProtectedRoute isLoggedIn={isLoggedIn}><Performance /></ProtectedRoute>} />
-              <Route path="/tickets" element={<ProtectedRoute isLoggedIn={isLoggedIn}><Tickets /></ProtectedRoute>} />
+              <Route path="/tickets" element={<Navigate to="/" replace />} />
               <Route path="/utilities" element={<ProtectedRoute isLoggedIn={isLoggedIn}><Utilities /></ProtectedRoute>} />
               <Route path="/assets" element={<ProtectedRoute isLoggedIn={isLoggedIn}><Assets /></ProtectedRoute>} />
               <Route path="/personnel" element={<ProtectedRoute isLoggedIn={isLoggedIn}><Personnel /></ProtectedRoute>} />
