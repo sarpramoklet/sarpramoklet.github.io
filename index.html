@@ -6,20 +6,14 @@
     <link rel="apple-touch-icon" href="/og-image.png" />
     <link rel="manifest" href="/manifest.json" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    
-    <!-- Primary Meta Tags -->
     <title>Sarpramoklet - Internal Command Center</title>
     <meta name="title" content="Sarpramoklet - Internal Command Center" />
     <meta name="description" content="Sistem Terpadu Penugasan & Monitoring Layanan IT, Laboratorium, dan Sarana Prasarana SMK Telkom Malang." />
-
-    <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://sarpramoklet.github.io/" />
     <meta property="og:title" content="Sarpramoklet - Internal Command Center" />
     <meta property="og:description" content="Sistem Terpadu Penugasan & Monitoring Layanan IT, Laboratorium, dan Sarana Prasarana SMK Telkom Malang." />
     <meta property="og:image" content="https://sarpramoklet.github.io/og-image.png" />
-
-    <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image" />
     <meta property="twitter:url" content="https://sarpramoklet.github.io/" />
     <meta property="twitter:title" content="Sarpramoklet - Internal Command Center" />
@@ -28,9 +22,7 @@
     <script>
 (function(){
   var h = (location.hash || '').replace(/^#\/?/, '');
-  if (h === 'kpi-personil' || h === 'kpi-personil.html') {
-    location.replace('/kpi-personil.html');
-  }
+  if (h === 'kpi-personil' || h === 'kpi-personil.html') location.replace('/kpi-personil.html');
 })();
 </script>
     <script type="module" crossorigin src="/assets/index-CfeFa6m1.js"></script>
@@ -40,17 +32,19 @@
     <div id="root"></div>
     <script>
 (function(){
-  function text(el){return (el && el.textContent || '').replace(/\s+/g,' ').trim();}
-  function hasKpi(){return Array.from(document.querySelectorAll('a,button,span,div')).some(function(el){return text(el)==='KPI Personil';});}
-  function setText(el,label){
+  function cleanText(el){return (el && el.textContent || '').replace(/\s+/g,' ').trim();}
+  function exact(label){return Array.from(document.querySelectorAll('a,button')).find(function(el){return cleanText(el)===label;});}
+  function exists(){return Array.from(document.querySelectorAll('a,button')).some(function(el){return cleanText(el)==='KPI Personil';});}
+  function setMenuLabel(el,label){
     var spans=el.querySelectorAll('span');
-    if(spans.length){spans[spans.length-1].textContent=label;return;}
-    el.textContent=label;
+    if(spans.length) spans[spans.length-1].textContent=label;
+    else el.textContent=label;
   }
   function addKpiMenu(){
-    if(hasKpi()) return;
-    var anchors=Array.from(document.querySelectorAll('a'));
-    var ref=anchors.find(function(a){return text(a)==='Kinerja Personel';}) || anchors.find(function(a){return text(a)==='Sarpras';}) || anchors.find(function(a){return a.className && String(a.className).indexOf('nav-item')>=0;});
+    var oldFloat=document.getElementById('kpi-personil-float');
+    if(oldFloat) oldFloat.remove();
+    if(exists()) return;
+    var ref=exact('Monitor CAPEX') || exact('Kinerja Personel') || exact('Performance') || exact('Sarpras');
     if(!ref || !ref.parentNode) return;
     var item=ref.cloneNode(true);
     item.setAttribute('href','/kpi-personil.html');
@@ -58,23 +52,14 @@
     item.removeAttribute('aria-current');
     item.removeAttribute('data-active');
     item.setAttribute('data-kpi-personil-menu','true');
-    setText(item,'KPI Personil');
+    setMenuLabel(item,'KPI Personil');
     item.addEventListener('click',function(e){e.preventDefault(); window.location.href='/kpi-personil.html';},true);
     ref.parentNode.insertBefore(item,ref.nextSibling);
   }
-  function addFloating(){
-    if(document.getElementById('kpi-personil-float')) return;
-    var a=document.createElement('a');
-    a.id='kpi-personil-float';
-    a.href='/kpi-personil.html';
-    a.textContent='🎯 KPI Personil';
-    a.style.cssText='position:fixed;right:18px;bottom:18px;z-index:2147483000;background:linear-gradient(135deg,#991b1b,#dc2626);color:#fff;text-decoration:none;border-radius:999px;padding:12px 16px;font:800 13px Inter,system-ui,sans-serif;box-shadow:0 12px 35px rgba(153,27,27,.35);border:1px solid rgba(255,255,255,.25)';
-    document.body.appendChild(a);
-  }
-  function run(){addKpiMenu();addFloating();}
+  function run(){addKpiMenu();}
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',run); else run();
-  new MutationObserver(function(){setTimeout(run,0);}).observe(document.documentElement,{childList:true,subtree:true});
-  setInterval(run,1000);
+  new MutationObserver(function(){setTimeout(run,0);setTimeout(run,300);}).observe(document.documentElement,{childList:true,subtree:true});
+  setInterval(run,1500);
 })();
 </script>
   </body>
