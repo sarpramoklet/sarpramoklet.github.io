@@ -1,0 +1,63 @@
+@media (max-width: 768px) {
+  .glass-panel[style*="width: 500px"],
+  .glass-panel[style*="width:500px"],
+  .glass-panel[style*="maxWidth: 500px"],
+  .glass-panel[style*="maxWidth:500px"],
+  .glass-panel[style*="max-width: 500px"],
+  .glass-panel[style*="max-width:500px"],
+  .glass-panel[style*="width: 420px"],
+  .glass-panel[style*="width:420px"],
+  .glass-panel[style*="width: 400px"],
+  .glass-panel[style*="width:400px"],
+  .glass-panel[style*="right: 0"],
+  .glass-panel[style*="right:0"] {
+    position: fixed !important;
+    left: 10px !important;
+    right: 10px !important;
+    top: 74px !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: calc(100vw - 20px) !important;
+    max-height: calc(100vh - 150px) !important;
+    transform: none !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    border-radius: 18px !important;
+    z-index: 9999 !important;
+  }
+
+  .glass-panel[style*="width: 500px"] *,
+  .glass-panel[style*="width:500px"] *,
+  .glass-panel[style*="maxWidth: 500px"] *,
+  .glass-panel[style*="maxWidth:500px"] *,
+  .glass-panel[style*="right: 0"] *,
+  .glass-panel[style*="right:0"] * {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  .glass-panel[style*="width: 500px"] > div,
+  .glass-panel[style*="width:500px"] > div,
+  .glass-panel[style*="maxWidth: 500px"] > div,
+  .glass-panel[style*="maxWidth:500px"] > div,
+  .glass-panel[style*="right: 0"] > div,
+  .glass-panel[style*="right:0"] > div {
+    min-width: 0 !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .glass-panel[style*="width: 500px"],
+  .glass-panel[style*="width:500px"],
+  .glass-panel[style*="maxWidth: 500px"],
+  .glass-panel[style*="maxWidth:500px"],
+  .glass-panel[style*="right: 0"],
+  .glass-panel[style*="right:0"] {
+    left: 8px !important;
+    right: 8px !important;
+    top: 66px !important;
+    max-width: calc(100vw - 16px) !important;
+    max-height: calc(100vh - 132px) !important;
+  }
+}
