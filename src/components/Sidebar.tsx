@@ -212,7 +212,7 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
               if (user.unit === 'Semua Unit') return true;
               
               // Common menus for all authenticated staff
-              const alwaysVisible = ['Dashboard', 'Rapat Bulanan', 'Catatan Piket', 'Asisten Sarmok'];
+              const alwaysVisible = ['Dashboard', 'Rapat Bulanan', 'Catatan Piket', 'Asisten Sarmok', 'KPI Personil'];
 
               // Unit based access
               if (user.unit === 'Laboratorium') {
@@ -259,6 +259,25 @@ const Sidebar = ({ isOpen = false, setIsOpen, isLightMode = false, setIsLightMod
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
               
+              if (item.isStatic) {
+                return (
+                  <a
+                    key={item.path}
+                    href={item.path}
+                    className={`nav-item ${isActive ? 'active' : ''}`}
+                    onClick={() => {
+                      if (isLoggedIn) {
+                        logMenuClick(currentUser, item.name, item.path);
+                      }
+                      handleClose();
+                    }}
+                  >
+                    <Icon className="nav-icon" />
+                    <span>{item.name}</span>
+                  </a>
+                );
+              }
+
               return (
                 <Link
                   key={item.path}

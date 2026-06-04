@@ -18,6 +18,7 @@ export const NAVIGATION = [
   { path: '/ac-history', name: 'Riwayat AC', icon: HistoryIcon, authRequired: true },
   { path: '/logs', name: 'Log Akses', icon: HistoryIcon, authRequired: true, pimpinanOnly: true },
   { path: '/assignment', name: 'Penugasan', icon: Briefcase, authRequired: true },
+  { path: '/kpi-personil.html', name: 'KPI Personil', icon: Target, authRequired: true, isStatic: true },
 
   { path: '/sop', name: 'SOP & Dokumen', icon: BookOpen, authRequired: true },
   { path: '/duty-notes', name: 'Catatan Piket', icon: BookOpen, authRequired: true },
