@@ -268,6 +268,7 @@ export const FINANCE_ALLOWED_EMAILS: ReadonlyArray<string> = [
   'ekon.a.poernomo@smktelkom-mlg.sch.id',
   'whyna@smktelkom-mlg.sch.id',
   'chusni@smktelkom-mlg.sch.id',
+  'amalia@smktelkom-mlg.sch.id',
 ];
 
 const FINANCE_ALLOWED_SET = new Set(FINANCE_ALLOWED_EMAILS.map((email) => email.toLowerCase()));
