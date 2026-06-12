@@ -249,17 +249,17 @@ const normalizeSarmokComplaintStats = (
   const completeRowsCount = hasPayload ? rows.filter(isSarmokReturnedRow).length : undefined;
   const rejectedRowsCount = hasPayload ? rows.filter(isSarmokRejectedRow).length : undefined;
 
-  const pending = fallback.waitingConfirmation
-    ?? pendingRowsCount
+  const pending = pendingRowsCount
     ?? unwrapped?.countWaitingComplaints ?? unwrapped?.count_waiting_complaints
     ?? pickSarmokCount(payload, ['count_pending', 'countPending', 'pending', 'pending_count', 'waitingConfirmation'])
     ?? pickSarmokStatusCount(payload, ['pending', 'waiting', 'menunggu', 'konfirmasi'])
+    ?? fallback.waitingConfirmation
     ?? 0;
-  const inProgress = fallback.onProcess
-    ?? processRowsCount
+  const inProgress = processRowsCount
     ?? unwrapped?.countInProcessComplaints ?? unwrapped?.count_in_process_complaints
     ?? pickSarmokCount(payload, ['count_in_progress', 'countInProgress', 'count_process', 'in_progress', 'inProgress', 'on_process'])
     ?? pickSarmokStatusCount(payload, ['in_progress', 'on_process', 'process', 'diproses', 'berjalan'])
+    ?? fallback.onProcess
     ?? 0;
   const complete = completeRowsCount
     ?? unwrapped?.countCompleteComplaints ?? unwrapped?.count_complete_complaints
@@ -298,17 +298,17 @@ const normalizeSarmokRoomStats = (
     ?? pickSarmokStatusCount(payload, ['rejected', 'reject', 'ditolak'])
     ?? fallback.rejectedReservation
     ?? 0;
-  const waitingConfirmation = fallback.waitingConfirmation
-    ?? pendingRowsCount
+  const waitingConfirmation = pendingRowsCount
     ?? unwrapped?.countPendingReservation ?? unwrapped?.count_pending_reservation
     ?? pickSarmokCount(payload, ['count_pending', 'countPending', 'pending', 'pending_count', 'waitingConfirmation', 'waiting_confirmation'])
     ?? pickSarmokStatusCount(payload, ['pending', 'waiting', 'waiting_confirmation', 'menunggu', 'menunggu_konfirmasi', 'konfirmasi'])
+    ?? fallback.waitingConfirmation
     ?? 0;
-  const activeReservation = fallback.activeReservation
-    ?? activeRowsCount
+  const activeReservation = activeRowsCount
     ?? unwrapped?.countActiveReservation ?? unwrapped?.count_active_reservation
     ?? pickSarmokCount(payload, ['count_verified', 'countVerified', 'count_approved', 'countApproved', 'count_active', 'countActive', 'count_ongoing', 'countOngoing', 'verified', 'approved', 'active', 'ongoing', 'sedang_berlangsung'])
     ?? pickSarmokStatusCount(payload, ['verified', 'approved', 'active', 'ongoing', 'sedang_berlangsung', 'disetujui'])
+    ?? fallback.activeReservation
     ?? 0;
   const inUseReservation = inUseRowsCount
     ?? pickSarmokCount(payload, ['count_in_use', 'countInUse', 'count_using', 'countUsing', 'count_current', 'countCurrent', 'in_use', 'inUse', 'using', 'current', 'sedang_dipakai'])
@@ -329,17 +329,17 @@ const normalizeSarmokToolsStats = (
   const returnedRowsCount = payload === null || payload === undefined ? undefined : rows.filter(isSarmokReturnedRow).length;
   const rejectedRowsCount = payload === null || payload === undefined ? undefined : rows.filter(isSarmokRejectedRow).length;
 
-  const waitingConfirmation = fallback.waitingConfirmation
-    ?? pendingRowsCount
+  const waitingConfirmation = pendingRowsCount
     ?? unwrapped?.countPendingLoans ?? unwrapped?.count_pending_loans
     ?? pickSarmokCount(payload, ['count_pending', 'countPending', 'pending', 'pending_count', 'waitingConfirmation', 'waiting_confirmation'])
     ?? pickSarmokStatusCount(payload, ['pending', 'waiting', 'waiting_confirmation', 'menunggu', 'menunggu_konfirmasi', 'konfirmasi'])
+    ?? fallback.waitingConfirmation
     ?? 0;
-  const haveNotReturn = fallback.haveNotReturn
-    ?? activeRowsCount
+  const haveNotReturn = activeRowsCount
     ?? unwrapped?.countVerifiedLoans ?? unwrapped?.count_verified_loans
     ?? pickSarmokCount(payload, ['count_verified', 'countVerified', 'count_approved', 'countApproved', 'count_active', 'countActive', 'count_not_returned', 'countNotReturned', 'verified', 'approved', 'active', 'haveNotReturn', 'have_not_return'])
     ?? pickSarmokStatusCount(payload, ['verified', 'approved', 'active', 'terverifikasi', 'disetujui', 'aktif', 'ongoing', 'berlangsung'])
+    ?? fallback.haveNotReturn
     ?? 0;
   const returned = returnedRowsCount
     ?? unwrapped?.countReturnedLoans ?? unwrapped?.count_returned_loans
@@ -835,8 +835,15 @@ const formatRoomReservationRange = (row: unknown) => {
 
 const getCurrentMonthDateRange = () => {
   const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), 1);
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+  // Sarpra secara default membatasi rentang tanggal 1 bulan terakhir (~32 hari agar aman menjangkau data aktif)
+  const start = new Date();
+  start.setDate(now.getDate() - 32);
+
+  // Tanggal akhir ditambah 1 hari agar mencakup penuh hari ini inklusif
+  const end = new Date();
+  end.setDate(now.getDate() + 1);
+
   const formatDate = (date: Date) => {
     const yyyy = date.getFullYear();
     const mm = String(date.getMonth() + 1).padStart(2, '0');
@@ -866,15 +873,10 @@ const buildSarmokDetailUrl = (endpoint: string, kind: SarmokDetailKind, metricLa
 
   const apiStatus = getSarmokApiStatusFilter(metricLabel);
 
-  // Hanya batasi tanggal untuk data historis (ditolak/selesai) atau saat request ringkasan (All Status)
-  const isHistorical = apiStatus === 'REJECTED' || apiStatus === 'COMPLETED';
-  const shouldFilterDate = !apiStatus || isHistorical;
-
-  if (shouldFilterDate) {
-    const { startDate, endDate } = getCurrentMonthDateRange();
-    url.searchParams.set('startDate', startDate);
-    url.searchParams.set('endDate', endDate);
-  }
+  // Always append date boundaries to stay in sync with the 32-day dashboard range
+  const { startDate, endDate } = getCurrentMonthDateRange();
+  url.searchParams.set('startDate', startDate);
+  url.searchParams.set('endDate', endDate);
 
   if (apiStatus) {
     if (kind === 'roomReservation') {
@@ -3445,16 +3447,50 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                 </div>
               ) : (
                 <div style={{ display: 'grid', gap: '0.85rem' }}>
-                  {getSarmokDetailSummaryEntries(sarmokDetailModal.raw).length > 0 && (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.65rem' }}>
-                      {getSarmokDetailSummaryEntries(sarmokDetailModal.raw).map(([key, value]) => (
-                        <div key={key} style={{ padding: '0.75rem', border: '1px solid var(--border-subtle)', borderRadius: 8, background: 'rgba(255,255,255,0.02)' }}>
-                          <div style={{ fontSize: '0.63rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{formatDetailKey(key)}</div>
-                          <div style={{ marginTop: '0.25rem', fontSize: '1.1rem', lineHeight: 1, fontWeight: 800, color: sarmokDetailModal.accent }}>{formatDetailValue(value)}</div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  {(() => {
+                    let summaryCards: { label: string; value: number | string }[] = [];
+                    if (sarmokDetailModal.kind === 'toolsLoan' && mokletService.toolsLoan) {
+                      summaryCards = [
+                        { label: 'Count Pending', value: mokletService.toolsLoan.waitingConfirmation },
+                        { label: 'Count Verified', value: mokletService.toolsLoan.haveNotReturn },
+                        { label: 'Count Rejected', value: mokletService.toolsLoan.rejected },
+                        { label: 'Count Returned', value: mokletService.toolsLoan.returned },
+                      ];
+                    } else if (sarmokDetailModal.kind === 'roomReservation' && mokletService.roomReservation) {
+                      summaryCards = [
+                        { label: 'Count Pending', value: mokletService.roomReservation.waitingConfirmation },
+                        { label: 'Count Verified', value: mokletService.roomReservation.activeReservation },
+                        { label: 'Count Rejected', value: mokletService.roomReservation.rejectedReservation },
+                        { label: 'Count In Use', value: mokletService.roomReservation.inUseReservation },
+                      ];
+                    } else if (sarmokDetailModal.kind === 'complaints' && mokletService.complaints) {
+                      summaryCards = [
+                        { label: 'Count Pending', value: mokletService.complaints.pending },
+                        { label: 'Count In Progress', value: mokletService.complaints.inProgress },
+                        { label: 'Count Complete', value: mokletService.complaints.complete },
+                        { label: 'Count Rejected', value: mokletService.complaints.rejected },
+                      ];
+                    } else {
+                      const entries = getSarmokDetailSummaryEntries(sarmokDetailModal.raw);
+                      summaryCards = entries.map(([key, val]) => ({
+                        label: formatDetailKey(key),
+                        value: formatDetailValue(val),
+                      }));
+                    }
+
+                    if (summaryCards.length === 0) return null;
+
+                    return (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.65rem' }}>
+                        {summaryCards.map((card, idx) => (
+                          <div key={idx} style={{ padding: '0.75rem', border: '1px solid var(--border-subtle)', borderRadius: 8, background: 'rgba(255,255,255,0.02)' }}>
+                            <div style={{ fontSize: '0.63rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{card.label}</div>
+                            <div style={{ marginTop: '0.25rem', fontSize: '1.1rem', lineHeight: 1, fontWeight: 800, color: sarmokDetailModal.accent }}>{card.value}</div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
 
                   <div style={{ overflowX: 'auto', border: '1px solid var(--border-subtle)', borderRadius: 8, background: 'rgba(255,255,255,0.02)' }}>
                     <table style={{ width: '100%', minWidth: sarmokDetailModal.kind === 'complaints' ? '1120px' : '1280px', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
