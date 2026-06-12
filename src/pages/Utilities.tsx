@@ -318,7 +318,7 @@ const Utilities = () => {
 
   const comparisonMonths = useMemo(() => {
     const asc = [...monthOptions].sort((a, b) => a.localeCompare(b));
-    return asc.slice(-5);
+    return asc.filter((month) => month >= '2025-12');
   }, [monthOptions]);
 
   const comparisonReferenceYear = comparisonMonths[comparisonMonths.length - 1]?.slice(0, 4) || '';
