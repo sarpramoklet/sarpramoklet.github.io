@@ -685,6 +685,11 @@ const isSarmokRejectedRow = (row: unknown) => {
   const rejectedKeywords = ['3', 'rejected', 'reject', 'ditolak', 'declined', 'cancel'];
   if (rejectedKeywords.some((keyword) => status.includes(keyword))) return true;
 
+  if (row && typeof row === 'object' && !Array.isArray(row)) {
+    const vAdmin = (row as any).verified_admin ?? (row as any).verifiedAdmin;
+    if (vAdmin === 2 || vAdmin === '2') return true;
+  }
+
   return hasAnyDetailValue(row, ['rejected_at', 'declined_at', 'rejected_date', 'declined_date']);
 };
 
@@ -693,6 +698,11 @@ const isSarmokPendingRow = (row: unknown) => {
   const status = getRowStatusValue(row);
   const pendingKeywords = ['0', 'pending', 'waiting', 'menunggu', 'waiting_confirmation'];
   if (pendingKeywords.some((keyword) => status.includes(keyword))) return true;
+
+  if (row && typeof row === 'object' && !Array.isArray(row)) {
+    const vAdmin = (row as any).verified_admin ?? (row as any).verifiedAdmin;
+    if (vAdmin === 0 || vAdmin === '0') return true;
+  }
 
   if (status && status !== '-') return false;
   return !hasAnyDetailValue(row, ['verified_at', 'approved_at', 'process_at', 'processed_at', 'returned_at']);
@@ -734,6 +744,11 @@ const isSarmokActiveRow = (row: unknown) => {
   const activeKeywords = ['1', 'active', 'approved', 'verified', 'terverifikasi', 'aktif', 'disetujui', 'berlangsung', 'ongoing'];
   if (activeKeywords.some((keyword) => status.includes(keyword))) return true;
 
+  if (row && typeof row === 'object' && !Array.isArray(row)) {
+    const vAdmin = (row as any).verified_admin ?? (row as any).verifiedAdmin;
+    if (vAdmin === 1 || vAdmin === '1') return true;
+  }
+
   if (hasAnyDetailValue(row, ['verified_admin'])) {
     return isTruthyDetailFlag(row, ['verified_admin']);
   }
@@ -767,18 +782,18 @@ const normalizeComplaintStats = (
   const hasPayload = payload !== null && payload !== undefined;
   const unwrapped = unwrapSarmokDetailPayload(payload) as Record<string, unknown> | undefined;
 
-  const pending = (hasPayload ? rows.filter(isSarmokPendingRow).length : undefined)
+  const pending = fallback.waitingConfirmation
+    ?? (hasPayload ? rows.filter(isSarmokPendingRow).length : undefined)
     ?? (unwrapped ? toSarmokCount(unwrapped.countWaitingComplaints ?? unwrapped.count_waiting_complaints) : undefined)
     ?? pickSarmokCount(payload, ['count_pending', 'countPending', 'pending', 'pending_count', 'waitingConfirmation'])
     ?? pickSarmokStatusCount(payload, ['pending', 'waiting', 'menunggu', 'konfirmasi'])
-    ?? fallback.waitingConfirmation
     ?? 0;
 
-  const inProgress = (hasPayload ? rows.filter(isSarmokProcessRow).length : undefined)
+  const inProgress = fallback.onProcess
+    ?? (hasPayload ? rows.filter(isSarmokProcessRow).length : undefined)
     ?? (unwrapped ? toSarmokCount(unwrapped.countInProcessComplaints ?? unwrapped.count_in_process_complaints) : undefined)
     ?? pickSarmokCount(payload, ['count_in_progress', 'countInProgress', 'count_process', 'in_progress', 'inProgress', 'on_process'])
     ?? pickSarmokStatusCount(payload, ['in_progress', 'on_process', 'process', 'diproses', 'berjalan'])
-    ?? fallback.onProcess
     ?? 0;
 
   const complete = (hasPayload ? rows.filter(isSarmokReturnedRow).length : undefined)
@@ -805,18 +820,18 @@ const normalizeRoomStats = (
   const hasPayload = payload !== null && payload !== undefined;
   const unwrapped = unwrapSarmokDetailPayload(payload) as Record<string, unknown> | undefined;
 
-  const waitingConfirmation = (hasPayload ? rows.filter(isSarmokPendingRow).length : undefined)
+  const waitingConfirmation = fallback.waitingConfirmation
+    ?? (hasPayload ? rows.filter(isSarmokPendingRow).length : undefined)
     ?? (unwrapped ? toSarmokCount(unwrapped.countPendingReservation ?? unwrapped.count_pending_reservation) : undefined)
     ?? pickSarmokCount(payload, ['count_pending', 'countPending', 'pending', 'waitingConfirmation', 'waiting_confirmation'])
     ?? pickSarmokStatusCount(payload, ['pending', 'waiting', 'waiting_confirmation', 'menunggu', 'menunggu_konfirmasi'])
-    ?? fallback.waitingConfirmation
     ?? 0;
 
-  const activeReservation = (hasPayload ? rows.filter(isSarmokActiveRow).length : undefined)
+  const activeReservation = fallback.activeReservation
+    ?? (hasPayload ? rows.filter(isSarmokActiveRow).length : undefined)
     ?? (unwrapped ? toSarmokCount(unwrapped.countActiveReservation ?? unwrapped.count_active_reservation) : undefined)
     ?? pickSarmokCount(payload, ['count_verified', 'countVerified', 'count_approved', 'countApproved', 'count_active', 'countActive', 'verified', 'approved', 'active'])
     ?? pickSarmokStatusCount(payload, ['verified', 'approved', 'active', 'ongoing', 'disetujui'])
-    ?? fallback.activeReservation
     ?? 0;
 
   const inUseReservation = (hasPayload ? rows.filter(isSarmokRoomInUseRow).length : undefined)
@@ -841,18 +856,18 @@ const normalizeToolsStats = (
   const hasPayload = payload !== null && payload !== undefined;
   const unwrapped = unwrapSarmokDetailPayload(payload) as Record<string, unknown> | undefined;
 
-  const waitingConfirmation = (hasPayload ? rows.filter(isSarmokPendingRow).length : undefined)
+  const waitingConfirmation = fallback.waitingConfirmation
+    ?? (hasPayload ? rows.filter(isSarmokPendingRow).length : undefined)
     ?? (unwrapped ? toSarmokCount(unwrapped.countPendingLoans ?? unwrapped.count_pending_loans) : undefined)
     ?? pickSarmokCount(payload, ['count_pending', 'countPending', 'pending', 'waitingConfirmation', 'waiting_confirmation'])
     ?? pickSarmokStatusCount(payload, ['pending', 'waiting', 'menunggu', 'konfirmasi'])
-    ?? fallback.waitingConfirmation
     ?? 0;
 
-  const haveNotReturn = (hasPayload ? rows.filter(isSarmokActiveRow).length : undefined)
+  const haveNotReturn = fallback.haveNotReturn
+    ?? (hasPayload ? rows.filter(isSarmokActiveRow).length : undefined)
     ?? (unwrapped ? toSarmokCount(unwrapped.countVerifiedLoans ?? unwrapped.count_verified_loans) : undefined)
     ?? pickSarmokCount(payload, ['count_verified', 'countVerified', 'count_approved', 'countApproved', 'count_active', 'countActive', 'count_not_returned', 'countNotReturned', 'verified', 'approved', 'active', 'haveNotReturn'])
     ?? pickSarmokStatusCount(payload, ['verified', 'approved', 'active', 'terverifikasi', 'disetujui', 'aktif'])
-    ?? fallback.haveNotReturn
     ?? 0;
 
   const returned = (hasPayload ? rows.filter(isSarmokReturnedRow).length : undefined)
