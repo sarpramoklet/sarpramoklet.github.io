@@ -128,7 +128,9 @@ const CapexBudget = () => {
 
   const currentUser = getCurrentUser();
   const canUpdate   = currentUser.roleAplikasi === ROLES.PIMPINAN
-                   || currentUser.roleAplikasi === ROLES.KOORDINATOR_SARPRAS;
+                   || currentUser.roleAplikasi === ROLES.KOORDINATOR_SARPRAS
+                   || currentUser.roleAplikasi === ROLES.KOORDINATOR_IT
+                   || currentUser.roleAplikasi === ROLES.KOORDINATOR_LAB;
   const canUpdateProject = canUpdate || currentUser.roleAplikasi.includes('Koordinator') || currentUser.roleAplikasi.includes('PIC');
 
   /* ── helpers ── */
@@ -1385,7 +1387,7 @@ const CapexBudget = () => {
           <AlertTriangle size={18} color="var(--accent-blue)" style={{ flexShrink: 0, marginTop: '1px' }}/>
           <div>
             <strong style={{ color: 'var(--text-primary)' }}>Mode Baca Saja</strong><br />
-            Pencatatan realisasi anggaran CAPEX hanya dapat dilakukan oleh <strong>Pimpinan / Approver</strong> atau <strong>Koordinator Sarpras</strong>.
+            Pencatatan realisasi anggaran CAPEX hanya dapat dilakukan oleh <strong>Pimpinan / Approver</strong>, <strong>Koordinator Sarpras</strong>, <strong>Koordinator IT</strong>, atau <strong>Koordinator Laboratorium</strong>.
           </div>
         </div>
       )}
