@@ -1,0 +1,1222 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Laporan Evidence CAPEX 2026 | IT LAB SARPRA</title>
+  <style>
+    :root {
+      --ink: #15202b;
+      --muted: #64748b;
+      --line: #d9e2ec;
+      --paper: #f6f8fb;
+      --white: #ffffff;
+      --blue: #1e5eff;
+      --green: #11a36a;
+      --amber: #f39c12;
+      --red: #df3f3f;
+      --navy: #0f2742;
+      --cyan: #00a6d6;
+      --shadow: 0 18px 45px rgba(15, 39, 66, 0.13);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: #e8edf4;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      letter-spacing: 0;
+    }
+
+    .deck {
+      display: grid;
+      gap: 28px;
+      padding: 28px;
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    .slide {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      overflow: hidden;
+      background: var(--white);
+      border: 1px solid rgba(15, 39, 66, 0.1);
+      box-shadow: var(--shadow);
+      page-break-after: always;
+    }
+
+    .slide::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(90deg, rgba(30, 94, 255, 0.07), transparent 34%),
+        linear-gradient(180deg, rgba(17, 163, 106, 0.06), transparent 42%);
+    }
+
+    .content {
+      position: relative;
+      z-index: 1;
+      height: 100%;
+      padding: 52px 62px 46px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .cover {
+      color: #fff;
+      background:
+        linear-gradient(130deg, rgba(15, 39, 66, 0.98), rgba(24, 73, 122, 0.9));
+    }
+
+    .cover::before {
+      background:
+        radial-gradient(circle at 82% 18%, rgba(0, 166, 214, 0.24), transparent 30%),
+        linear-gradient(90deg, rgba(17, 163, 106, 0.2), transparent 42%);
+    }
+
+    .cover .content {
+      justify-content: space-between;
+    }
+
+    .cover-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 36px;
+      align-items: flex-start;
+    }
+
+    .cover-logo-box {
+      width: 148px;
+      height: 86px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.96);
+      display: grid;
+      place-items: center;
+      padding: 16px;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+      flex: 0 0 auto;
+    }
+
+    .cover-logo-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .eyebrow {
+      font-size: 15px;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--blue);
+      letter-spacing: 0.08em;
+    }
+
+    .cover .eyebrow {
+      color: #70d8ff;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      max-width: 780px;
+      font-size: 58px;
+      line-height: 1.04;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      font-size: 38px;
+      line-height: 1.12;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      font-size: 22px;
+      line-height: 1.2;
+    }
+
+    .subtitle {
+      max-width: 760px;
+      font-size: 22px;
+      line-height: 1.45;
+      color: rgba(255, 255, 255, 0.82);
+    }
+
+    .slide-subtitle {
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1.45;
+      max-width: 880px;
+    }
+
+    .meta-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      font-size: 16px;
+      color: rgba(255, 255, 255, 0.78);
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 7px 14px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.13);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      color: inherit;
+      font-weight: 700;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      gap: 28px;
+      align-items: flex-start;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 800;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .brand img {
+      width: 46px;
+      height: 34px;
+      object-fit: contain;
+      padding: 5px;
+      border-radius: 6px;
+      background: #fff;
+      border: 1px solid rgba(15, 39, 66, 0.1);
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+      min-height: 0;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 18px;
+      min-height: 0;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.86);
+      border-radius: 8px;
+      padding: 22px;
+      min-height: 0;
+    }
+
+    .metric {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      justify-content: space-between;
+    }
+
+    .metric .num {
+      font-size: 44px;
+      font-weight: 900;
+      color: var(--navy);
+      line-height: 1;
+    }
+
+    .metric .label {
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.35;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: 1fr 44px 1fr 44px 1fr;
+      align-items: stretch;
+      gap: 10px;
+      flex: 1;
+    }
+
+    .arrow {
+      display: grid;
+      place-items: center;
+      font-size: 36px;
+      color: var(--blue);
+      font-weight: 900;
+    }
+
+    .phase {
+      border-radius: 8px;
+      padding: 24px;
+      border: 1px solid var(--line);
+      background: var(--white);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .phase-tag {
+      display: inline-flex;
+      width: max-content;
+      padding: 7px 12px;
+      border-radius: 999px;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .before { background: var(--red); }
+    .process { background: var(--amber); }
+    .after { background: var(--green); }
+
+    .phase ul,
+    .checklist,
+    .plain-list {
+      margin: 0;
+      padding-left: 20px;
+      color: var(--ink);
+      font-size: 17px;
+      line-height: 1.45;
+    }
+
+    .checklist li,
+    .plain-list li {
+      margin-bottom: 9px;
+    }
+
+    .project-title {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .project-code {
+      padding: 9px 13px;
+      border-radius: 8px;
+      background: #eef4ff;
+      color: var(--blue);
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .photo-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .photo-slot {
+      min-height: 360px;
+      border: 1px solid #c7d3e3;
+      border-radius: 8px;
+      background:
+        linear-gradient(135deg, rgba(30, 94, 255, 0.05), rgba(17, 163, 106, 0.04)),
+        #f9fbfe;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 16px;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+    }
+
+    .mini-photo-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-rows: 118px 64px;
+      gap: 8px;
+      min-height: 190px;
+    }
+
+    .mini-photo {
+      display: grid;
+      place-items: center;
+      border-radius: 6px;
+      background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0.68)),
+        repeating-linear-gradient(45deg, rgba(100, 116, 139, 0.1) 0 1px, transparent 1px 10px);
+      border: 1px dashed rgba(100, 116, 139, 0.36);
+      color: #6b7a90;
+      font-size: 12px;
+      font-weight: 900;
+      text-align: center;
+      text-transform: uppercase;
+      padding: 8px;
+    }
+
+    .mini-photo.main {
+      grid-column: 1 / -1;
+      font-size: 16px;
+    }
+
+    .photo-slot strong {
+      font-size: 18px;
+    }
+
+    .photo-slot span {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.35;
+    }
+
+    .caption-box {
+      border-left: 4px solid var(--blue);
+      padding: 12px 14px;
+      background: #f3f7ff;
+      color: var(--ink);
+      font-size: 15px;
+      line-height: 1.42;
+    }
+
+    .caption-box strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 12px;
+      color: var(--blue);
+      text-transform: uppercase;
+    }
+
+    .table {
+      display: grid;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--white);
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 44px 78px 1.4fr 0.68fr 0.56fr 0.64fr 0.64fr 0.64fr;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .row:last-child {
+      border-bottom: 0;
+    }
+
+    .cell {
+      padding: 10px 12px;
+      font-size: 13px;
+      line-height: 1.25;
+      border-right: 1px solid var(--line);
+    }
+
+    .cell:last-child {
+      border-right: 0;
+    }
+
+    .head {
+      color: #fff;
+      background: var(--navy);
+      font-weight: 900;
+      text-transform: uppercase;
+      font-size: 12px;
+    }
+
+    .status {
+      display: inline-flex;
+      padding: 5px 9px;
+      border-radius: 999px;
+      background: #eef4ff;
+      color: var(--blue);
+      font-weight: 800;
+      font-size: 12px;
+    }
+
+    .progress-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 48px;
+      padding: 6px 9px;
+      border-radius: 999px;
+      color: #fff;
+      background: var(--blue);
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .progress-badge.done {
+      background: var(--green);
+    }
+
+    .progress-badge.watch {
+      background: var(--amber);
+    }
+
+    .progress-badge.low {
+      background: var(--red);
+    }
+
+    .timeline {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .step {
+      position: relative;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--white);
+      padding: 18px;
+      min-height: 170px;
+    }
+
+    .step-num {
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      color: #fff;
+      background: var(--blue);
+      font-weight: 900;
+      margin-bottom: 12px;
+    }
+
+    .footer {
+      margin-top: auto;
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .accent-line {
+      height: 7px;
+      width: 160px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--blue), var(--green));
+    }
+
+    .note {
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.42;
+    }
+
+    .handover {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .handover .panel {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .quote {
+      padding: 28px 34px;
+      border-left: 7px solid var(--green);
+      background: #f2fbf7;
+      font-size: 25px;
+      line-height: 1.42;
+      font-weight: 800;
+    }
+
+    @media print {
+      @page {
+        size: 16in 9in;
+        margin: 0;
+      }
+
+      body {
+        background: #fff;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+      }
+
+      .deck {
+        padding: 0;
+        gap: 0;
+        max-width: none;
+      }
+
+      .slide {
+        width: 100vw;
+        height: 100vh;
+        box-shadow: none;
+        border: 0;
+      }
+    }
+
+    @media (max-width: 860px) {
+      .deck {
+        padding: 12px;
+        gap: 16px;
+      }
+
+      .content {
+        padding: 28px;
+      }
+
+      h1 {
+        font-size: 34px;
+      }
+
+      h2 {
+        font-size: 25px;
+      }
+
+      .slide {
+        aspect-ratio: auto;
+        min-height: 760px;
+      }
+
+      .grid-3,
+      .grid-2,
+      .handover,
+      .photo-row,
+      .timeline,
+      .flow {
+        grid-template-columns: 1fr;
+      }
+
+      .arrow {
+        display: none;
+      }
+
+      .row {
+        grid-template-columns: 1fr;
+      }
+
+      .cell {
+        border-right: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="deck">
+    <section class="slide cover">
+      <div class="content">
+        <div class="cover-top">
+          <div>
+            <div class="eyebrow">Laporan Evidence CAPEX</div>
+            <h1>Pelaporan Pekerjaan CAPEX 2026</h1>
+            <p class="subtitle">Dokumentasi visual Before, Process, dan After untuk seluruh pekerjaan CAPEX IT, Laboratorium, dan Sarana Prasarana.</p>
+          </div>
+          <div class="cover-logo-box">
+            <img src="logo_telkom.png" alt="Telkom Schools" />
+          </div>
+        </div>
+        <div class="meta-row">
+          <span class="pill">PIC: Kaur IT LAB SARPRA</span>
+          <span class="pill">Tahun Anggaran 2026</span>
+          <span class="pill">Siap Kolaborasi Foto</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="content">
+        <div class="header">
+          <div>
+            <div class="eyebrow">Arah Dokumen</div>
+            <h2>Pelaporan yang mudah diaudit, mudah dibaca, dan kuat secara visual</h2>
+          </div>
+          <div class="brand"><img src="logo_telkom.png" alt="" /> SARPRA</div>
+        </div>
+        <div class="grid-3">
+          <div class="panel metric">
+            <div class="num">01</div>
+            <h3>Kondisi Awal</h3>
+            <p class="label">Menunjukkan masalah, urgensi, titik lokasi, dan dampak sebelum pekerjaan dimulai.</p>
+          </div>
+          <div class="panel metric">
+            <div class="num">02</div>
+            <h3>Proses Pekerjaan</h3>
+            <p class="label">Merekam aktivitas pelaksanaan, pengawasan, material, vendor, dan progres lapangan.</p>
+          </div>
+          <div class="panel metric">
+            <div class="num">03</div>
+            <h3>Hasil Akhir</h3>
+            <p class="label">Membuktikan output pekerjaan, manfaat operasional, dan kesiapan serah-terima.</p>
+          </div>
+        </div>
+        <div class="footer">
+          <span>Gunakan satu pola visual untuk semua proyek agar komparasi antar pekerjaan konsisten.</span>
+          <span class="accent-line"></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="content">
+        <div>
+          <div class="eyebrow">Standar Pengisian Foto</div>
+          <h2>Format kolaborasi foto untuk Kaur</h2>
+          <p class="slide-subtitle">Setiap halaman pekerjaan sudah disiapkan dengan tiga bingkai evidence. Kaur cukup menempel foto lapangan dan menyesuaikan caption singkat.</p>
+        </div>
+        <div class="handover">
+          <div class="panel">
+            <h3>Tugas pengisian oleh Kaur</h3>
+            <ul class="checklist">
+              <li>Ganti bingkai foto utama/detail/pendukung dengan foto lapangan.</li>
+              <li>Setiap fase dapat diisi 1 foto utama atau sampai 3 foto jika perlu detail tambahan.</li>
+              <li>Cek ulang nama pekerjaan, owner, dan progres sebelum deck final dibagikan.</li>
+              <li>Perbarui owner, lokasi, tanggal mulai, tanggal selesai, dan status.</li>
+              <li>Isi caption maksimal 1-2 kalimat agar slide tetap bersih.</li>
+            </ul>
+          </div>
+          <div class="panel">
+            <h3>Standar foto yang disarankan</h3>
+            <ul class="checklist">
+              <li>Ambil foto horizontal 16:9 untuk tiap fase pekerjaan.</li>
+              <li>Gunakan sudut yang sama untuk Before dan After jika memungkinkan.</li>
+              <li>Tambahkan satu foto detail jika ada kerusakan, instalasi, atau finishing penting.</li>
+              <li>Hindari foto gelap, blur, atau terlalu jauh dari objek pekerjaan.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="footer">
+          <span>Alur kerja: pilih bingkai foto, tempel foto lapangan, rapikan crop, lalu finalisasi caption dan status.</span>
+          <span class="accent-line"></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="content">
+        <div>
+          <div class="eyebrow">Portofolio CAPEX | 1 dari 2</div>
+          <h2>Daftar pekerjaan yang masuk deck pelaporan</h2>
+          <p class="slide-subtitle">Total 15 pekerjaan CAPEX diurutkan berdasarkan progres tertinggi, dari pekerjaan selesai sampai pekerjaan yang masih perlu akselerasi.</p>
+        </div>
+        <div class="table">
+          <div class="row head">
+            <div class="cell">No.</div>
+            <div class="cell">Kode</div>
+            <div class="cell">Pekerjaan</div>
+            <div class="cell">Owner</div>
+            <div class="cell">Progres</div>
+            <div class="cell">Before</div>
+            <div class="cell">Process</div>
+            <div class="cell">After</div>
+          </div>
+          <div class="row">
+            <div class="cell"><strong>01</strong></div><div class="cell"><strong>PRJ-2</strong></div><div class="cell">Peremajaan talang air pada dak beton lantai 3</div><div class="cell">Sarpras</div><div class="cell"><span class="progress-badge done">100%</span></div><div class="cell"><span class="status">Foto awal</span></div><div class="cell"><span class="status">Foto kerja</span></div><div class="cell"><span class="status">Foto hasil</span></div>
+          </div>
+          <div class="row">
+            <div class="cell"><strong>02</strong></div><div class="cell"><strong>PRJ-3</strong></div><div class="cell">Peremajaan dak beton masjid</div><div class="cell">Sarpras</div><div class="cell"><span class="progress-badge done">100%</span></div><div class="cell"><span class="status">Foto awal</span></div><div class="cell"><span class="status">Foto kerja</span></div><div class="cell"><span class="status">Foto hasil</span></div>
+          </div>
+          <div class="row">
+            <div class="cell"><strong>03</strong></div><div class="cell"><strong>PRJ-4</strong></div><div class="cell">Peremajaan cat dinding pada 10 ruang kelas (R.7 - R.16)</div><div class="cell">Sarpras</div><div class="cell"><span class="progress-badge done">100%</span></div><div class="cell"><span class="status">Foto awal</span></div><div class="cell"><span class="status">Foto kerja</span></div><div class="cell"><span class="status">Foto hasil</span></div>
+          </div>
+          <div class="row">
+            <div class="cell"><strong>04</strong></div><div class="cell"><strong>PRJ-6</strong></div><div class="cell">Pengadaan interior Laboratorium TEFA (Lab. 3)</div><div class="cell">Lab</div><div class="cell"><span class="progress-badge">85%</span></div><div class="cell"><span class="status">Foto awal</span></div><div class="cell"><span class="status">Foto kerja</span></div><div class="cell"><span class="status">Foto hasil</span></div>
+          </div>
+          <div class="row">
+            <div class="cell"><strong>05</strong></div><div class="cell"><strong>PRJ-1</strong></div><div class="cell">Peremajaan keramik pada 3 ruang kelas (R.1 - R.3)</div><div class="cell">Sarpras</div><div class="cell"><span class="progress-badge">75%</span></div><div class="cell"><span class="status">Foto awal</span></div><div class="cell"><span class="status">Foto kerja</span></div><div class="cell"><span class="status">Foto hasil</span></div>
+          </div>
+          <div class="row">
+            <div class="cell"><strong>06</strong></div><div class="cell"><strong>PRJ-7</strong></div><div class="cell">Pembangunan Malang Techno Park (Lanjutan)</div><div class="cell">IT & Sarpras</div><div class="cell"><span class="progress-badge">70%</span></div><div class="cell"><span class="status">Foto awal</span></div><div class="cell"><span class="status">Foto kerja</span></div><div class="cell"><span class="status">Foto hasil</span></div>
+          </div>
+          <div class="row">
+            <div class="cell"><strong>07</strong></div><div class="cell"><strong>PRJ-10</strong></div><div class="cell">Pengadaan AC Ruang Kelas</div><div class="cell">Sarpras</div><div class="cell"><span class="progress-badge">50%</span></div><div class="cell"><span class="status">Foto awal</span></div><div class="cell"><span class="status">Foto kerja</span></div><div class="cell"><span class="status">Foto hasil</span></div>
+          </div>
+          <div class="row">
+            <div class="cell"><strong>08</strong></div><div class="cell"><strong>PRJ-13</strong></div><div class="cell">Pengadaan AC Ruang Kelas Tahap II</div><div class="cell">Sarpras</div><div class="cell"><span class="progress-badge">50%</span></div><div class="cell"><span class="status">Foto awal</span></div><div class="cell"><span class="status">Foto kerja</span></div><div class="cell"><span class="status">Foto hasil</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="content">
+        <div>
+          <div class="eyebrow">Portofolio CAPEX | 2 dari 2</div>
+          <h2>Lanjutan daftar pekerjaan CAPEX</h2>
+          <p class="slide-subtitle">Judul, owner, dan progres mengikuti data Progres_CAPEX terakhir yang ditarik dari dashboard.</p>
+        </div>
+        <div class="table">
+          <div class="row head">
+            <div class="cell">No.</div>
+            <div class="cell">Kode</div>
+            <div class="cell">Pekerjaan</div>
+            <div class="cell">Owner</div>
+            <div class="cell">Progres</div>
+            <div class="cell">Before</div>
+            <div class="cell">Process</div>
+            <div class="cell">After</div>
+          </div>
+          <div class="row">
+            <div class="cell"><strong>09</strong></div><div class="cell"><strong>PRJ-14</strong></div><div class="cell">Pengadaan Studio Musik dan Podcast</div><div class="cell">Sarpras</div><div class="cell"><span class="progress-badge">50%</span></div><div class="cell"><span class="status">Foto awal</span></div><div class="cell"><span class="status">Foto kerja</span></div><div class="cell"><span class="status">Foto hasil</span></div>
+          </div>
+          <div class="row">
+            <div class="cell"><strong>10</strong></div><div class="cell"><strong>PRJ-11</strong></div><div class="cell">Digital Enhancement untuk program smart school dan penguatan branding sekolah untuk Alat Pengolah Data</div><div class="cell">Sarpras</div><div class="cell"><span class="progress-badge watch">25%</span></div><div class="cell"><span class="status">Foto awal</span></div><div class="cell"><span class="status">Foto kerja</span></div><div class="cell"><span class="status">Foto hasil</span></div>
+          </div>
+          <div class="row">
+            <div class="cell"><strong>11</strong></div><div class="cell"><strong>PRJ-5</strong></div><div class="cell">Peremajaan beton lapangan olahraga (basket)</div><div class="cell">Sarpras</div><div class="cell"><span class="progress-badge watch">20%</span></div><div class="cell"><span class="status">Foto awal</span></div><div class="cell"><span class="status">Foto kerja</span></div><div class="cell"><span class="status">Foto hasil</span></div>
+          </div>
+          <div class="row">
+            <div class="cell"><strong>12</strong></div><div class="cell"><strong>PRJ-9</strong></div><div class="cell">Digital Enhancement untuk program smart school dan penguatan branding sekolah untuk Inventaris Kantor</div><div class="cell">Sarpras</div><div class="cell"><span class="progress-badge low">15%</span></div><div class="cell"><span class="status">Foto awal</span></div><div class="cell"><span class="status">Foto kerja</span></div><div class="cell"><span class="status">Foto hasil</span></div>
+          </div>
+          <div class="row">
+            <div class="cell"><strong>13</strong></div><div class="cell"><strong>PRJ-12</strong></div><div class="cell">Digital Enhancement untuk program smart school dan penguatan branding sekolah untuk Alat Catu Daya</div><div class="cell">Sarpras</div><div class="cell"><span class="progress-badge low">15%</span></div><div class="cell"><span class="status">Foto awal</span></div><div class="cell"><span class="status">Foto kerja</span></div><div class="cell"><span class="status">Foto hasil</span></div>
+          </div>
+          <div class="row">
+            <div class="cell"><strong>14</strong></div><div class="cell"><strong>PRJ-8</strong></div><div class="cell">Kebutuhan fasilitas untuk ruang kelas modern atau "Smart Classroom"</div><div class="cell">Sarpras</div><div class="cell"><span class="progress-badge low">5%</span></div><div class="cell"><span class="status">Foto awal</span></div><div class="cell"><span class="status">Foto kerja</span></div><div class="cell"><span class="status">Foto hasil</span></div>
+          </div>
+          <div class="row">
+            <div class="cell"><strong>15</strong></div><div class="cell"><strong>PRJ-15</strong></div><div class="cell">Pengadaan Gerobak dan Tempat Sampah, Kran Wastafel dan Stopkontak untuk Peremajaan</div><div class="cell">Sarpras</div><div class="cell"><span class="progress-badge low">5%</span></div><div class="cell"><span class="status">Foto awal</span></div><div class="cell"><span class="status">Foto kerja</span></div><div class="cell"><span class="status">Foto hasil</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="content">
+        <div>
+          <div class="eyebrow">Standar Narasi</div>
+          <h2>Satu proyek diceritakan dalam tiga bukti utama</h2>
+        </div>
+        <div class="flow">
+          <div class="phase">
+            <span class="phase-tag before">Before</span>
+            <h3>Masalah dan kondisi existing</h3>
+            <ul>
+              <li>Lokasi dan ruang terdampak.</li>
+              <li>Kerusakan, kebutuhan, atau risiko operasional.</li>
+              <li>Foto lebar dan detail titik masalah.</li>
+            </ul>
+          </div>
+          <div class="arrow">→</div>
+          <div class="phase">
+            <span class="phase-tag process">Process</span>
+            <h3>Aktivitas pekerjaan di lapangan</h3>
+            <ul>
+              <li>Dokumentasi pekerjaan berjalan.</li>
+              <li>Kontrol mutu, material, dan koordinasi vendor.</li>
+              <li>Catatan kendala dan mitigasi.</li>
+            </ul>
+          </div>
+          <div class="arrow">→</div>
+          <div class="phase">
+            <span class="phase-tag after">After</span>
+            <h3>Output dan manfaat</h3>
+            <ul>
+              <li>Foto hasil dari sudut yang sama.</li>
+              <li>Perubahan fungsi, keamanan, atau kenyamanan.</li>
+              <li>Status siap pakai atau butuh tindak lanjut.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="footer">
+          <span>Rekomendasi: minimal 3 foto per proyek, ideal 6-9 foto jika pekerjaan besar.</span>
+          <span class="accent-line"></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="content">
+        <div class="project-title">
+          <div>
+            <div class="eyebrow">No. 01 | PRJ-2 | Sarpras | Progres 100%</div>
+            <h2>01. Peremajaan talang air pada dak beton lantai 3</h2>
+            <p class="slide-subtitle">Deskripsi: Meliputi penutupan lapisan membran dengan talang baru. Fokus laporan: sumber genangan/kebocoran, progres perbaikan jalur air, dan kondisi aliran setelah pekerjaan.</p>
+          </div>
+          <div class="project-code">01</div>
+        </div>
+        <div class="photo-row">
+          <div class="photo-slot"><strong>Before</strong><div class="mini-photo-grid"><div class="mini-photo main">Before 1 Utama</div><div class="mini-photo">Before 2 Detail</div><div class="mini-photo">Before 3 Pendukung</div></div><span>Foto talang lama, sumbatan, rembesan, karat, atau area rawan bocor.</span><div class="caption-box">Catatan: sertakan dampak ke ruang di bawahnya jika ada.</div></div>
+          <div class="photo-slot"><strong>Process</strong><div class="mini-photo-grid"><div class="mini-photo main">Process 1 Utama</div><div class="mini-photo">Process 2 Detail</div><div class="mini-photo">Process 3 Pendukung</div></div><span>Foto pembersihan, pembongkaran, pemasangan talang, dan sambungan pipa.</span><div class="caption-box">Catatan: tampilkan pengujian aliran atau kemiringan.</div></div>
+          <div class="photo-slot"><strong>After</strong><div class="mini-photo-grid"><div class="mini-photo main">After 1 Utama</div><div class="mini-photo">After 2 Detail</div><div class="mini-photo">After 3 Pendukung</div></div><span>Foto talang selesai, jalur air bersih, dan titik sambungan rapi.</span><div class="caption-box">Manfaat: risiko rembesan dan genangan berkurang.</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="content">
+        <div class="project-title">
+          <div>
+            <div class="eyebrow">No. 02 | PRJ-3 | Sarpras | Progres 100%</div>
+            <h2>02. Peremajaan dak beton masjid</h2>
+            <p class="slide-subtitle">Deskripsi: Pelapisan bagian atas cor dengan lapisan baru dan anti bocor. Fokus laporan: kondisi dak, proses waterproofing/perbaikan, dan hasil area ibadah yang lebih aman.</p>
+          </div>
+          <div class="project-code">02</div>
+        </div>
+        <div class="photo-row">
+          <div class="photo-slot"><strong>Before</strong><div class="mini-photo-grid"><div class="mini-photo main">Before 1 Utama</div><div class="mini-photo">Before 2 Detail</div><div class="mini-photo">Before 3 Pendukung</div></div><span>Foto retak, rembesan, genangan, atau area dak yang lapuk.</span><div class="caption-box">Catatan: hubungkan dengan dampak ke area masjid.</div></div>
+          <div class="photo-slot"><strong>Process</strong><div class="mini-photo-grid"><div class="mini-photo main">Process 1 Utama</div><div class="mini-photo">Process 2 Detail</div><div class="mini-photo">Process 3 Pendukung</div></div><span>Foto persiapan permukaan, perbaikan retak, pelapisan, dan inspeksi.</span><div class="caption-box">Catatan: tampilkan material dan area yang sudah ditangani.</div></div>
+          <div class="photo-slot"><strong>After</strong><div class="mini-photo-grid"><div class="mini-photo main">After 1 Utama</div><div class="mini-photo">After 2 Detail</div><div class="mini-photo">After 3 Pendukung</div></div><span>Foto dak selesai dan area masjid yang terdampak sudah rapi.</span><div class="caption-box">Manfaat: perlindungan bangunan dan kenyamanan ibadah.</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="content">
+        <div class="project-title">
+          <div>
+            <div class="eyebrow">No. 03 | PRJ-4 | Sarpras | Progres 100%</div>
+            <h2>03. Peremajaan cat dinding pada 10 ruang kelas (R.7 - R.16)</h2>
+            <p class="slide-subtitle">Deskripsi: Pengecatan dinding bagian samping dan depan 10 ruang kelas lantai 1. Fokus laporan: kondisi cat lama, persiapan bidang, dan suasana kelas setelah finishing.</p>
+          </div>
+          <div class="project-code">03</div>
+        </div>
+        <div class="photo-row">
+          <div class="photo-slot"><strong>Before</strong><div class="mini-photo-grid"><div class="mini-photo main">Before 1 Utama</div><div class="mini-photo">Before 2 Detail</div><div class="mini-photo">Before 3 Pendukung</div></div><span>Foto dinding kusam, mengelupas, lembap, atau coretan.</span><div class="caption-box">Catatan: ambil foto representatif tiap kelompok ruang.</div></div>
+          <div class="photo-slot"><strong>Process</strong><div class="mini-photo-grid"><div class="mini-photo main">Process 1 Utama</div><div class="mini-photo">Process 2 Detail</div><div class="mini-photo">Process 3 Pendukung</div></div><span>Foto pengamplasan, plamir, masking, pengecatan dasar, dan pengecatan akhir.</span><div class="caption-box">Catatan: sertakan kontrol warna dan kerapian tepi.</div></div>
+          <div class="photo-slot"><strong>After</strong><div class="mini-photo-grid"><div class="mini-photo main">After 1 Utama</div><div class="mini-photo">After 2 Detail</div><div class="mini-photo">After 3 Pendukung</div></div><span>Foto ruang kelas setelah pengecatan, pencahayaan baik, dan meja kursi tertata.</span><div class="caption-box">Manfaat: ruang belajar lebih segar dan representatif.</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="content">
+        <div class="project-title">
+          <div>
+            <div class="eyebrow">No. 04 | PRJ-6 | Lab | Progres 85%</div>
+            <h2>04. Pengadaan interior Laboratorium TEFA (Lab. 3)</h2>
+            <p class="slide-subtitle">Deskripsi: ruang bersama K3. Fokus laporan: kebutuhan ruang TEFA, proses instalasi interior, dan kesiapan lab untuk pembelajaran/praktik.</p>
+          </div>
+          <div class="project-code">04</div>
+        </div>
+        <div class="photo-row">
+          <div class="photo-slot"><strong>Before</strong><div class="mini-photo-grid"><div class="mini-photo main">Before 1 Utama</div><div class="mini-photo">Before 2 Detail</div><div class="mini-photo">Before 3 Pendukung</div></div><span>Foto kondisi ruang sebelum interior, layout lama, dan area yang belum fungsional.</span><div class="caption-box">Catatan: cantumkan kebutuhan pembelajaran atau produksi TEFA.</div></div>
+          <div class="photo-slot"><strong>Process</strong><div class="mini-photo-grid"><div class="mini-photo main">Process 1 Utama</div><div class="mini-photo">Process 2 Detail</div><div class="mini-photo">Process 3 Pendukung</div></div><span>Foto pengukuran, perakitan furniture, instalasi listrik/data, dan penataan ruang.</span><div class="caption-box">Catatan: tampilkan koordinasi Lab, IT, dan Sarpras.</div></div>
+          <div class="photo-slot"><strong>After</strong><div class="mini-photo-grid"><div class="mini-photo main">After 1 Utama</div><div class="mini-photo">After 2 Detail</div><div class="mini-photo">After 3 Pendukung</div></div><span>Foto interior final, workstation, area display, dan jalur kerja lab.</span><div class="caption-box">Manfaat: lab lebih siap untuk praktik industri dan showcase.</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="content">
+        <div class="project-title">
+          <div>
+            <div class="eyebrow">No. 05 | PRJ-1 | Sarpras | Progres 75%</div>
+            <h2>05. Peremajaan keramik pada 3 ruang kelas (R.1 - R.3)</h2>
+            <p class="slide-subtitle">Deskripsi: Lantai granit 60x60. Fokus laporan: kondisi lantai sebelum pekerjaan, proses bongkar/pasang, dan hasil ruang kelas siap digunakan.</p>
+          </div>
+          <div class="project-code">05</div>
+        </div>
+        <div class="photo-row">
+          <div class="photo-slot"><strong>Before</strong><div class="mini-photo-grid"><div class="mini-photo main">Before 1 Utama</div><div class="mini-photo">Before 2 Detail</div><div class="mini-photo">Before 3 Pendukung</div></div><span>Foto lantai rusak, pecah, menggelembung, atau area yang mengganggu aktivitas kelas.</span><div class="caption-box">Catatan: tandai ruang dan titik kerusakan paling kritis.</div></div>
+          <div class="photo-slot"><strong>Process</strong><div class="mini-photo-grid"><div class="mini-photo main">Process 1 Utama</div><div class="mini-photo">Process 2 Detail</div><div class="mini-photo">Process 3 Pendukung</div></div><span>Foto pembongkaran, leveling, pemasangan keramik, dan pengecekan nat.</span><div class="caption-box">Catatan: tampilkan tahapan kerja dan kontrol kerapian.</div></div>
+          <div class="photo-slot"><strong>After</strong><div class="mini-photo-grid"><div class="mini-photo main">After 1 Utama</div><div class="mini-photo">After 2 Detail</div><div class="mini-photo">After 3 Pendukung</div></div><span>Foto ruang kelas setelah bersih, rapi, dan siap dipakai siswa/guru.</span><div class="caption-box">Manfaat: keamanan dan kenyamanan belajar meningkat.</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="content">
+        <div class="project-title">
+          <div>
+            <div class="eyebrow">No. 06 | PRJ-7 | IT & Sarpras | Progres 70%</div>
+            <h2>06. Pembangunan Malang Techno Park (Lanjutan)</h2>
+            <p class="slide-subtitle">Deskripsi: Pembangunan Lantai 3 secara keseluruhan untuk mencapai target ruang kelas international tahun ajaran 2026/2027. Fokus laporan: pekerjaan lanjutan area MTP, integrasi infrastruktur, dan kesiapan operasional ruang.</p>
+          </div>
+          <div class="project-code">06</div>
+        </div>
+        <div class="photo-row">
+          <div class="photo-slot"><strong>Before</strong><div class="mini-photo-grid"><div class="mini-photo main">Before 1 Utama</div><div class="mini-photo">Before 2 Detail</div><div class="mini-photo">Before 3 Pendukung</div></div><span>Foto area existing, bagian yang belum selesai, dan kebutuhan teknis/ruang.</span><div class="caption-box">Catatan: bedakan pekerjaan sipil, interior, jaringan, dan listrik.</div></div>
+          <div class="photo-slot"><strong>Process</strong><div class="mini-photo-grid"><div class="mini-photo main">Process 1 Utama</div><div class="mini-photo">Process 2 Detail</div><div class="mini-photo">Process 3 Pendukung</div></div><span>Foto progres konstruksi, instalasi perangkat, penarikan kabel, dan koordinasi vendor.</span><div class="caption-box">Catatan: tampilkan milestone pekerjaan utama.</div></div>
+          <div class="photo-slot"><strong>After</strong><div class="mini-photo-grid"><div class="mini-photo main">After 1 Utama</div><div class="mini-photo">After 2 Detail</div><div class="mini-photo">After 3 Pendukung</div></div><span>Foto area final, perangkat menyala, dan ruang siap dipakai.</span><div class="caption-box">Manfaat: fasilitas inovasi dan kolaborasi semakin siap operasional.</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="content">
+        <div class="project-title">
+          <div>
+            <div class="eyebrow">No. 07 | PRJ-10 | Sarpras | Progres 50%</div>
+            <h2>07. Pengadaan AC Ruang Kelas</h2>
+            <p class="slide-subtitle">Deskripsi: AC lantai 1 dan 2 gedung utara (15 ruang). Fokus laporan: kondisi ruang sebelum AC, proses pemasangan, dan kenyamanan ruang kelas setelah instalasi.</p>
+          </div>
+          <div class="project-code">07</div>
+        </div>
+        <div class="photo-row">
+          <div class="photo-slot"><strong>Before</strong><div class="mini-photo-grid"><div class="mini-photo main">Before 1 Utama</div><div class="mini-photo">Before 2 Detail</div><div class="mini-photo">Before 3 Pendukung</div></div><span>Foto kondisi existing, titik masalah, dan konteks lokasi pekerjaan.</span><div class="caption-box">Catatan: isi masalah utama dan dampaknya.</div></div>
+          <div class="photo-slot"><strong>Process</strong><div class="mini-photo-grid"><div class="mini-photo main">Process 1 Utama</div><div class="mini-photo">Process 2 Detail</div><div class="mini-photo">Process 3 Pendukung</div></div><span>Foto aktivitas pengerjaan, material, instalasi, koordinasi, atau pengawasan.</span><div class="caption-box">Catatan: isi tahapan kerja dan progres.</div></div>
+          <div class="photo-slot"><strong>After</strong><div class="mini-photo-grid"><div class="mini-photo main">After 1 Utama</div><div class="mini-photo">After 2 Detail</div><div class="mini-photo">After 3 Pendukung</div></div><span>Foto hasil akhir dari sudut yang sama atau paling representatif.</span><div class="caption-box">Manfaat: isi perubahan fungsi, kualitas, atau kesiapan pakai.</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="content">
+        <div class="project-title">
+          <div>
+            <div class="eyebrow">No. 08 | PRJ-13 | Sarpras | Progres 50%</div>
+            <h2>08. Pengadaan AC Ruang Kelas Tahap II</h2>
+            <p class="slide-subtitle">Deskripsi: Lanjutan pengadaan AC ruang kelas. Fokus laporan: ruang sasaran tahap II, proses pemasangan, dan hasil kenyamanan kelas.</p>
+          </div>
+          <div class="project-code">08</div>
+        </div>
+        <div class="photo-row">
+          <div class="photo-slot"><strong>Before</strong><div class="mini-photo-grid"><div class="mini-photo main">Before 1 Utama</div><div class="mini-photo">Before 2 Detail</div><div class="mini-photo">Before 3 Pendukung</div></div><span>Foto kondisi existing, titik masalah, dan konteks lokasi pekerjaan.</span><div class="caption-box">Catatan: isi masalah utama dan dampaknya.</div></div>
+          <div class="photo-slot"><strong>Process</strong><div class="mini-photo-grid"><div class="mini-photo main">Process 1 Utama</div><div class="mini-photo">Process 2 Detail</div><div class="mini-photo">Process 3 Pendukung</div></div><span>Foto aktivitas pengerjaan, material, instalasi, koordinasi, atau pengawasan.</span><div class="caption-box">Catatan: isi tahapan kerja dan progres.</div></div>
+          <div class="photo-slot"><strong>After</strong><div class="mini-photo-grid"><div class="mini-photo main">After 1 Utama</div><div class="mini-photo">After 2 Detail</div><div class="mini-photo">After 3 Pendukung</div></div><span>Foto hasil akhir dari sudut yang sama atau paling representatif.</span><div class="caption-box">Manfaat: isi perubahan fungsi, kualitas, atau kesiapan pakai.</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="content">
+        <div class="project-title">
+          <div>
+            <div class="eyebrow">No. 09 | PRJ-14 | Sarpras | Progres 50%</div>
+            <h2>09. Pengadaan Studio Musik dan Podcast</h2>
+            <p class="slide-subtitle">Deskripsi: Meliputi pengadaan studio musik dan podcast. Fokus laporan: kondisi ruang/peralatan awal, proses penataan studio, dan hasil siap produksi.</p>
+          </div>
+          <div class="project-code">09</div>
+        </div>
+        <div class="photo-row">
+          <div class="photo-slot"><strong>Before</strong><div class="mini-photo-grid"><div class="mini-photo main">Before 1 Utama</div><div class="mini-photo">Before 2 Detail</div><div class="mini-photo">Before 3 Pendukung</div></div><span>Foto kondisi existing, titik masalah, dan konteks lokasi pekerjaan.</span><div class="caption-box">Catatan: isi masalah utama dan dampaknya.</div></div>
+          <div class="photo-slot"><strong>Process</strong><div class="mini-photo-grid"><div class="mini-photo main">Process 1 Utama</div><div class="mini-photo">Process 2 Detail</div><div class="mini-photo">Process 3 Pendukung</div></div><span>Foto aktivitas pengerjaan, material, instalasi, koordinasi, atau pengawasan.</span><div class="caption-box">Catatan: isi tahapan kerja dan progres.</div></div>
+          <div class="photo-slot"><strong>After</strong><div class="mini-photo-grid"><div class="mini-photo main">After 1 Utama</div><div class="mini-photo">After 2 Detail</div><div class="mini-photo">After 3 Pendukung</div></div><span>Foto hasil akhir dari sudut yang sama atau paling representatif.</span><div class="caption-box">Manfaat: isi perubahan fungsi, kualitas, atau kesiapan pakai.</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="content">
+        <div class="project-title">
+          <div>
+            <div class="eyebrow">No. 10 | PRJ-11 | Sarpras | Progres 25%</div>
+            <h2>10. Digital Enhancement untuk program smart school dan penguatan branding sekolah untuk Alat Pengolah Data</h2>
+            <p class="slide-subtitle">Deskripsi: Access Point Indoor. Fokus laporan: titik kebutuhan jaringan, proses instalasi, dan kualitas konektivitas setelah perangkat aktif.</p>
+          </div>
+          <div class="project-code">10</div>
+        </div>
+        <div class="photo-row">
+          <div class="photo-slot"><strong>Before</strong><div class="mini-photo-grid"><div class="mini-photo main">Before 1 Utama</div><div class="mini-photo">Before 2 Detail</div><div class="mini-photo">Before 3 Pendukung</div></div><span>Foto kondisi existing, titik masalah, dan konteks lokasi pekerjaan.</span><div class="caption-box">Catatan: isi masalah utama dan dampaknya.</div></div>
+          <div class="photo-slot"><strong>Process</strong><div class="mini-photo-grid"><div class="mini-photo main">Process 1 Utama</div><div class="mini-photo">Process 2 Detail</div><div class="mini-photo">Process 3 Pendukung</div></div><span>Foto aktivitas pengerjaan, material, instalasi, koordinasi, atau pengawasan.</span><div class="caption-box">Catatan: isi tahapan kerja dan progres.</div></div>
+          <div class="photo-slot"><strong>After</strong><div class="mini-photo-grid"><div class="mini-photo main">After 1 Utama</div><div class="mini-photo">After 2 Detail</div><div class="mini-photo">After 3 Pendukung</div></div><span>Foto hasil akhir dari sudut yang sama atau paling representatif.</span><div class="caption-box">Manfaat: isi perubahan fungsi, kualitas, atau kesiapan pakai.</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="content">
+        <div class="project-title">
+          <div>
+            <div class="eyebrow">No. 11 | PRJ-5 | Sarpras | Progres 20%</div>
+            <h2>11. Peremajaan beton lapangan olahraga (basket)</h2>
+            <p class="slide-subtitle">Deskripsi: Pengecoran ulang lapisan beton lapangan. Fokus laporan: kerusakan permukaan lapangan, proses pengecoran/perataan, dan kelayakan aktivitas olahraga.</p>
+          </div>
+          <div class="project-code">11</div>
+        </div>
+        <div class="photo-row">
+          <div class="photo-slot"><strong>Before</strong><div class="mini-photo-grid"><div class="mini-photo main">Before 1 Utama</div><div class="mini-photo">Before 2 Detail</div><div class="mini-photo">Before 3 Pendukung</div></div><span>Foto permukaan retak, tidak rata, berlubang, atau area yang berisiko cedera.</span><div class="caption-box">Catatan: ambil foto detail dan foto keseluruhan lapangan.</div></div>
+          <div class="photo-slot"><strong>Process</strong><div class="mini-photo-grid"><div class="mini-photo main">Process 1 Utama</div><div class="mini-photo">Process 2 Detail</div><div class="mini-photo">Process 3 Pendukung</div></div><span>Foto pembongkaran, bekisting, pengecoran, curing, dan marking area.</span><div class="caption-box">Catatan: tampilkan pengawasan kualitas permukaan.</div></div>
+          <div class="photo-slot"><strong>After</strong><div class="mini-photo-grid"><div class="mini-photo main">After 1 Utama</div><div class="mini-photo">After 2 Detail</div><div class="mini-photo">After 3 Pendukung</div></div><span>Foto lapangan selesai, garis lapangan, dan area siap digunakan.</span><div class="caption-box">Manfaat: aktivitas olahraga lebih aman dan optimal.</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="content">
+        <div class="project-title">
+          <div>
+            <div class="eyebrow">No. 12 | PRJ-9 | Sarpras | Progres 15%</div>
+            <h2>12. Digital Enhancement untuk program smart school dan penguatan branding sekolah untuk Inventaris Kantor</h2>
+            <p class="slide-subtitle">Deskripsi: Pengadaan Peralatan Multimedia dan Dokumentasi Sekolah. Fokus laporan: kebutuhan perangkat, proses pengadaan, dan manfaat dokumentasi/branding.</p>
+          </div>
+          <div class="project-code">12</div>
+        </div>
+        <div class="photo-row">
+          <div class="photo-slot"><strong>Before</strong><div class="mini-photo-grid"><div class="mini-photo main">Before 1 Utama</div><div class="mini-photo">Before 2 Detail</div><div class="mini-photo">Before 3 Pendukung</div></div><span>Foto kondisi existing, titik masalah, dan konteks lokasi pekerjaan.</span><div class="caption-box">Catatan: isi masalah utama dan dampaknya.</div></div>
+          <div class="photo-slot"><strong>Process</strong><div class="mini-photo-grid"><div class="mini-photo main">Process 1 Utama</div><div class="mini-photo">Process 2 Detail</div><div class="mini-photo">Process 3 Pendukung</div></div><span>Foto aktivitas pengerjaan, material, instalasi, koordinasi, atau pengawasan.</span><div class="caption-box">Catatan: isi tahapan kerja dan progres.</div></div>
+          <div class="photo-slot"><strong>After</strong><div class="mini-photo-grid"><div class="mini-photo main">After 1 Utama</div><div class="mini-photo">After 2 Detail</div><div class="mini-photo">After 3 Pendukung</div></div><span>Foto hasil akhir dari sudut yang sama atau paling representatif.</span><div class="caption-box">Manfaat: isi perubahan fungsi, kualitas, atau kesiapan pakai.</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="content">
+        <div class="project-title">
+          <div>
+            <div class="eyebrow">No. 13 | PRJ-12 | Sarpras | Progres 15%</div>
+            <h2>13. Digital Enhancement untuk program smart school dan penguatan branding sekolah untuk Alat Catu Daya</h2>
+            <p class="slide-subtitle">Deskripsi: IP CCTV (HIK Central). Fokus laporan: kebutuhan monitoring, proses instalasi/integrasi, dan hasil pemantauan setelah perangkat aktif.</p>
+          </div>
+          <div class="project-code">13</div>
+        </div>
+        <div class="photo-row">
+          <div class="photo-slot"><strong>Before</strong><div class="mini-photo-grid"><div class="mini-photo main">Before 1 Utama</div><div class="mini-photo">Before 2 Detail</div><div class="mini-photo">Before 3 Pendukung</div></div><span>Foto kondisi existing, titik masalah, dan konteks lokasi pekerjaan.</span><div class="caption-box">Catatan: isi masalah utama dan dampaknya.</div></div>
+          <div class="photo-slot"><strong>Process</strong><div class="mini-photo-grid"><div class="mini-photo main">Process 1 Utama</div><div class="mini-photo">Process 2 Detail</div><div class="mini-photo">Process 3 Pendukung</div></div><span>Foto aktivitas pengerjaan, material, instalasi, koordinasi, atau pengawasan.</span><div class="caption-box">Catatan: isi tahapan kerja dan progres.</div></div>
+          <div class="photo-slot"><strong>After</strong><div class="mini-photo-grid"><div class="mini-photo main">After 1 Utama</div><div class="mini-photo">After 2 Detail</div><div class="mini-photo">After 3 Pendukung</div></div><span>Foto hasil akhir dari sudut yang sama atau paling representatif.</span><div class="caption-box">Manfaat: isi perubahan fungsi, kualitas, atau kesiapan pakai.</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="content">
+        <div class="project-title">
+          <div>
+            <div class="eyebrow">No. 14 | PRJ-8 | Sarpras | Progres 5%</div>
+            <h2>14. Kebutuhan fasilitas untuk ruang kelas modern atau "Smart Classroom"</h2>
+            <p class="slide-subtitle">Deskripsi: Pemenuhan Fasilitas Utama Sekolah Premium. Fokus laporan: kebutuhan ruang kelas modern, proses pengadaan/instalasi, dan kesiapan fasilitas.</p>
+          </div>
+          <div class="project-code">14</div>
+        </div>
+        <div class="photo-row">
+          <div class="photo-slot"><strong>Before</strong><div class="mini-photo-grid"><div class="mini-photo main">Before 1 Utama</div><div class="mini-photo">Before 2 Detail</div><div class="mini-photo">Before 3 Pendukung</div></div><span>Foto kondisi existing, titik masalah, dan konteks lokasi pekerjaan.</span><div class="caption-box">Catatan: isi masalah utama dan dampaknya.</div></div>
+          <div class="photo-slot"><strong>Process</strong><div class="mini-photo-grid"><div class="mini-photo main">Process 1 Utama</div><div class="mini-photo">Process 2 Detail</div><div class="mini-photo">Process 3 Pendukung</div></div><span>Foto aktivitas pengerjaan, material, instalasi, koordinasi, atau pengawasan.</span><div class="caption-box">Catatan: isi tahapan kerja dan progres.</div></div>
+          <div class="photo-slot"><strong>After</strong><div class="mini-photo-grid"><div class="mini-photo main">After 1 Utama</div><div class="mini-photo">After 2 Detail</div><div class="mini-photo">After 3 Pendukung</div></div><span>Foto hasil akhir dari sudut yang sama atau paling representatif.</span><div class="caption-box">Manfaat: isi perubahan fungsi, kualitas, atau kesiapan pakai.</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="content">
+        <div class="project-title">
+          <div>
+            <div class="eyebrow">No. 15 | PRJ-15 | Sarpras | Progres 5%</div>
+            <h2>15. Pengadaan Gerobak dan Tempat Sampah, Kran Wastafel dan Stopkontak untuk Peremajaan</h2>
+            <p class="slide-subtitle">Deskripsi: Pengadaan untuk peremajaan alat kebersihan dan elektronik. Fokus laporan: kebutuhan fasilitas, proses pengadaan/pemasangan, dan hasil siap pakai.</p>
+          </div>
+          <div class="project-code">15</div>
+        </div>
+        <div class="photo-row">
+          <div class="photo-slot"><strong>Before</strong><div class="mini-photo-grid"><div class="mini-photo main">Before 1 Utama</div><div class="mini-photo">Before 2 Detail</div><div class="mini-photo">Before 3 Pendukung</div></div><span>Foto kondisi existing, titik masalah, dan konteks lokasi pekerjaan.</span><div class="caption-box">Catatan: isi masalah utama dan dampaknya.</div></div>
+          <div class="photo-slot"><strong>Process</strong><div class="mini-photo-grid"><div class="mini-photo main">Process 1 Utama</div><div class="mini-photo">Process 2 Detail</div><div class="mini-photo">Process 3 Pendukung</div></div><span>Foto aktivitas pengerjaan, material, instalasi, koordinasi, atau pengawasan.</span><div class="caption-box">Catatan: isi tahapan kerja dan progres.</div></div>
+          <div class="photo-slot"><strong>After</strong><div class="mini-photo-grid"><div class="mini-photo main">After 1 Utama</div><div class="mini-photo">After 2 Detail</div><div class="mini-photo">After 3 Pendukung</div></div><span>Foto hasil akhir dari sudut yang sama atau paling representatif.</span><div class="caption-box">Manfaat: isi perubahan fungsi, kualitas, atau kesiapan pakai.</div></div>
+        </div>
+      </div>
+    </section>
+
+
+
+    <section class="slide">
+      <div class="content">
+        <div>
+          <div class="eyebrow">Timeline & Kontrol</div>
+          <h2>Alur kerja pelaporan oleh PIC Kaur IT LAB SARPRA</h2>
+          <p class="slide-subtitle">Gunakan alur ini untuk memastikan semua pekerjaan memiliki evidence yang lengkap sebelum laporan final dikirim.</p>
+        </div>
+        <div class="timeline">
+          <div class="step"><div class="step-num">1</div><h3>Mapping</h3><p class="note">Validasi daftar proyek, lokasi, owner, dan PIC dokumentasi.</p></div>
+          <div class="step"><div class="step-num">2</div><h3>Before</h3><p class="note">Kumpulkan foto awal dan catatan masalah per titik pekerjaan.</p></div>
+          <div class="step"><div class="step-num">3</div><h3>Process</h3><p class="note">Update progres mingguan, kendala, material, vendor, dan pengawasan.</p></div>
+          <div class="step"><div class="step-num">4</div><h3>After</h3><p class="note">Ambil foto final dari sudut yang sama dan lakukan cek fungsi.</p></div>
+          <div class="step"><div class="step-num">5</div><h3>Finalisasi</h3><p class="note">Lengkapi narasi, rekap status, dan lampiran dokumen pendukung.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="content">
+        <div>
+          <div class="eyebrow">Checklist Evidence</div>
+          <h2>Data minimal yang sebaiknya ada di setiap pekerjaan</h2>
+        </div>
+        <div class="grid-2">
+          <div class="panel">
+            <h3>Dokumentasi visual</h3>
+            <ul class="checklist">
+              <li>Foto before, process, after dari sudut yang konsisten.</li>
+              <li>Foto detail titik kritis: retak, bocor, instalasi, finishing, atau perangkat.</li>
+              <li>Foto wide angle untuk menunjukkan konteks lokasi.</li>
+              <li>Caption berisi ruang, tanggal, dan fase pekerjaan.</li>
+            </ul>
+          </div>
+          <div class="panel">
+            <h3>Dokumentasi administratif</h3>
+            <ul class="checklist">
+              <li>Nama pekerjaan, akun CAPEX, owner, PIC, dan vendor jika ada.</li>
+              <li>Tanggal mulai, tanggal selesai, dan progres terakhir.</li>
+              <li>Catatan kendala, mitigasi, dan tindak lanjut.</li>
+              <li>Status serah-terima atau kesiapan pakai.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="footer">
+          <span>Foto dapat dimasukkan langsung di Canva dengan mengganti bingkai pada masing-masing fase.</span>
+          <span class="accent-line"></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="content">
+        <div>
+          <div class="eyebrow">Rekap Final</div>
+          <h2>Ringkasan status untuk pimpinan</h2>
+          <p class="slide-subtitle">Ringkasan ini digunakan sebagai penutup laporan progress dan evidence pekerjaan.</p>
+        </div>
+        <div class="grid-3">
+          <div class="panel metric">
+            <div class="num">15</div>
+            <h3>Total pekerjaan</h3>
+            <p class="label">Jumlah proyek CAPEX yang dilaporkan pada periode ini.</p>
+          </div>
+          <div class="panel metric">
+            <div class="num">50,3%</div>
+            <h3>Rata-rata progres</h3>
+            <p class="label">Berdasarkan 15 pekerjaan pada data Progres_CAPEX terakhir.</p>
+          </div>
+          <div class="panel metric">
+            <div class="num">3</div>
+            <h3>Pekerjaan selesai</h3>
+            <p class="label">Pekerjaan dengan progres 100% dan siap dilengkapi evidence after.</p>
+          </div>
+        </div>
+        <div class="quote">“Laporan CAPEX tidak hanya menunjukkan anggaran terserap, tetapi membuktikan perubahan nyata di ruang belajar, laboratorium, infrastruktur, dan layanan sekolah.”</div>
+      </div>
+    </section>
+
+    <section class="slide cover">
+      <div class="content">
+        <div class="cover-top">
+          <div>
+            <div class="eyebrow">Penutup</div>
+            <h1>Evidence lengkap, progres transparan, manfaat terlihat.</h1>
+            <p class="subtitle">Presentasi ini siap dikolaborasikan di Canva dan dilengkapi foto lapangan oleh PIC Kaur IT LAB SARPRA.</p>
+          </div>
+          <div class="cover-logo-box">
+            <img src="logo_telkom.png" alt="Telkom Schools" />
+          </div>
+        </div>
+        <div class="meta-row">
+          <span class="pill">Before</span>
+          <span class="pill">Process</span>
+          <span class="pill">After</span>
+          <span class="pill">CAPEX 2026</span>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
