@@ -744,7 +744,7 @@ const CapexBudget = () => {
                 </span>
               </div>
               <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                Koordinator Sarpras dan pimpinan bisa menambahkan pekerjaan baru, lalu progresnya tetap diupdate mingguan.
+                Pimpinan dan Koordinator (Sarpras/IT/Lab) bisa menambahkan pekerjaan baru, lalu progresnya tetap diupdate mingguan.
               </div>
             </div>
             {canUpdate && (
