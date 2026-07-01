@@ -50,10 +50,10 @@ const normalizeKeys = (row: Record<string, unknown>) => {
 
 const parseEvidence = (row: Record<string, unknown>): EvidenceRecord | null => {
   const r = normalizeKeys(row);
-  const projectId = String(r.projectid || r.project_id || '').trim();
-  const phaseRaw = String(r.phase || '').trim();
+  const projectId = String(r.projectid || r.project_id || r.type || '').trim();
+  const phaseRaw = String(r.phase || r.kategori || '').trim();
   const phase = PHASES.includes(phaseRaw as Phase) ? phaseRaw as Phase : null;
-  const slot = Number(r.slot || 0);
+  const slot = Number(r.slot || r.amount || 0);
   if (!projectId || !phase || !slot) return null;
 
   return {
@@ -64,13 +64,13 @@ const parseEvidence = (row: Record<string, unknown>): EvidenceRecord | null => {
     progress: Number(r.progress || 0),
     phase,
     slot,
-    caption: String(r.caption || ''),
-    imageUrl: String(r.imageurl || r.image_url || ''),
-    driveUrl: String(r.driveurl || r.drive_url || ''),
+    caption: String(r.caption || r.keterangan || ''),
+    imageUrl: String(r.imageurl || r.image_url || r.debit || ''),
+    driveUrl: String(r.driveurl || r.drive_url || r.kredit || ''),
     fileName: String(r.filename || r.file_name || ''),
     updatedBy: String(r.updatedby || r.updated_by || ''),
     updatedByEmail: String(r.updatedbyemail || r.updated_by_email || ''),
-    updatedAt: String(r.updatedat || r.updated_at || ''),
+    updatedAt: String(r.updatedat || r.updated_at || r.tanggal || ''),
   };
 };
 
@@ -206,6 +206,17 @@ const CapexEvidence = () => {
       sheet: SHEET_EVIDENCE,
       id: record.id,
       ID: record.id,
+      // Map to the existing sheet columns:
+      // id, tanggal, keterangan, kategori, amount, type, debit, kredit
+      type: record.projectId,
+      kategori: record.phase,
+      amount: record.slot,
+      keterangan: record.caption,
+      debit: record.imageUrl,
+      kredit: record.driveUrl,
+      tanggal: record.updatedAt,
+
+      // Also preserve original fields for robustness and future schema upgrades
       ProjectId: record.projectId,
       projectId: record.projectId,
       Nama: record.nama,
