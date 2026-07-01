@@ -23,11 +23,12 @@ import Utilities from './pages/Utilities';
 import AccessLogs from './pages/AccessLogs';
 import DutyNotes from './pages/DutyNotes';
 import CapexBudget from './pages/CapexBudget';
+import CapexEvidence from './pages/CapexEvidence';
 import ClassroomMonitor from './pages/ClassroomMonitor';
 import ClassroomPriorityFocus from './pages/ClassroomPriorityFocus';
 import Login from './pages/Login';
 import SarmokAssistant from './pages/SarmokAssistant';
-import { canAccessFinanceData, getCurrentUser, ROLES } from './data/organization';
+import { canAccessCapexEvidence, canAccessFinanceData, getCurrentUser, ROLES } from './data/organization';
 import { NAVIGATION } from './navigation';
 import { logAccess } from './utils/logger';
 
@@ -85,6 +86,12 @@ const PimpinanRoute = ({ isLoggedIn, children }: { isLoggedIn: boolean, children
 const FinanceRoute = ({ isLoggedIn, children }: { isLoggedIn: boolean, children: React.ReactNode }) => {
   if (!isLoggedIn) return <Navigate to="/login" replace />;
   if (!canAccessFinanceData(getCurrentUser())) return <Navigate to="/" replace />;
+  return children;
+};
+
+const CapexEvidenceRoute = ({ isLoggedIn, children }: { isLoggedIn: boolean, children: React.ReactNode }) => {
+  if (!isLoggedIn) return <Navigate to="/login" replace />;
+  if (!canAccessCapexEvidence(getCurrentUser())) return <Navigate to="/" replace />;
   return children;
 };
 
@@ -217,6 +224,7 @@ function App() {
               <Route path="/maintenance" element={<ProtectedRoute isLoggedIn={isLoggedIn}><DummyPage title="Jadwal Maintenance" /></ProtectedRoute>} />
               <Route path="/ac-monitor" element={<ProtectedRoute isLoggedIn={isLoggedIn}><ACMonitor /></ProtectedRoute>} />
               <Route path="/capex" element={<ProtectedRoute isLoggedIn={isLoggedIn}><CapexBudget /></ProtectedRoute>} />
+              <Route path="/capex-evidence" element={<CapexEvidenceRoute isLoggedIn={isLoggedIn}><CapexEvidence /></CapexEvidenceRoute>} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
 

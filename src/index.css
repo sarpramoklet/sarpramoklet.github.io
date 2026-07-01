@@ -854,6 +854,16 @@ tr:hover td {
 }
 
 @media (max-width: 768px) {
+  .capex-evidence-stats,
+  .capex-evidence-layout,
+  .capex-evidence-slot-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .capex-evidence-layout > .glass-panel:first-child {
+    position: static !important;
+  }
+
   .quick-actions-bar {
     width: calc(100vw - 1.25rem);
     max-width: none;

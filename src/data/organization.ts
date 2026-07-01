@@ -273,6 +273,15 @@ export const FINANCE_ALLOWED_EMAILS: ReadonlyArray<string> = [
 
 const FINANCE_ALLOWED_SET = new Set(FINANCE_ALLOWED_EMAILS.map((email) => email.toLowerCase()));
 
+export const CAPEX_EVIDENCE_ALLOWED_EMAILS: ReadonlyArray<string> = [
+  'hadi@smktelkom-mlg.sch.id',
+  'ekon.a.poernomo@smktelkom-mlg.sch.id',
+  'whyna@smktelkom-mlg.sch.id',
+  'chusni@smktelkom-mlg.sch.id',
+];
+
+const CAPEX_EVIDENCE_ALLOWED_SET = new Set(CAPEX_EVIDENCE_ALLOWED_EMAILS.map((email) => email.toLowerCase()));
+
 export const canAccessFinanceData = (input?: User | string | null): boolean => {
   const email = typeof input === 'string'
     ? input
@@ -286,4 +295,19 @@ export const canAccessFinanceData = (input?: User | string | null): boolean => {
   }
 
   return FINANCE_ALLOWED_SET.has(email.trim().toLowerCase());
+};
+
+export const canAccessCapexEvidence = (input?: User | string | null): boolean => {
+  const email = typeof input === 'string'
+    ? input
+    : input?.email;
+
+  if (!email) {
+    if (typeof window === 'undefined') return false;
+    const stored = window.localStorage.getItem('userEmail');
+    if (!stored) return false;
+    return CAPEX_EVIDENCE_ALLOWED_SET.has(stored.trim().toLowerCase());
+  }
+
+  return CAPEX_EVIDENCE_ALLOWED_SET.has(email.trim().toLowerCase());
 };

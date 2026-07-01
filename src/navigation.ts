@@ -1,4 +1,4 @@
-import { LayoutDashboard, Server, Component, Building, Package, BookOpen, Presentation, Users, Briefcase, TrendingUp, Zap, Wallet, History as HistoryIcon, Coins, Wind, Target, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, Server, Component, Building, Package, BookOpen, Presentation, Users, Briefcase, TrendingUp, Zap, Wallet, History as HistoryIcon, Coins, Wind, Target, MessageSquare, Camera } from 'lucide-react';
 
 export const NAVIGATION = [
   { path: '/', name: 'Dashboard', icon: LayoutDashboard, authRequired: false },
@@ -26,4 +26,5 @@ export const NAVIGATION = [
   { path: '/classroom-monitor', name: 'Monitor Kelas', icon: Building, authRequired: true },
 
   { path: '/capex', name: 'Monitor CAPEX', icon: Target, authRequired: true, leaderOnly: true },
+  { path: '/capex-evidence', name: 'Laporan Foto CAPEX', icon: Camera, authRequired: true, capexEvidenceOnly: true },
 ];
