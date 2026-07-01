@@ -17,6 +17,8 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RH
 const SHEET_PROJECTS = 'Progres_CAPEX';
 const SHEET_EVIDENCE = 'Capex_Evidence';
 const DRIVE_FOLDER = 'Sarpramoklet_CAPEX_Evidence';
+const LS_IMAGE_PREFIX = 'capex_ev_img_';
+const LS_CAPTION_PREFIX = 'capex_ev_cap_';
 
 type Phase = 'Before' | 'Process' | 'After';
 
@@ -40,6 +42,21 @@ interface EvidenceRecord {
 const PHASES: Phase[] = ['Before', 'Process', 'After'];
 const SLOTS = [1, 2, 3];
 
+// ─── LocalStorage helpers ──────────────────────────────────────────────────
+const lsSetImage = (key: string, dataUrl: string) => {
+  try { localStorage.setItem(`${LS_IMAGE_PREFIX}${key}`, dataUrl); } catch { /* quota full */ }
+};
+const lsGetImage = (key: string): string => {
+  try { return localStorage.getItem(`${LS_IMAGE_PREFIX}${key}`) || ''; } catch { return ''; }
+};
+const lsSetCaption = (key: string, caption: string) => {
+  try { localStorage.setItem(`${LS_CAPTION_PREFIX}${key}`, caption); } catch { /* quota full */ }
+};
+const lsGetCaption = (key: string): string => {
+  try { return localStorage.getItem(`${LS_CAPTION_PREFIX}${key}`) || ''; } catch { return ''; }
+};
+
+// ─── Parsers / helpers ─────────────────────────────────────────────────────
 const normalizeKeys = (row: Record<string, unknown>) => {
   const out: Record<string, unknown> = {};
   Object.keys(row || {}).forEach((key) => {
@@ -56,16 +73,30 @@ const parseEvidence = (row: Record<string, unknown>): EvidenceRecord | null => {
   const slot = Number(r.slot || r.amount || 0);
   if (!projectId || !phase || !slot) return null;
 
+  const id = String(r.id || `CAPEXEV-${projectId}-${phase}-${slot}`);
+  const key = `CAPEXEV-${projectId}-${phase}-${slot}`;
+  
+  // Merge sheet data with localStorage cache (localStorage wins for image, sheet wins for caption if newer)
+  const cachedImage = lsGetImage(key);
+  const sheetImage = String(r.imageurl || r.image_url || r.debit || '');
+  // Prefer Drive URL (from sheet) if it exists, else fallback to localStorage
+  const imageUrl = (sheetImage && !sheetImage.startsWith('data:')) ? sheetImage : (cachedImage || sheetImage);
+
+  const sheetCaption = String(r.caption || r.keterangan || '');
+  const cachedCaption = lsGetCaption(key);
+  // Prefer sheet caption (persistent), fall back to localStorage cache
+  const caption = sheetCaption || cachedCaption;
+
   return {
-    id: String(r.id || `CAPEXEV-${projectId}-${phase}-${slot}`),
+    id,
     projectId,
     nama: String(r.nama || ''),
     owner: String(r.owner || ''),
     progress: Number(r.progress || 0),
     phase,
     slot,
-    caption: String(r.caption || r.keterangan || ''),
-    imageUrl: String(r.imageurl || r.image_url || r.debit || ''),
+    caption,
+    imageUrl,
     driveUrl: String(r.driveurl || r.drive_url || r.kredit || ''),
     fileName: String(r.filename || r.file_name || ''),
     updatedBy: String(r.updatedby || r.updated_by || ''),
@@ -126,6 +157,7 @@ const progressColor = (value: number) => {
   return 'var(--accent-rose)';
 };
 
+// ─── Component ─────────────────────────────────────────────────────────────
 const CapexEvidence = () => {
   const currentUser = getCurrentUser();
   const userEmail = localStorage.getItem('userEmail') || currentUser.email || '';
@@ -137,7 +169,13 @@ const CapexEvidence = () => {
   const [activeProjectId, setActiveProjectId] = useState('');
   const [lastSync, setLastSync] = useState('');
   const [captions, setCaptions] = useState<Record<string, string>>({});
+  const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  const showToast = (msg: string, ok = true) => {
+    setToast({ msg, ok });
+    setTimeout(() => setToast(null), 3200);
+  };
 
   const sortedProjects = useMemo(() => (
     [...projects].sort((a, b) => b.progress - a.progress || Number(a.id.replace('PRJ-', '')) - Number(b.id.replace('PRJ-', '')))
@@ -153,12 +191,16 @@ const CapexEvidence = () => {
 
   const completion = useMemo(() => {
     const totalSlots = sortedProjects.length * PHASES.length * SLOTS.length;
-    const filledSlots = evidence.filter((item) => item.imageUrl || item.driveUrl).length;
+    const lsExtra = PHASES.flatMap(ph => SLOTS.map(sl => {
+      const key = `CAPEXEV-${sortedProjects.find(p => p.id === activeProjectId)?.id || ''}-${ph}-${sl}`;
+      return (!evidenceByKey.get(key)?.imageUrl && lsGetImage(key)) ? 1 : 0;
+    })).reduce<number>((a, b) => a + b, 0);
+    const filledSlots = evidence.filter((item) => item.imageUrl || item.driveUrl).length + lsExtra;
     const projectDone = sortedProjects.filter((project) => (
       PHASES.every((phase) => SLOTS.some((slot) => evidenceByKey.get(evidenceId(project.id, phase, slot))?.imageUrl))
     )).length;
     return { totalSlots, filledSlots, projectDone, pct: totalSlots ? Math.round((filledSlots / totalSlots) * 100) : 0 };
-  }, [evidence, evidenceByKey, sortedProjects]);
+  }, [evidence, evidenceByKey, sortedProjects, activeProjectId]);
 
   const loadData = async (silent = false) => {
     if (silent) setSyncing(true);
@@ -179,12 +221,32 @@ const CapexEvidence = () => {
         const parsed = Array.isArray(evidenceRows)
           ? evidenceRows.map(parseEvidence).filter((item): item is EvidenceRecord => Boolean(item))
           : [];
-        setEvidence(parsed);
+        
+        // Inject localStorage images into records that don't have them from sheet
+        const enriched = parsed.map(item => {
+          if (!item.imageUrl) {
+            const cached = lsGetImage(item.id);
+            if (cached) return { ...item, imageUrl: cached };
+          }
+          return item;
+        });
+
+        setEvidence(enriched);
         const nextCaptions: Record<string, string> = {};
-        parsed.forEach((item) => {
+        enriched.forEach((item) => {
           nextCaptions[evidenceId(item.projectId, item.phase, item.slot)] = item.caption;
         });
-        setCaptions((prev) => ({ ...nextCaptions, ...prev }));
+        // Also restore captions from localStorage for projects not yet in sheet
+        setCaptions((prev) => {
+          const fromLs: Record<string, string> = {};
+          Object.keys(localStorage).forEach(k => {
+            if (k.startsWith(LS_CAPTION_PREFIX)) {
+              const evKey = k.slice(LS_CAPTION_PREFIX.length);
+              fromLs[evKey] = localStorage.getItem(k) || '';
+            }
+          });
+          return { ...fromLs, ...nextCaptions, ...prev };
+        });
       }
       setLastSync(new Date().toISOString());
     } finally {
@@ -200,41 +262,32 @@ const CapexEvidence = () => {
   }, []);
 
   const saveEvidenceRecord = async (record: EvidenceRecord) => {
+    // Strip base64 from what we send to Sheet (Sheet cells cannot hold large base64)
+    // Only send Drive URL if available, otherwise send empty string
+    const imageUrlForSheet = record.imageUrl?.startsWith('data:') ? '' : (record.imageUrl || '');
     const payload = {
       action: 'FINANCE_RECORD',
       sheetName: SHEET_EVIDENCE,
       sheet: SHEET_EVIDENCE,
       id: record.id,
       ID: record.id,
-      // Map to the existing sheet columns:
-      // id, tanggal, keterangan, kategori, amount, type, debit, kredit
+      // Map to the existing sheet columns: id, tanggal, keterangan, kategori, amount, type, debit, kredit
       type: record.projectId,
       kategori: record.phase,
       amount: record.slot,
       keterangan: record.caption,
-      debit: record.imageUrl,
+      debit: imageUrlForSheet,
       kredit: record.driveUrl,
       tanggal: record.updatedAt,
-
-      // Also preserve original fields for robustness and future schema upgrades
+      // Also send readable field names for future schema upgrades
       ProjectId: record.projectId,
       projectId: record.projectId,
-      Nama: record.nama,
-      nama: record.nama,
-      Owner: record.owner,
-      owner: record.owner,
-      Progress: record.progress,
-      progress: record.progress,
       Phase: record.phase,
       phase: record.phase,
       Slot: record.slot,
       slot: record.slot,
       Caption: record.caption,
       caption: record.caption,
-      ImageUrl: record.imageUrl,
-      imageUrl: record.imageUrl,
-      DriveUrl: record.driveUrl,
-      driveUrl: record.driveUrl,
       FileName: record.fileName,
       fileName: record.fileName,
       UpdatedBy: record.updatedBy,
@@ -245,12 +298,16 @@ const CapexEvidence = () => {
       updatedAt: record.updatedAt,
     };
 
-    await fetch(API_URL, {
+    // Use text/plain without no-cors so we can read the response
+    const resp = await fetch(API_URL, {
       method: 'POST',
-      mode: 'no-cors',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify(payload),
     });
+    const text = await resp.text().catch(() => '');
+    if (!text.includes('Berhasil')) {
+      throw new Error(`Simpan gagal: ${text || 'Tidak ada respons dari server'}`);
+    }
   };
 
   const buildRecord = (project: CapexProjectRecord, phase: Phase, slot: number, patch: Partial<EvidenceRecord>): EvidenceRecord => {
@@ -264,8 +321,8 @@ const CapexEvidence = () => {
       progress: project.progress,
       phase,
       slot,
-      caption: captions[key] ?? existing?.caption ?? '',
-      imageUrl: existing?.imageUrl || '',
+      caption: captions[key] ?? existing?.caption ?? lsGetCaption(key) ?? '',
+      imageUrl: existing?.imageUrl || lsGetImage(key) || '',
       driveUrl: existing?.driveUrl || '',
       fileName: existing?.fileName || '',
       updatedBy: currentUser.nama,
@@ -279,16 +336,24 @@ const CapexEvidence = () => {
   const handleCaptionSave = async (phase: Phase, slot: number) => {
     if (!activeProject) return;
     const key = evidenceId(activeProject.id, phase, slot);
+    const captionText = captions[key] || '';
     const record = buildRecord(activeProject, phase, slot, {
-      caption: captions[key] || '',
+      caption: captionText,
       updatedBy: currentUser.nama,
       updatedByEmail: userEmail,
       updatedAt: new Date().toISOString(),
     });
     setSavingId(`${key}:caption`);
     try {
+      // Save to localStorage immediately (survives refresh)
+      lsSetCaption(key, captionText);
+      // Then save to sheet
       await saveEvidenceRecord(record);
       setEvidence((prev) => [...prev.filter((item) => item.id !== record.id), record]);
+      showToast('✓ Deskripsi tersimpan');
+    } catch (err: any) {
+      // localStorage already saved — data safe locally
+      showToast(`⚠ Tersimpan lokal. Sheet: ${err?.message || 'coba lagi'}`, false);
     } finally {
       setSavingId('');
     }
@@ -304,44 +369,65 @@ const CapexEvidence = () => {
       const base64 = compressed.split(',')[1] || '';
       const safeProject = activeProject.id.replace(/[^a-zA-Z0-9]/g, '_');
       const fileName = `capex_${safeProject}_${phase}_${slot}_${Date.now()}.jpg`;
-      const uploadResp = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-        body: JSON.stringify({
-          action: 'UPLOAD_TO_DRIVE',
-          base64,
-          mimeType: 'image/jpeg',
-          fileName,
-          folder: DRIVE_FOLDER,
-        }),
-      });
 
-      const uploadText = await uploadResp.text();
-      let uploadJson: any = null;
+      // Step 1: Save compressed image to localStorage FIRST (instant, always works)
+      lsSetImage(key, compressed);
+
+      // Step 2: Try uploading to Google Drive
+      let imageUrl = compressed;
+      let driveUrl = '';
       try {
-        uploadJson = uploadText ? JSON.parse(uploadText) : null;
+        const uploadResp = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+          body: JSON.stringify({
+            action: 'UPLOAD_TO_DRIVE',
+            base64,
+            mimeType: 'image/jpeg',
+            fileName,
+            folder: DRIVE_FOLDER,
+          }),
+        });
+        const uploadText = await uploadResp.text();
+        let uploadJson: any = null;
+        try { uploadJson = uploadText ? JSON.parse(uploadText) : null; } catch { uploadJson = null; }
+        if (uploadJson?.success && (uploadJson.url || uploadJson.imageUrl || uploadJson.driveUrl)) {
+          imageUrl = uploadJson.url || uploadJson.imageUrl || compressed;
+          driveUrl = uploadJson.driveUrl || uploadJson.url || '';
+        }
       } catch {
-        uploadJson = null;
+        // Drive upload failed — we already have localStorage fallback
       }
 
-      const hasDriveUpload = uploadJson?.success && (uploadJson.url || uploadJson.imageUrl || uploadJson.driveUrl);
-      const imageUrl = hasDriveUpload ? (uploadJson.url || uploadJson.imageUrl || '') : compressed;
-      const driveUrl = hasDriveUpload ? (uploadJson.driveUrl || uploadJson.url || '') : '';
-
+      // Step 3: Build record and update UI immediately
       const record = buildRecord(activeProject, phase, slot, {
         imageUrl,
         driveUrl,
         fileName,
-        caption: captions[key] || evidenceByKey.get(key)?.caption || '',
+        caption: captions[key] || evidenceByKey.get(key)?.caption || lsGetCaption(key) || '',
         updatedBy: currentUser.nama,
         updatedByEmail: userEmail,
         updatedAt: new Date().toISOString(),
       });
-      await saveEvidenceRecord(record);
+
+      // Update UI state right away
       setEvidence((prev) => [...prev.filter((item) => item.id !== record.id), record]);
       setLastSync(new Date().toISOString());
+
+      // Step 4: Save metadata to Sheet (image URL without base64 if no Drive URL)
+      try {
+        await saveEvidenceRecord(record);
+        if (driveUrl) {
+          showToast('✓ Foto tersimpan di Drive');
+        } else {
+          showToast('✓ Foto tersimpan lokal (Drive tidak tersedia)');
+        }
+      } catch {
+        // Sheet save failed — localStorage cache is still intact
+        showToast('✓ Foto tersimpan lokal. Sync ke Sheet gagal — coba Sinkronkan.', false);
+      }
     } catch (error: any) {
-      alert(`Gagal upload foto: ${error?.message || 'Periksa koneksi dan Apps Script.'}`);
+      alert(`Gagal upload foto: ${error?.message || 'Periksa koneksi.'}`);
     } finally {
       setSavingId('');
       if (fileInputs.current[key]) fileInputs.current[key]!.value = '';
@@ -357,7 +443,20 @@ const CapexEvidence = () => {
   }
 
   return (
-    <div style={{ paddingBottom: '2rem' }}>
+    <div style={{ paddingBottom: '2rem', position: 'relative' }}>
+      {/* Toast notification */}
+      {toast && (
+        <div style={{
+          position: 'fixed', bottom: '1.5rem', right: '1.5rem', zIndex: 9999,
+          background: toast.ok ? 'rgba(17,163,106,0.95)' : 'rgba(245,158,11,0.95)',
+          color: '#fff', padding: '0.75rem 1.2rem', borderRadius: 10,
+          fontWeight: 700, fontSize: '0.88rem', boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+          transition: 'opacity 0.3s',
+        }}>
+          {toast.msg}
+        </div>
+      )}
+
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'flex-start', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', color: 'var(--accent-cyan)', fontWeight: 800, fontSize: '0.82rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
@@ -365,7 +464,7 @@ const CapexEvidence = () => {
           </div>
           <h1 className="page-title gradient-text" style={{ margin: '0.35rem 0 0' }}>Evidence Before - Process - After</h1>
           <p style={{ color: 'var(--text-secondary)', margin: '0.4rem 0 0', maxWidth: 760 }}>
-            Upload foto progres CAPEX oleh Pimpinan dan Kaur. Data tersimpan di Drive + Google Sheet dan otomatis refresh setiap 30 detik.
+            Upload foto progres CAPEX. Foto tersimpan di browser (lokal) dan Google Sheet. Caption tersimpan otomatis di Sheet.
           </p>
         </div>
         <button className="btn btn-outline" onClick={() => loadData(true)} disabled={syncing}>
@@ -398,7 +497,10 @@ const CapexEvidence = () => {
           <div style={{ display: 'grid', gap: '0.55rem', maxHeight: '70vh', overflow: 'auto', paddingRight: '0.25rem' }}>
             {sortedProjects.map((project, index) => {
               const filled = PHASES.reduce((sum, phase) => (
-                sum + SLOTS.filter((slot) => evidenceByKey.get(evidenceId(project.id, phase, slot))?.imageUrl).length
+                sum + SLOTS.filter((slot) => {
+                  const k = evidenceId(project.id, phase, slot);
+                  return evidenceByKey.get(k)?.imageUrl || lsGetImage(k);
+                }).length
               ), 0);
               const active = project.id === activeProject?.id;
               return (
@@ -457,8 +559,10 @@ const CapexEvidence = () => {
                     {SLOTS.map((slot) => {
                       const key = evidenceId(activeProject.id, phase, slot);
                       const item = evidenceByKey.get(key);
+                      const displayImage = item?.imageUrl || lsGetImage(key);
                       const isUploading = savingId === `${key}:upload`;
                       const isSavingCaption = savingId === `${key}:caption`;
+                      const captionVal = captions[key] ?? item?.caption ?? lsGetCaption(key) ?? '';
                       return (
                         <div key={key} style={{ border: '1px solid var(--border-subtle)', borderRadius: 8, padding: '0.75rem', background: 'rgba(255,255,255,0.025)' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', marginBottom: '0.55rem' }}>
@@ -475,8 +579,8 @@ const CapexEvidence = () => {
                             style={{
                               height: 150,
                               borderRadius: 8,
-                              border: `1px dashed ${item?.imageUrl ? 'rgba(16,185,129,0.5)' : 'var(--border-subtle)'}`,
-                              background: item?.imageUrl ? 'rgba(16,185,129,0.06)' : 'rgba(0,0,0,0.12)',
+                              border: `1px dashed ${displayImage ? 'rgba(16,185,129,0.5)' : 'var(--border-subtle)'}`,
+                              background: displayImage ? 'rgba(16,185,129,0.06)' : 'rgba(0,0,0,0.12)',
                               display: 'grid',
                               placeItems: 'center',
                               cursor: 'pointer',
@@ -485,8 +589,8 @@ const CapexEvidence = () => {
                           >
                             {isUploading ? (
                               <Loader2 className="animate-spin" size={28} color="var(--accent-blue)" />
-                            ) : item?.imageUrl ? (
-                              <img src={item.imageUrl} alt={`${phase} ${slot}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : displayImage ? (
+                              <img src={displayImage} alt={`${phase} ${slot}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                             ) : (
                               <div style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
                                 <Upload size={28} style={{ marginBottom: 8 }} />
@@ -506,8 +610,12 @@ const CapexEvidence = () => {
                           />
 
                           <textarea
-                            value={captions[key] ?? item?.caption ?? ''}
-                            onChange={(event) => setCaptions((prev) => ({ ...prev, [key]: event.target.value }))}
+                            value={captionVal}
+                            onChange={(event) => {
+                              const val = event.target.value;
+                              setCaptions((prev) => ({ ...prev, [key]: val }));
+                              lsSetCaption(key, val); // auto-save to localStorage as user types
+                            }}
                             rows={2}
                             placeholder="Caption singkat foto..."
                             style={{
@@ -524,7 +632,7 @@ const CapexEvidence = () => {
                           <button className="btn btn-outline" style={{ width: '100%', marginTop: '0.55rem', justifyContent: 'center' }} onClick={() => handleCaptionSave(phase, slot)} disabled={isSavingCaption}>
                             {isSavingCaption ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Simpan Caption
                           </button>
-                          {item?.updatedAt && (
+                          {(item?.updatedAt || item?.updatedBy) && (
                             <div style={{ marginTop: '0.5rem', fontSize: '0.68rem', color: 'var(--text-muted)' }}>
                               Update: {formatDateTime(item.updatedAt)} oleh {item.updatedBy || '-'}
                             </div>
