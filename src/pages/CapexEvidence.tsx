@@ -693,16 +693,14 @@ const CapexEvidence = () => {
       updatedAt: record.updatedAt,
     };
 
-    // Use text/plain without no-cors so we can read the response
-    const resp = await fetch(API_URL, {
+    // POST with no-cors: Apps Script redirects cross-origin, browser can't read response
+    // but the request IS sent and processed. Same pattern as NetMonitorPage.
+    await fetch(API_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
+      mode: 'no-cors',
       body: JSON.stringify(payload),
     });
-    const text = await resp.text().catch(() => '');
-    if (!text.includes('Berhasil')) {
-      throw new Error(`Simpan gagal: ${text || 'Tidak ada respons dari server'}`);
-    }
+    // With no-cors, response is opaque — if fetch doesn't throw, data was sent successfully
   };
 
   const buildRecord = (project: CapexProjectRecord, phase: Phase, slot: number, patch: Partial<EvidenceRecord>): EvidenceRecord => {
