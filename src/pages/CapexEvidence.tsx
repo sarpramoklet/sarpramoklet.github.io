@@ -17,7 +17,8 @@ import {
 import { getCurrentUser } from '../data/organization';
 import { mergeCapexProjects, type CapexProjectRecord } from '../data/capexProjects';
 
-const API_URL = 'https://script.google.com/macros/s/AKfycbwM73jOWMyEXFwLAWCSx-P2-0NKfzdf6ynDcqXHQaM9fhng6uXufMU4aDN-Odxi2FucfQ/exec';
+const API_URL        = 'https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec';
+const UPLOAD_API_URL = 'https://script.google.com/macros/s/AKfycbwM73jOWMyEXFwLAWCSx-P2-0NKfzdf6ynDcqXHQaM9fhng6uXufMU4aDN-Odxi2FucfQ/exec';
 const SHEET_PROJECTS = 'Progres_CAPEX';
 const SHEET_EVIDENCE = 'Capex_Evidence';
 const DRIVE_FOLDER = 'Sarpramoklet_CAPEX_Evidence';
@@ -771,7 +772,7 @@ const CapexEvidence = () => {
       let imageUrl = compressed;
       let driveUrl = '';
       try {
-        const uploadResp = await fetch(API_URL, {
+        const uploadResp = await fetch(UPLOAD_API_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
           body: JSON.stringify({
