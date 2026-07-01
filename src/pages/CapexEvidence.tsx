@@ -2,13 +2,17 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Camera,
   CheckCircle,
+  ChevronLeft,
+  ChevronRight,
   Clock,
   ExternalLink,
   Image as ImageIcon,
   Loader2,
+  Presentation,
   RefreshCw,
   Save,
   Upload,
+  X,
 } from 'lucide-react';
 import { getCurrentUser } from '../data/organization';
 import { mergeCapexProjects, type CapexProjectRecord } from '../data/capexProjects';
@@ -157,6 +161,358 @@ const progressColor = (value: number) => {
   return 'var(--accent-rose)';
 };
 
+// ─── Presentasi Modal ─────────────────────────────────────────────────────
+interface PresentasiModalProps {
+  projects: CapexProjectRecord[];
+  evidenceByKey: Map<string, EvidenceRecord>;
+  onClose: () => void;
+}
+
+const phaseColor = (phase: Phase) =>
+  phase === 'Before' ? '#df3f3f' : phase === 'Process' ? '#f39c12' : '#11a36a';
+
+const phaseLabel = (phase: Phase) =>
+  phase === 'Before' ? 'Before' : phase === 'Process' ? 'Process' : 'After';
+
+const phaseHint = (phase: Phase, projectNama: string) => {
+  if (phase === 'Before') return `Kondisi awal / masalah yang mendorong pekerjaan ${projectNama}`;
+  if (phase === 'Process') return 'Dokumentasi pelaksanaan, pengawasan, dan progres lapangan';
+  return 'Hasil akhir, manfaat operasional, dan kesiapan serah-terima';
+};
+
+const PresentasiModal = ({ projects, evidenceByKey, onClose }: PresentasiModalProps) => {
+  const slides = useMemo(() => {
+    // Cover slide + one slide per project that has at least 1 photo
+    return projects.filter(p =>
+      PHASES.some(ph => SLOTS.some(sl => {
+        const k = `CAPEXEV-${p.id}-${ph}-${sl}`;
+        const item = evidenceByKey.get(k);
+        return item?.imageUrl || lsGetImage(k);
+      }))
+    );
+  }, [projects, evidenceByKey]);
+
+  const [idx, setIdx] = useState(-1); // -1 = cover
+  const total = slides.length;
+
+  const prev = () => setIdx(i => Math.max(-1, i - 1));
+  const next = () => setIdx(i => Math.min(total - 1, i + 1));
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next();
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') prev();
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [total]);
+
+  const isCover = idx === -1;
+  const project = isCover ? null : slides[idx];
+
+  // Build per-phase data for active project slide
+  const phaseData = project ? PHASES.map(ph => ({
+    phase: ph,
+    photos: SLOTS.map(sl => {
+      const k = `CAPEXEV-${project.id}-${ph}-${sl}`;
+      const item = evidenceByKey.get(k);
+      return {
+        url: item?.imageUrl || lsGetImage(k) || '',
+        caption: item?.caption || lsGetCaption(k) || '',
+        driveUrl: item?.driveUrl || '',
+      };
+    }),
+  })) : [];
+
+  const slideNum = idx + 2; // cover=1, first project=2
+
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9000,
+        background: 'rgba(5,10,20,0.97)',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      }}
+    >
+      {/* Top bar */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0.75rem 1.25rem',
+        background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(10px)',
+        borderBottom: '1px solid rgba(255,255,255,0.07)',
+        zIndex: 10,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+          <Presentation size={18} color="#70d8ff" />
+          <span style={{ color: '#fff', fontWeight: 800, fontSize: '0.88rem' }}>Presentasi Evidence CAPEX 2026</span>
+          <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.78rem' }}>
+            {isCover ? 'Cover' : `Slide ${slideNum} / ${total + 1} · ${project?.id}`}
+          </span>
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <button onClick={prev} disabled={isCover} style={navBtnStyle(isCover)}><ChevronLeft size={18}/></button>
+          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.78rem', minWidth: 60, textAlign: 'center' }}>
+            {isCover ? '1' : slideNum} / {total + 1}
+          </span>
+          <button onClick={next} disabled={idx === total - 1} style={navBtnStyle(idx === total - 1)}><ChevronRight size={18}/></button>
+          <button onClick={onClose} style={{ ...navBtnStyle(false), marginLeft: '0.5rem', background: 'rgba(220,50,50,0.18)', borderColor: 'rgba(220,50,50,0.35)' }}><X size={18}/></button>
+        </div>
+      </div>
+
+      {/* Slide area */}
+      <div style={{
+        width: '100%', maxWidth: 'min(96vw, calc(96vh * 16/9))',
+        aspectRatio: '16/9',
+        marginTop: 52,
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+        {isCover ? (
+          <CoverSlide projects={projects} totalPhotos={slides.length} />
+        ) : project ? (
+          <ProjectSlide
+            project={project}
+            num={idx + 1}
+            phaseData={phaseData}
+          />
+        ) : null}
+      </div>
+
+      {/* Thumbnail strip */}
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0,
+        display: 'flex', gap: '0.4rem',
+        padding: '0.6rem 1rem',
+        overflowX: 'auto',
+        background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)',
+        borderTop: '1px solid rgba(255,255,255,0.07)',
+      }}>
+        {/* Cover thumb */}
+        <button
+          onClick={() => setIdx(-1)}
+          style={thumbStyle(isCover)}
+        >
+          <span style={{ fontSize: '0.6rem', fontWeight: 900, color: isCover ? '#70d8ff' : 'rgba(255,255,255,0.5)' }}>COVER</span>
+        </button>
+        {slides.map((p, i) => {
+          const firstPhoto = PHASES.flatMap(ph => SLOTS.map(sl => {
+            const k = `CAPEXEV-${p.id}-${ph}-${sl}`;
+            const item = evidenceByKey.get(k);
+            return item?.imageUrl || lsGetImage(k) || '';
+          })).find(u => u);
+          const active = idx === i;
+          return (
+            <button key={p.id} onClick={() => setIdx(i)} style={thumbStyle(active)}>
+              {firstPhoto ? (
+                <img src={firstPhoto} alt={p.id} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 4 }} />
+              ) : (
+                <span style={{ fontSize: '0.55rem', fontWeight: 900, color: active ? '#70d8ff' : 'rgba(255,255,255,0.4)' }}>{p.id}</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+const navBtnStyle = (disabled: boolean): React.CSSProperties => ({
+  background: disabled ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.1)',
+  border: '1px solid rgba(255,255,255,0.15)',
+  borderRadius: 8, color: disabled ? 'rgba(255,255,255,0.25)' : '#fff',
+  padding: '0.4rem 0.6rem', cursor: disabled ? 'not-allowed' : 'pointer',
+  display: 'flex', alignItems: 'center',
+});
+
+const thumbStyle = (active: boolean): React.CSSProperties => ({
+  flex: '0 0 80px', height: 46, borderRadius: 6,
+  border: `2px solid ${active ? '#70d8ff' : 'rgba(255,255,255,0.12)'}`,
+  background: active ? 'rgba(112,216,255,0.12)' : 'rgba(255,255,255,0.05)',
+  cursor: 'pointer', overflow: 'hidden',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  transition: 'border-color 0.2s',
+});
+
+// Cover slide component
+const CoverSlide = ({ projects, totalPhotos }: { projects: CapexProjectRecord[]; totalPhotos: number }) => (
+  <div style={{
+    width: '100%', height: '100%',
+    background: 'linear-gradient(130deg, #0f2742 0%, #183d6e 55%, #0a1e3a 100%)',
+    display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+    padding: '5% 6%', position: 'relative', overflow: 'hidden',
+  }}>
+    {/* Decorative circles */}
+    <div style={{ position: 'absolute', top: '-8%', right: '-4%', width: '38%', aspectRatio: '1', borderRadius: '50%', background: 'radial-gradient(circle, rgba(0,166,214,0.18), transparent 70%)', pointerEvents: 'none' }} />
+    <div style={{ position: 'absolute', bottom: '-10%', left: '-5%', width: '32%', aspectRatio: '1', borderRadius: '50%', background: 'radial-gradient(circle, rgba(17,163,106,0.15), transparent 70%)', pointerEvents: 'none' }} />
+
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div>
+        <div style={{ color: '#70d8ff', fontWeight: 900, fontSize: 'clamp(10px,1.5vw,16px)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '2%' }}>Evidence CAPEX 2026</div>
+        <h1 style={{ margin: 0, color: '#fff', fontSize: 'clamp(20px,4.5vw,56px)', fontWeight: 900, lineHeight: 1.08, maxWidth: '72%' }}>Laporan Foto Pekerjaan CAPEX</h1>
+        <p style={{ margin: '2% 0 0', color: 'rgba(255,255,255,0.72)', fontSize: 'clamp(10px,1.6vw,18px)', lineHeight: 1.5, maxWidth: '65%' }}>Dokumentasi visual Before, Process, dan After untuk seluruh pekerjaan CAPEX IT, Laboratorium, dan Sarana Prasarana.</p>
+      </div>
+      <div style={{ flex: '0 0 auto', background: 'rgba(255,255,255,0.95)', borderRadius: 10, padding: '2%', boxShadow: '0 18px 40px rgba(0,0,0,0.3)' }}>
+        <img src="logo_telkom.png" alt="Telkom Schools" style={{ width: 'clamp(60px,8vw,120px)', height: 'auto', display: 'block' }} />
+      </div>
+    </div>
+    <div style={{ display: 'flex', gap: '1.5%', flexWrap: 'wrap' }}>
+      {[
+        { label: 'PIC', value: 'Kaur IT LAB SARPRA' },
+        { label: 'Tahun Anggaran', value: '2026' },
+        { label: 'Total Pekerjaan', value: `${projects.length} proyek` },
+        { label: 'Proyek Terdokumentasi', value: `${totalPhotos} proyek` },
+      ].map(({ label, value }) => (
+        <div key={label} style={{
+          padding: '0.6% 1.5%', borderRadius: 999,
+          background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)',
+          color: 'rgba(255,255,255,0.85)', fontSize: 'clamp(9px,1.2vw,14px)', fontWeight: 700,
+        }}>{label}: {value}</div>
+      ))}
+    </div>
+  </div>
+);
+
+// Project slide component
+interface PhaseSlot { url: string; caption: string; driveUrl: string; }
+interface PhaseData { phase: Phase; photos: PhaseSlot[]; }
+
+const ProjectSlide = ({ project, num, phaseData }: { project: CapexProjectRecord; num: number; phaseData: PhaseData[] }) => {
+  const numStr = String(num).padStart(2, '0');
+  const progressBg = project.progress >= 100 ? '#11a36a' : project.progress >= 70 ? '#1e5eff' : project.progress >= 40 ? '#f39c12' : '#df3f3f';
+  return (
+    <div style={{
+      width: '100%', height: '100%',
+      background: '#ffffff',
+      display: 'flex', flexDirection: 'column',
+      padding: '3% 4% 2%',
+      gap: '2%',
+      position: 'relative', overflow: 'hidden',
+    }}>
+      {/* Subtle background accent */}
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg,rgba(30,94,255,0.04),transparent 35%),linear-gradient(180deg,rgba(17,163,106,0.04),transparent 40%)', pointerEvents: 'none' }} />
+
+      {/* Header row */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '2%', flex: '0 0 auto', position: 'relative' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ color: '#1e5eff', fontWeight: 900, fontSize: 'clamp(7px,1vw,12px)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.5%' }}>
+            No. {numStr} · {project.id} · {project.owner} · Progres {project.progress}%
+          </div>
+          <h2 style={{ margin: 0, fontSize: 'clamp(12px,2vw,26px)', fontWeight: 900, color: '#0f2742', lineHeight: 1.15, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+            {numStr}. {project.nama}
+          </h2>
+          {project.deskripsi && (
+            <p style={{ margin: '0.5% 0 0', fontSize: 'clamp(7px,0.9vw,11px)', color: '#64748b', lineHeight: 1.4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+              {project.deskripsi}
+            </p>
+          )}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.4rem', flex: '0 0 auto' }}>
+          <div style={{ padding: '0.4% 1.2%', borderRadius: 8, background: '#eef4ff', color: '#1e5eff', fontWeight: 900, fontSize: 'clamp(10px,1.5vw,18px)' }}>{numStr}</div>
+          <div style={{ padding: '0.3% 1%', borderRadius: 999, background: progressBg, color: '#fff', fontWeight: 900, fontSize: 'clamp(8px,1vw,12px)' }}>{project.progress}%</div>
+        </div>
+      </div>
+
+      {/* Photo columns: Before | Process | After */}
+      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5%', minHeight: 0, position: 'relative' }}>
+        {phaseData.map(({ phase, photos }) => {
+          const mainPhoto = photos[0];
+          const sub1 = photos[1];
+          const sub2 = photos[2];
+          const hasMain = !!mainPhoto.url;
+          const hasSub1 = !!sub1.url;
+          const hasSub2 = !!sub2.url;
+          const mainCaption = mainPhoto.caption || photos.find(p => p.caption)?.caption || '';
+
+          return (
+            <div key={phase} style={{
+              border: '1px solid #d9e2ec', borderRadius: 8,
+              background: 'rgba(255,255,255,0.9)',
+              display: 'flex', flexDirection: 'column', gap: '1.5%', padding: '1.5%', minHeight: 0,
+            }}>
+              {/* Phase tag */}
+              <div style={{
+                display: 'inline-flex', width: 'max-content',
+                padding: '0.3% 1%', borderRadius: 999,
+                background: phaseColor(phase), color: '#fff',
+                fontSize: 'clamp(7px,0.85vw,11px)', fontWeight: 900, textTransform: 'uppercase',
+              }}>{phaseLabel(phase)}</div>
+
+              {/* Photo grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: 'auto auto', gap: '1%', flex: 1, minHeight: 0 }}>
+                {/* Main photo spans full width */}
+                <div style={{
+                  gridColumn: '1 / -1',
+                  borderRadius: 6, overflow: 'hidden',
+                  background: hasMain ? 'transparent' : 'linear-gradient(135deg,rgba(30,94,255,0.06),rgba(17,163,106,0.04)),#f9fbfe',
+                  border: hasMain ? 'none' : '1px dashed rgba(100,116,139,0.3)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  minHeight: 0, flex: 1,
+                }}>
+                  {hasMain ? (
+                    <img src={mainPhoto.url} alt={`${phase} 1`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '4%' }}>
+                      <Camera size={16} color="rgba(100,116,139,0.5)" />
+                      <div style={{ fontSize: 'clamp(6px,0.7vw,9px)', color: '#64748b', fontWeight: 700, marginTop: '4%' }}>Foto Utama</div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Sub photos */}
+                {[{ data: sub1, label: 'Detail', has: hasSub1 }, { data: sub2, label: 'Pendukung', has: hasSub2 }].map(({ data, label, has }) => (
+                  <div key={label} style={{
+                    borderRadius: 5, overflow: 'hidden',
+                    background: has ? 'transparent' : 'linear-gradient(135deg,rgba(255,255,255,0.86),rgba(255,255,255,0.68)),repeating-linear-gradient(45deg,rgba(100,116,139,0.1) 0 1px,transparent 1px 10px)',
+                    border: has ? 'none' : '1px dashed rgba(100,116,139,0.3)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    minHeight: 0,
+                  }}>
+                    {has ? (
+                      <img src={data.url} alt={`${phase} ${label}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                    ) : (
+                      <span style={{ fontSize: 'clamp(5px,0.6vw,8px)', color: '#94a3b8', fontWeight: 700 }}>{label}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Caption */}
+              {mainCaption ? (
+                <div style={{
+                  borderLeft: `3px solid ${phaseColor(phase)}`,
+                  padding: '1.5% 2%',
+                  background: phase === 'Before' ? '#fff5f5' : phase === 'Process' ? '#fffbf0' : '#f0faf6',
+                  fontSize: 'clamp(6px,0.75vw,10px)', lineHeight: 1.4, color: '#1e293b',
+                  overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                }}>{mainCaption}</div>
+              ) : (
+                <div style={{
+                  borderLeft: '3px solid #d9e2ec',
+                  padding: '1.5% 2%',
+                  background: '#f8fafc',
+                  fontSize: 'clamp(6px,0.75vw,10px)', color: '#94a3b8', lineHeight: 1.4,
+                }}>{phaseHint(phase, project.nama)}</div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Footer */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flex: '0 0 auto', paddingTop: '0.5%', position: 'relative' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5%', color: '#64748b', fontSize: 'clamp(6px,0.7vw,9px)', fontWeight: 700, textTransform: 'uppercase' }}>
+          <img src="logo_telkom.png" alt="" style={{ height: 'clamp(10px,1.5vw,20px)', objectFit: 'contain' }} />
+          SARPRA · IT LAB · Evidence CAPEX 2026
+        </div>
+        <div style={{ height: 5, width: 'clamp(60px,10vw,130px)', borderRadius: 999, background: 'linear-gradient(90deg,#1e5eff,#11a36a)' }} />
+      </div>
+    </div>
+  );
+};
+
 // ─── Component ─────────────────────────────────────────────────────────────
 const CapexEvidence = () => {
   const currentUser = getCurrentUser();
@@ -170,6 +526,7 @@ const CapexEvidence = () => {
   const [lastSync, setLastSync] = useState('');
   const [captions, setCaptions] = useState<Record<string, string>>({});
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
+  const [showPresentation, setShowPresentation] = useState(false);
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const showToast = (msg: string, ok = true) => {
@@ -457,6 +814,15 @@ const CapexEvidence = () => {
         </div>
       )}
 
+      {/* Presentasi Modal */}
+      {showPresentation && (
+        <PresentasiModal
+          projects={sortedProjects}
+          evidenceByKey={evidenceByKey}
+          onClose={() => setShowPresentation(false)}
+        />
+      )}
+
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'flex-start', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', color: 'var(--accent-cyan)', fontWeight: 800, fontSize: '0.82rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
@@ -467,9 +833,18 @@ const CapexEvidence = () => {
             Upload foto progres CAPEX. Foto tersimpan di browser (lokal) dan Google Sheet. Caption tersimpan otomatis di Sheet.
           </p>
         </div>
-        <button className="btn btn-outline" onClick={() => loadData(true)} disabled={syncing}>
-          {syncing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />} Sinkronkan
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <button
+            className="btn"
+            style={{ background: 'linear-gradient(135deg,#1e5eff,#11a36a)', color: '#fff', border: 'none', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', borderRadius: 8, cursor: 'pointer', boxShadow: '0 4px 16px rgba(30,94,255,0.3)', whiteSpace: 'nowrap' }}
+            onClick={() => setShowPresentation(true)}
+          >
+            <Presentation size={16} /> Lihat Presentasi
+          </button>
+          <button className="btn btn-outline" onClick={() => loadData(true)} disabled={syncing}>
+            {syncing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />} Sinkronkan
+          </button>
+        </div>
       </div>
 
       <div className="capex-evidence-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
