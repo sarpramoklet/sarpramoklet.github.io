@@ -21,8 +21,10 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbwM73jOWMyEXFwLAWCSx-P2
 const SHEET_PROJECTS = 'Progres_CAPEX';
 const SHEET_EVIDENCE = 'Capex_Evidence';
 const DRIVE_FOLDER = 'Sarpramoklet_CAPEX_Evidence';
-const LS_IMAGE_PREFIX = 'capex_ev_img_';
+const LS_IMAGE_PREFIX   = 'capex_ev_img_';
 const LS_CAPTION_PREFIX = 'capex_ev_cap_';
+const LS_PROJECTS_CACHE = 'capex_ev_projects_v2';
+const LS_EVIDENCE_CACHE = 'capex_ev_evidence_v2';
 
 type Phase = 'Before' | 'Process' | 'After';
 
@@ -560,8 +562,36 @@ const CapexEvidence = () => {
   }, [evidence, evidenceByKey, sortedProjects, activeProjectId]);
 
   const loadData = async (silent = false) => {
+    // ── Step 1: Restore cache instantly (no spinner for repeat visits) ──────
+    if (!silent) {
+      try {
+        const rawP = localStorage.getItem(LS_PROJECTS_CACHE);
+        const rawE = localStorage.getItem(LS_EVIDENCE_CACHE);
+        if (rawP) {
+          const cached = JSON.parse(rawP) as CapexProjectRecord[];
+          if (Array.isArray(cached) && cached.length > 0) {
+            setProjects(cached);
+            setActiveProjectId(prev => prev || [...cached].sort((a, b) => b.progress - a.progress)[0]?.id || '');
+            setLoading(false); // show cached data immediately
+          }
+        }
+        if (rawE) {
+          const cached = JSON.parse(rawE) as EvidenceRecord[];
+          if (Array.isArray(cached)) {
+            setEvidence(cached);
+            const caps: Record<string, string> = {};
+            cached.forEach(item => { caps[evidenceId(item.projectId, item.phase, item.slot)] = item.caption; });
+            setCaptions(prev => ({ ...prev, ...caps }));
+          }
+        }
+      } catch { /* ignore stale cache errors */ }
+    }
+
+    // ── Step 2: Fetch fresh data (silently if cache was available) ───────────
+    const hadCache = Boolean(localStorage.getItem(LS_PROJECTS_CACHE));
     if (silent) setSyncing(true);
-    else setLoading(true);
+    else if (!hadCache) setLoading(true);
+    else setSyncing(true); // subtle spinner in header while refreshing in background
 
     try {
       const [projectResp, evidenceResp] = await Promise.all([
@@ -572,6 +602,8 @@ const CapexEvidence = () => {
       const merged = mergeCapexProjects(Array.isArray(projectRows) ? projectRows : []);
       setProjects(merged);
       setActiveProjectId((prev) => prev || [...merged].sort((a, b) => b.progress - a.progress)[0]?.id || '');
+      // Save to cache
+      try { localStorage.setItem(LS_PROJECTS_CACHE, JSON.stringify(merged)); } catch { /* quota */ }
 
       if (evidenceResp) {
         const evidenceRows = await evidenceResp.json().catch(() => []);
@@ -604,6 +636,11 @@ const CapexEvidence = () => {
           });
           return { ...fromLs, ...nextCaptions, ...prev };
         });
+        // Save evidence to cache (without base64 blobs to keep cache small)
+        try {
+          const lite = enriched.map(e => ({ ...e, imageUrl: e.driveUrl ? e.imageUrl : '' }));
+          localStorage.setItem(LS_EVIDENCE_CACHE, JSON.stringify(lite));
+        } catch { /* quota */ }
       }
       setLastSync(new Date().toISOString());
     } finally {
