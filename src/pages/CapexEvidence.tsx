@@ -89,7 +89,7 @@ const formatDateTime = (value: string) => {
   });
 };
 
-const compressImage = (dataUrl: string, maxSize = 1400, quality = 0.72): Promise<string> =>
+const compressImage = (dataUrl: string, maxSize = 1100, quality = 0.58): Promise<string> =>
   new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
@@ -304,14 +304,22 @@ const CapexEvidence = () => {
           folder: DRIVE_FOLDER,
         }),
       });
-      const uploadJson = await uploadResp.json();
-      if (!uploadJson.success) {
-        throw new Error(uploadJson.error || 'Upload ke Drive gagal.');
+
+      const uploadText = await uploadResp.text();
+      let uploadJson: any = null;
+      try {
+        uploadJson = uploadText ? JSON.parse(uploadText) : null;
+      } catch {
+        uploadJson = null;
       }
 
+      const hasDriveUpload = uploadJson?.success && (uploadJson.url || uploadJson.imageUrl || uploadJson.driveUrl);
+      const imageUrl = hasDriveUpload ? (uploadJson.url || uploadJson.imageUrl || '') : compressed;
+      const driveUrl = hasDriveUpload ? (uploadJson.driveUrl || uploadJson.url || '') : '';
+
       const record = buildRecord(activeProject, phase, slot, {
-        imageUrl: uploadJson.url || uploadJson.imageUrl || '',
-        driveUrl: uploadJson.driveUrl || uploadJson.url || '',
+        imageUrl,
+        driveUrl,
         fileName,
         caption: captions[key] || evidenceByKey.get(key)?.caption || '',
         updatedBy: currentUser.nama,
