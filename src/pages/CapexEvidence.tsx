@@ -22,8 +22,11 @@ const LEGACY_UPLOAD_API_URL = 'https://script.google.com/macros/s/AKfycbwM73jOWM
 const SHEET_PROJECTS = 'Progres_CAPEX';
 const SHEET_EVIDENCE = 'Capex_Evidence';
 const DRIVE_FOLDER = 'Sarpramoklet_CAPEX_Evidence';
+const DRIVE_FOLDER_ID = '1A81RWHxGfYRExHsS8iH45O0vL96LX9o6';
+const DRIVE_FOLDER_URL = `https://drive.google.com/drive/folders/${DRIVE_FOLDER_ID}`;
 const LS_IMAGE_PREFIX   = 'capex_ev_img_';
 const LS_CAPTION_PREFIX = 'capex_ev_cap_';
+const LS_CAPTION_UPDATED_PREFIX = 'capex_ev_cap_updated_';
 const LS_PROJECTS_CACHE = 'capex_ev_projects_v2';
 const LS_EVIDENCE_CACHE = 'capex_ev_evidence_v2';
 
@@ -62,10 +65,19 @@ const lsGetImage = (key: string): string => {
   try { return localStorage.getItem(`${LS_IMAGE_PREFIX}${key}`) || ''; } catch { return ''; }
 };
 const lsSetCaption = (key: string, caption: string) => {
-  try { localStorage.setItem(`${LS_CAPTION_PREFIX}${key}`, caption); } catch { /* quota full */ }
+  try {
+    localStorage.setItem(`${LS_CAPTION_PREFIX}${key}`, caption);
+    localStorage.setItem(`${LS_CAPTION_UPDATED_PREFIX}${key}`, new Date().toISOString());
+  } catch { /* quota full */ }
 };
 const lsGetCaption = (key: string): string => {
   try { return localStorage.getItem(`${LS_CAPTION_PREFIX}${key}`) || ''; } catch { return ''; }
+};
+const lsHasCaption = (key: string): boolean => {
+  try { return localStorage.getItem(`${LS_CAPTION_PREFIX}${key}`) !== null; } catch { return false; }
+};
+const lsGetCaptionUpdatedAt = (key: string): string => {
+  try { return localStorage.getItem(`${LS_CAPTION_UPDATED_PREFIX}${key}`) || ''; } catch { return ''; }
 };
 
 // ─── Parsers / helpers ─────────────────────────────────────────────────────
@@ -75,6 +87,11 @@ const normalizeKeys = (row: Record<string, unknown>) => {
     out[key.toLowerCase()] = row[key];
   });
   return out;
+};
+
+const timeValue = (value: string) => {
+  const time = new Date(value).getTime();
+  return Number.isNaN(time) ? 0 : time;
 };
 
 const parseEvidence = (row: Record<string, unknown>): EvidenceRecord | null => {
@@ -94,10 +111,15 @@ const parseEvidence = (row: Record<string, unknown>): EvidenceRecord | null => {
   // Prefer Drive URL (from sheet) if it exists, else fallback to localStorage
   const imageUrl = (sheetImage && !sheetImage.startsWith('data:')) ? sheetImage : (cachedImage || sheetImage);
 
+  const updatedAt = String(r.updatedat || r.updated_at || r.tanggal || '');
   const sheetCaption = String(r.caption || r.keterangan || '');
   const cachedCaption = lsGetCaption(key);
-  // Prefer sheet caption (persistent), fall back to localStorage cache
-  const caption = sheetCaption || cachedCaption;
+  const hasCachedCaption = lsHasCaption(key);
+  const cachedCaptionUpdatedAt = lsGetCaptionUpdatedAt(key);
+  // Prefer the newest caption, so saved local edits are not overwritten by stale Sheet reads.
+  const caption = hasCachedCaption && timeValue(cachedCaptionUpdatedAt) > timeValue(updatedAt)
+    ? cachedCaption
+    : (sheetCaption || cachedCaption);
 
   return {
     id,
@@ -113,11 +135,22 @@ const parseEvidence = (row: Record<string, unknown>): EvidenceRecord | null => {
     fileName: String(r.filename || r.file_name || ''),
     updatedBy: String(r.updatedby || r.updated_by || ''),
     updatedByEmail: String(r.updatedbyemail || r.updated_by_email || ''),
-    updatedAt: String(r.updatedat || r.updated_at || r.tanggal || ''),
+    updatedAt,
   };
 };
 
 const evidenceId = (projectId: string, phase: Phase, slot: number) => `CAPEXEV-${projectId}-${phase}-${slot}`;
+
+const mergeEvidenceRecords = (items: EvidenceRecord[]) => {
+  const byId = new Map<string, EvidenceRecord>();
+  items.forEach((item) => {
+    const existing = byId.get(item.id);
+    if (!existing || timeValue(item.updatedAt) >= timeValue(existing.updatedAt)) {
+      byId.set(item.id, item);
+    }
+  });
+  return Array.from(byId.values());
+};
 
 const formatDateTime = (value: string) => {
   if (!value) return '-';
@@ -169,6 +202,13 @@ const uploadToDrive = async (base64: string, fileName: string): Promise<DriveUpl
     mimeType: 'image/jpeg',
     fileName,
     folder: DRIVE_FOLDER,
+    folderName: DRIVE_FOLDER,
+    folder_name: DRIVE_FOLDER,
+    folderId: DRIVE_FOLDER_ID,
+    folder_id: DRIVE_FOLDER_ID,
+    parentFolderId: DRIVE_FOLDER_ID,
+    driveFolderId: DRIVE_FOLDER_ID,
+    folderUrl: DRIVE_FOLDER_URL,
   });
 
   let lastError: Error | null = null;
@@ -580,6 +620,21 @@ const CapexEvidence = () => {
     setTimeout(() => setToast(null), 3200);
   };
 
+  const cacheEvidenceRecords = (items: EvidenceRecord[]) => {
+    try {
+      const lite = items.map(e => ({ ...e, imageUrl: e.driveUrl ? e.imageUrl : '' }));
+      localStorage.setItem(LS_EVIDENCE_CACHE, JSON.stringify(lite));
+    } catch { /* quota */ }
+  };
+
+  const upsertEvidenceRecord = (record: EvidenceRecord) => {
+    setEvidence((prev) => {
+      const next = mergeEvidenceRecords([...prev.filter((item) => item.id !== record.id), record]);
+      cacheEvidenceRecords(next);
+      return next;
+    });
+  };
+
   const sortedProjects = useMemo(() => (
     [...projects].sort((a, b) => b.progress - a.progress || Number(a.id.replace('PRJ-', '')) - Number(b.id.replace('PRJ-', '')))
   ), [projects]);
@@ -622,9 +677,10 @@ const CapexEvidence = () => {
         if (rawE) {
           const cached = JSON.parse(rawE) as EvidenceRecord[];
           if (Array.isArray(cached)) {
-            setEvidence(cached);
+            const mergedCache = mergeEvidenceRecords(cached);
+            setEvidence(mergedCache);
             const caps: Record<string, string> = {};
-            cached.forEach(item => { caps[evidenceId(item.projectId, item.phase, item.slot)] = item.caption; });
+            mergedCache.forEach(item => { caps[evidenceId(item.projectId, item.phase, item.slot)] = item.caption; });
             setCaptions(prev => ({ ...prev, ...caps }));
           }
         }
@@ -652,17 +708,17 @@ const CapexEvidence = () => {
       if (evidenceResp) {
         const evidenceRows = await evidenceResp.json().catch(() => []);
         const parsed = Array.isArray(evidenceRows)
-          ? evidenceRows.map(parseEvidence).filter((item): item is EvidenceRecord => Boolean(item))
+          ? mergeEvidenceRecords(evidenceRows.map(parseEvidence).filter((item): item is EvidenceRecord => Boolean(item)))
           : [];
         
         // Inject localStorage images into records that don't have them from sheet
-        const enriched = parsed.map(item => {
+        const enriched = mergeEvidenceRecords(parsed.map(item => {
           if (!item.imageUrl) {
             const cached = lsGetImage(item.id);
             if (cached) return { ...item, imageUrl: cached };
           }
           return item;
-        });
+        }));
 
         setEvidence(enriched);
         const nextCaptions: Record<string, string> = {};
@@ -670,7 +726,7 @@ const CapexEvidence = () => {
           nextCaptions[evidenceId(item.projectId, item.phase, item.slot)] = item.caption;
         });
         // Also restore captions from localStorage for projects not yet in sheet
-        setCaptions((prev) => {
+        setCaptions(() => {
           const fromLs: Record<string, string> = {};
           Object.keys(localStorage).forEach(k => {
             if (k.startsWith(LS_CAPTION_PREFIX)) {
@@ -678,13 +734,10 @@ const CapexEvidence = () => {
               fromLs[evKey] = localStorage.getItem(k) || '';
             }
           });
-          return { ...fromLs, ...nextCaptions, ...prev };
+          return { ...fromLs, ...nextCaptions };
         });
         // Save evidence to cache (without base64 blobs to keep cache small)
-        try {
-          const lite = enriched.map(e => ({ ...e, imageUrl: e.driveUrl ? e.imageUrl : '' }));
-          localStorage.setItem(LS_EVIDENCE_CACHE, JSON.stringify(lite));
-        } catch { /* quota */ }
+        cacheEvidenceRecords(enriched);
       }
       setLastSync(new Date().toISOString());
     } finally {
@@ -738,6 +791,10 @@ const CapexEvidence = () => {
       DriveUrl: record.driveUrl,
       driveUrl: record.driveUrl,
       drive_url: record.driveUrl,
+      FolderId: DRIVE_FOLDER_ID,
+      folderId: DRIVE_FOLDER_ID,
+      FolderUrl: DRIVE_FOLDER_URL,
+      folderUrl: DRIVE_FOLDER_URL,
       FileName: record.fileName,
       fileName: record.fileName,
       UpdatedBy: record.updatedBy,
@@ -753,6 +810,7 @@ const CapexEvidence = () => {
     await fetch(API_URL, {
       method: 'POST',
       mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
       body: JSON.stringify(payload),
     });
     // With no-cors, response is opaque — if fetch doesn't throw, data was sent successfully
@@ -797,7 +855,7 @@ const CapexEvidence = () => {
       lsSetCaption(key, captionText);
       // Then save to sheet
       await saveEvidenceRecord(record);
-      setEvidence((prev) => [...prev.filter((item) => item.id !== record.id), record]);
+      upsertEvidenceRecord(record);
       showToast('✓ Deskripsi tersimpan');
     } catch (err: any) {
       // localStorage already saved — data safe locally
@@ -832,14 +890,14 @@ const CapexEvidence = () => {
         imageUrl,
         driveUrl,
         fileName,
-        caption: captions[key] || evidenceByKey.get(key)?.caption || lsGetCaption(key) || '',
+        caption: captions[key] ?? evidenceByKey.get(key)?.caption ?? lsGetCaption(key) ?? '',
         updatedBy: currentUser.nama,
         updatedByEmail: userEmail,
         updatedAt: new Date().toISOString(),
       });
 
       // Update UI state right away
-      setEvidence((prev) => [...prev.filter((item) => item.id !== record.id), record]);
+      upsertEvidenceRecord(record);
       setLastSync(new Date().toISOString());
 
       // Step 4: Save metadata to Sheet (image URL without base64 if no Drive URL)
