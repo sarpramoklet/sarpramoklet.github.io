@@ -18,11 +18,9 @@ import { getCurrentUser } from '../data/organization';
 import { mergeCapexProjects, type CapexProjectRecord } from '../data/capexProjects';
 
 const API_URL        = 'https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec';
-const LEGACY_UPLOAD_API_URL = 'https://script.google.com/macros/s/AKfycbwM73jOWMyEXFwLAWCSx-P2-0NKfzdf6ynDcqXHQaM9fhng6uXufMU4aDN-Odxi2FucfQ/exec';
 const GOOGLE_CLIENT_ID = '975387842374-locrn64jjrt4m6h7ffsq1ic6m2etbl3o.apps.googleusercontent.com';
 const SHEET_PROJECTS = 'Progres_CAPEX';
 const SHEET_EVIDENCE = 'Capex_Evidence';
-const DRIVE_FOLDER = 'Sarpramoklet_CAPEX_Evidence';
 const DRIVE_FOLDER_ID = '1A81RWHxGfYRExHsS8iH45O0vL96LX9o6';
 const DRIVE_FOLDER_URL = `https://drive.google.com/drive/folders/${DRIVE_FOLDER_ID}`;
 const LS_IMAGE_PREFIX   = 'capex_ev_img_';
@@ -55,6 +53,8 @@ interface DriveUploadResult {
   driveUrl: string;
 }
 
+let cachedDriveAccessToken = '';
+
 declare global {
   interface Window {
     google?: {
@@ -64,6 +64,7 @@ declare global {
             client_id: string;
             scope: string;
             prompt?: string;
+            include_granted_scopes?: boolean;
             callback: (response: { access_token?: string; error?: string; error_description?: string }) => void;
           }) => { requestAccessToken: (overrideConfig?: { prompt?: string }) => void };
         };
@@ -216,6 +217,15 @@ const readFileAsDataUrl = (file: File): Promise<string> =>
 const waitForGoogleIdentity = async () => {
   if (window.google?.accounts?.oauth2) return;
 
+  if (!document.getElementById('google-identity-services')) {
+    const script = document.createElement('script');
+    script.id = 'google-identity-services';
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    document.head.appendChild(script);
+  }
+
   await new Promise<void>((resolve, reject) => {
     const startedAt = Date.now();
     const timer = window.setInterval(() => {
@@ -238,17 +248,19 @@ const requestDriveAccessToken = async () => {
   return new Promise<string>((resolve, reject) => {
     const tokenClient = window.google!.accounts!.oauth2!.initTokenClient({
       client_id: GOOGLE_CLIENT_ID,
-      scope: 'https://www.googleapis.com/auth/drive.file',
+      scope: 'https://www.googleapis.com/auth/drive',
       prompt: '',
+      include_granted_scopes: true,
       callback: (response) => {
         if (response.error || !response.access_token) {
           reject(new Error(response.error_description || response.error || 'Izin Google Drive tidak diberikan.'));
           return;
         }
+        cachedDriveAccessToken = response.access_token;
         resolve(response.access_token);
       },
     });
-    tokenClient.requestAccessToken({ prompt: 'consent' });
+    tokenClient.requestAccessToken({ prompt: cachedDriveAccessToken ? '' : 'consent' });
   });
 };
 
@@ -266,8 +278,7 @@ const base64ToBlob = (base64: string, mimeType: string) => {
   return new Blob(byteArrays, { type: mimeType });
 };
 
-const uploadToDriveApi = async (base64: string, fileName: string): Promise<DriveUploadResult> => {
-  const accessToken = await requestDriveAccessToken();
+const uploadToDrive = async (base64: string, fileName: string, accessToken: string): Promise<DriveUploadResult> => {
   const boundary = `capex_${Date.now()}_${Math.random().toString(36).slice(2)}`;
   const metadata = {
     name: fileName,
@@ -286,7 +297,7 @@ const uploadToDriveApi = async (base64: string, fileName: string): Promise<Drive
     `\r\n--${boundary}--`,
   ], { type: `multipart/related; boundary=${boundary}` });
 
-  const uploadResp = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink,webContentLink', {
+  const uploadResp = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id,name,webViewLink,webContentLink', {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -305,65 +316,6 @@ const uploadToDriveApi = async (base64: string, fileName: string): Promise<Drive
     imageUrl: `https://drive.google.com/uc?export=view&id=${encodeURIComponent(fileId)}`,
     driveUrl: uploadJson.webViewLink || `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view`,
   };
-};
-
-const uploadViaAppsScript = async (base64: string, fileName: string): Promise<DriveUploadResult> => {
-  const body = JSON.stringify({
-    action: 'UPLOAD_TO_DRIVE',
-    base64,
-    mimeType: 'image/jpeg',
-    fileName,
-    folder: DRIVE_FOLDER,
-    folderName: DRIVE_FOLDER,
-    folder_name: DRIVE_FOLDER,
-    folderId: DRIVE_FOLDER_ID,
-    folder_id: DRIVE_FOLDER_ID,
-    parentFolderId: DRIVE_FOLDER_ID,
-    driveFolderId: DRIVE_FOLDER_ID,
-    folderUrl: DRIVE_FOLDER_URL,
-  });
-
-  let lastError: Error | null = null;
-  for (const endpoint of [API_URL, LEGACY_UPLOAD_API_URL]) {
-    try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-        body,
-      });
-      const text = await response.text();
-      const json = text ? JSON.parse(text) : null;
-      if (!json?.success) {
-        throw new Error(json?.error || 'Upload Drive tidak mengembalikan status sukses.');
-      }
-
-      const imageUrl = json.url || json.imageUrl || json.image_url || '';
-      const driveUrl = json.driveUrl || json.drive_url || json.url || '';
-      if (!imageUrl && !driveUrl) {
-        throw new Error('Upload Drive sukses, tetapi URL gambar kosong.');
-      }
-
-      return { imageUrl: imageUrl || driveUrl, driveUrl };
-    } catch (error: any) {
-      lastError = error instanceof Error ? error : new Error(error?.message || 'Upload Drive gagal.');
-    }
-  }
-
-  throw lastError || new Error('Upload Drive gagal.');
-};
-
-const uploadToDrive = async (base64: string, fileName: string): Promise<DriveUploadResult> => {
-  try {
-    return await uploadToDriveApi(base64, fileName);
-  } catch (driveApiError: any) {
-    try {
-      return await uploadViaAppsScript(base64, fileName);
-    } catch (appsScriptError: any) {
-      const driveMsg = driveApiError?.message || 'Upload langsung ke Drive gagal.';
-      const scriptMsg = appsScriptError?.message || 'Upload via Apps Script gagal.';
-      throw new Error(`${driveMsg} Apps Script: ${scriptMsg}`);
-    }
-  }
 };
 
 const progressColor = (value: number) => {
@@ -996,6 +948,7 @@ const CapexEvidence = () => {
     const key = evidenceId(activeProject.id, phase, slot);
     setSavingId(`${key}:upload`);
     try {
+      const accessToken = await requestDriveAccessToken();
       const raw = await readFileAsDataUrl(file);
       const compressed = await compressImage(raw);
       const base64 = compressed.split(',')[1] || '';
@@ -1006,7 +959,7 @@ const CapexEvidence = () => {
       lsSetImage(key, compressed);
 
       // Step 2: Upload to Google Drive for cross-user persistence
-      const uploaded = await uploadToDrive(base64, fileName);
+      const uploaded = await uploadToDrive(base64, fileName, accessToken);
       const imageUrl = uploaded.imageUrl;
       const driveUrl = uploaded.driveUrl;
       lsSetImage(key, imageUrl);
@@ -1034,7 +987,7 @@ const CapexEvidence = () => {
         showToast('✓ Foto tersimpan di Drive. Sync metadata Sheet gagal — coba Sinkronkan.', false);
       }
     } catch (error: any) {
-      alert(`Gagal upload foto permanen: ${error?.message || 'Periksa koneksi.'}\n\nFoto masih tersimpan sementara di browser ini. Coba upload ulang agar pimpinan/kaur lain bisa melihatnya.`);
+      alert(`Gagal upload foto permanen via Google Drive API langsung: ${error?.message || 'Periksa koneksi.'}\n\nFoto masih tersimpan sementara di browser ini. Pastikan akun Google yang dipilih punya akses edit ke folder CAPEX Evidence, lalu coba upload ulang.`);
     } finally {
       setSavingId('');
       if (fileInputs.current[key]) fileInputs.current[key]!.value = '';
