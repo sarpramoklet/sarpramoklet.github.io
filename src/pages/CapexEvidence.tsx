@@ -51,6 +51,7 @@ interface EvidenceRecord {
 interface DriveUploadResult {
   imageUrl: string;
   driveUrl: string;
+  fileId: string;
 }
 
 let cachedDriveAccessToken = '';
@@ -82,6 +83,10 @@ const lsSetImage = (key: string, dataUrl: string) => {
 };
 const lsGetImage = (key: string): string => {
   try { return localStorage.getItem(`${LS_IMAGE_PREFIX}${key}`) || ''; } catch { return ''; }
+};
+const getCachedImageDataUrl = (key: string): string => {
+  const cached = lsGetImage(key);
+  return cached.startsWith('data:image/') ? cached : '';
 };
 const lsSetCaption = (key: string, caption: string) => {
   try {
@@ -159,6 +164,15 @@ const parseEvidence = (row: Record<string, unknown>): EvidenceRecord | null => {
 };
 
 const evidenceId = (projectId: string, phase: Phase, slot: number) => `CAPEXEV-${projectId}-${phase}-${slot}`;
+
+const getDisplayImage = (key: string, item?: EvidenceRecord | null) =>
+  getCachedImageDataUrl(key) || item?.imageUrl || '';
+
+const extractDriveFileId = (value: string) => {
+  if (!value) return '';
+  const match = value.match(/\/file\/d\/([^/]+)/) || value.match(/[?&]id=([^&]+)/);
+  return match?.[1] ? decodeURIComponent(match[1]) : '';
+};
 
 const mergeEvidenceRecords = (items: EvidenceRecord[]) => {
   const byId = new Map<string, EvidenceRecord>();
@@ -312,10 +326,42 @@ const uploadToDrive = async (base64: string, fileName: string, accessToken: stri
   }
 
   const fileId = String(uploadJson.id);
+  try {
+    await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}/permissions?supportsAllDrives=true`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ role: 'reader', type: 'anyone' }),
+    });
+  } catch {
+    // If Workspace policy blocks public links, authenticated Drive recovery still handles preview.
+  }
   return {
     imageUrl: `https://drive.google.com/uc?export=view&id=${encodeURIComponent(fileId)}`,
     driveUrl: uploadJson.webViewLink || `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view`,
+    fileId,
   };
+};
+
+const blobToDataUrl = (blob: Blob): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (event) => resolve(String(event.target?.result || ''));
+    reader.onerror = () => reject(new Error('Gambar Drive gagal dibaca.'));
+    reader.readAsDataURL(blob);
+  });
+
+const downloadDriveImage = async (fileId: string, accessToken: string) => {
+  const response = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!response.ok) {
+    const json = await response.json().catch(() => null);
+    throw new Error(json?.error?.message || 'Gambar Drive gagal dimuat.');
+  }
+  return blobToDataUrl(await response.blob());
 };
 
 const progressColor = (value: number) => {
@@ -351,7 +397,7 @@ const PresentasiModal = ({ projects, evidenceByKey, onClose }: PresentasiModalPr
       PHASES.some(ph => SLOTS.some(sl => {
         const k = `CAPEXEV-${p.id}-${ph}-${sl}`;
         const item = evidenceByKey.get(k);
-        return item?.imageUrl || lsGetImage(k);
+        return getDisplayImage(k, item);
       }))
     );
   }, [projects, evidenceByKey]);
@@ -383,7 +429,7 @@ const PresentasiModal = ({ projects, evidenceByKey, onClose }: PresentasiModalPr
       const k = `CAPEXEV-${project.id}-${ph}-${sl}`;
       const item = evidenceByKey.get(k);
       return {
-        url: item?.imageUrl || lsGetImage(k) || '',
+        url: getDisplayImage(k, item),
         caption: item?.caption || lsGetCaption(k) || '',
         driveUrl: item?.driveUrl || '',
       };
@@ -465,7 +511,7 @@ const PresentasiModal = ({ projects, evidenceByKey, onClose }: PresentasiModalPr
           const firstPhoto = PHASES.flatMap(ph => SLOTS.map(sl => {
             const k = `CAPEXEV-${p.id}-${ph}-${sl}`;
             const item = evidenceByKey.get(k);
-            return item?.imageUrl || lsGetImage(k) || '';
+            return getDisplayImage(k, item);
           })).find(u => u);
           const active = idx === i;
           return (
@@ -692,6 +738,7 @@ const CapexEvidence = () => {
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
   const [showPresentation, setShowPresentation] = useState(false);
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
+  const recoveringImages = useRef<Set<string>>(new Set());
 
   const showToast = (msg: string, ok = true) => {
     setToast({ msg, ok });
@@ -713,6 +760,25 @@ const CapexEvidence = () => {
     });
   };
 
+  const recoverDriveImage = async (key: string, item?: EvidenceRecord | null) => {
+    if (!item || getCachedImageDataUrl(key) || recoveringImages.current.has(key)) return;
+    const fileId = extractDriveFileId(item.driveUrl) || extractDriveFileId(item.imageUrl);
+    if (!fileId) return;
+    recoveringImages.current.add(key);
+    try {
+      const token = cachedDriveAccessToken || await requestDriveAccessToken();
+      const dataUrl = await downloadDriveImage(fileId, token);
+      if (dataUrl.startsWith('data:image/')) {
+        lsSetImage(key, dataUrl);
+        setEvidence((prev) => [...prev]);
+      }
+    } catch (error) {
+      console.warn('Gagal memuat preview evidence dari Drive', error);
+    } finally {
+      recoveringImages.current.delete(key);
+    }
+  };
+
   const sortedProjects = useMemo(() => (
     [...projects].sort((a, b) => b.progress - a.progress || Number(a.id.replace('PRJ-', '')) - Number(b.id.replace('PRJ-', '')))
   ), [projects]);
@@ -729,7 +795,7 @@ const CapexEvidence = () => {
     const totalSlots = sortedProjects.length * PHASES.length * SLOTS.length;
     const lsExtra = PHASES.flatMap(ph => SLOTS.map(sl => {
       const key = `CAPEXEV-${sortedProjects.find(p => p.id === activeProjectId)?.id || ''}-${ph}-${sl}`;
-      return (!evidenceByKey.get(key)?.imageUrl && lsGetImage(key)) ? 1 : 0;
+      return (!evidenceByKey.get(key)?.imageUrl && getCachedImageDataUrl(key)) ? 1 : 0;
     })).reduce<number>((a, b) => a + b, 0);
     const filledSlots = evidence.filter((item) => item.imageUrl || item.driveUrl).length + lsExtra;
     const projectDone = sortedProjects.filter((project) => (
@@ -792,7 +858,7 @@ const CapexEvidence = () => {
         // Inject localStorage images into records that don't have them from sheet
         const enriched = mergeEvidenceRecords(parsed.map(item => {
           if (!item.imageUrl) {
-            const cached = lsGetImage(item.id);
+            const cached = getCachedImageDataUrl(item.id);
             if (cached) return { ...item, imageUrl: cached };
           }
           return item;
@@ -906,7 +972,7 @@ const CapexEvidence = () => {
       phase,
       slot,
       caption: captions[key] ?? existing?.caption ?? lsGetCaption(key) ?? '',
-      imageUrl: existing?.imageUrl || lsGetImage(key) || '',
+      imageUrl: existing?.imageUrl || getCachedImageDataUrl(key) || '',
       driveUrl: existing?.driveUrl || '',
       fileName: existing?.fileName || '',
       updatedBy: currentUser.nama,
@@ -962,7 +1028,6 @@ const CapexEvidence = () => {
       const uploaded = await uploadToDrive(base64, fileName, accessToken);
       const imageUrl = uploaded.imageUrl;
       const driveUrl = uploaded.driveUrl;
-      lsSetImage(key, imageUrl);
 
       // Step 3: Build record and update UI immediately
       const record = buildRecord(activeProject, phase, slot, {
@@ -1077,7 +1142,8 @@ const CapexEvidence = () => {
               const filled = PHASES.reduce((sum, phase) => (
                 sum + SLOTS.filter((slot) => {
                   const k = evidenceId(project.id, phase, slot);
-                  return evidenceByKey.get(k)?.imageUrl || lsGetImage(k);
+                  const item = evidenceByKey.get(k);
+                  return item?.imageUrl || item?.driveUrl || getCachedImageDataUrl(k);
                 }).length
               ), 0);
               const active = project.id === activeProject?.id;
@@ -1137,7 +1203,7 @@ const CapexEvidence = () => {
                     {SLOTS.map((slot) => {
                       const key = evidenceId(activeProject.id, phase, slot);
                       const item = evidenceByKey.get(key);
-                      const displayImage = item?.imageUrl || lsGetImage(key);
+                      const displayImage = getDisplayImage(key, item);
                       const isUploading = savingId === `${key}:upload`;
                       const isSavingCaption = savingId === `${key}:caption`;
                       const captionVal = captions[key] ?? item?.caption ?? lsGetCaption(key) ?? '';
@@ -1168,7 +1234,12 @@ const CapexEvidence = () => {
                             {isUploading ? (
                               <Loader2 className="animate-spin" size={28} color="var(--accent-blue)" />
                             ) : displayImage ? (
-                              <img src={displayImage} alt={`${phase} ${slot}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              <img
+                                src={displayImage}
+                                alt={`${phase} ${slot}`}
+                                onError={() => recoverDriveImage(key, item)}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              />
                             ) : (
                               <div style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
                                 <Upload size={28} style={{ marginBottom: 8 }} />
