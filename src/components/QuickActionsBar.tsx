@@ -31,7 +31,7 @@ const QuickActionsBar = ({ isLoggedIn }: Props) => {
 
   // Persist visibility in localStorage (default: visible)
   const [visible, setVisible] = useState<boolean>(() => {
-    try { return localStorage.getItem(LS_KEY) !== 'false'; } catch { return true; }
+    try { return localStorage.getItem(LS_KEY) === 'true'; } catch { return false; }
   });
 
   useEffect(() => {
