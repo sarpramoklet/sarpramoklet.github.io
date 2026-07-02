@@ -3,7 +3,7 @@ import { HashRouter as Router, Routes, Route, Navigate, useLocation } from 'reac
 import { Menu } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import QuickActionsBar from './components/QuickActionsBar';
-import AssistantLauncher from './components/AssistantLauncher';
+
 import Dashboard from './pages/Dashboard';
 import MeetingDashboard from './pages/MeetingDashboard';
 import ITPage from './pages/ITPage';
@@ -145,7 +145,7 @@ function App() {
       <ScrollToTop />
       <RouteActivityTracker isLoggedIn={isLoggedIn} />
       <QuickActionsBar isLoggedIn={isLoggedIn} />
-      <AssistantLauncher />
+
       <div className="app-layout">
         <Sidebar 
           isOpen={isSidebarOpen} 
