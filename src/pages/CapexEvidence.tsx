@@ -18,7 +18,7 @@ import { getCurrentUser } from '../data/organization';
 import { mergeCapexProjects, type CapexProjectRecord } from '../data/capexProjects';
 
 const API_URL        = 'https://script.google.com/macros/s/AKfycbz0Axc_vnnLBPsKOZQCE8RHrv2SU9SMyqEcnUYaVUJk5uBlDqLA_qtAlUjTEF0pRyxWdQ/exec';
-const UPLOAD_API_URL = 'https://script.google.com/macros/s/AKfycbwM73jOWMyEXFwLAWCSx-P2-0NKfzdf6ynDcqXHQaM9fhng6uXufMU4aDN-Odxi2FucfQ/exec';
+const LEGACY_UPLOAD_API_URL = 'https://script.google.com/macros/s/AKfycbwM73jOWMyEXFwLAWCSx-P2-0NKfzdf6ynDcqXHQaM9fhng6uXufMU4aDN-Odxi2FucfQ/exec';
 const SHEET_PROJECTS = 'Progres_CAPEX';
 const SHEET_EVIDENCE = 'Capex_Evidence';
 const DRIVE_FOLDER = 'Sarpramoklet_CAPEX_Evidence';
@@ -44,6 +44,11 @@ interface EvidenceRecord {
   updatedBy: string;
   updatedByEmail: string;
   updatedAt: string;
+}
+
+interface DriveUploadResult {
+  imageUrl: string;
+  driveUrl: string;
 }
 
 const PHASES: Phase[] = ['Before', 'Process', 'After'];
@@ -156,6 +161,44 @@ const readFileAsDataUrl = (file: File): Promise<string> =>
     reader.onerror = () => reject(new Error('File gagal dibaca.'));
     reader.readAsDataURL(file);
   });
+
+const uploadToDrive = async (base64: string, fileName: string): Promise<DriveUploadResult> => {
+  const body = JSON.stringify({
+    action: 'UPLOAD_TO_DRIVE',
+    base64,
+    mimeType: 'image/jpeg',
+    fileName,
+    folder: DRIVE_FOLDER,
+  });
+
+  let lastError: Error | null = null;
+  for (const endpoint of [API_URL, LEGACY_UPLOAD_API_URL]) {
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+        body,
+      });
+      const text = await response.text();
+      const json = text ? JSON.parse(text) : null;
+      if (!json?.success) {
+        throw new Error(json?.error || 'Upload Drive tidak mengembalikan status sukses.');
+      }
+
+      const imageUrl = json.url || json.imageUrl || json.image_url || '';
+      const driveUrl = json.driveUrl || json.drive_url || json.url || '';
+      if (!imageUrl && !driveUrl) {
+        throw new Error('Upload Drive sukses, tetapi URL gambar kosong.');
+      }
+
+      return { imageUrl: imageUrl || driveUrl, driveUrl };
+    } catch (error: any) {
+      lastError = error instanceof Error ? error : new Error(error?.message || 'Upload Drive gagal.');
+    }
+  }
+
+  throw lastError || new Error('Upload Drive gagal.');
+};
 
 const progressColor = (value: number) => {
   if (value >= 100) return 'var(--accent-emerald)';
@@ -677,12 +720,24 @@ const CapexEvidence = () => {
       // Also send readable field names for future schema upgrades
       ProjectId: record.projectId,
       projectId: record.projectId,
+      Nama: record.nama,
+      nama: record.nama,
+      Owner: record.owner,
+      owner: record.owner,
+      Progress: record.progress,
+      progress: record.progress,
       Phase: record.phase,
       phase: record.phase,
       Slot: record.slot,
       slot: record.slot,
       Caption: record.caption,
       caption: record.caption,
+      ImageUrl: imageUrlForSheet,
+      imageUrl: imageUrlForSheet,
+      image_url: imageUrlForSheet,
+      DriveUrl: record.driveUrl,
+      driveUrl: record.driveUrl,
+      drive_url: record.driveUrl,
       FileName: record.fileName,
       fileName: record.fileName,
       UpdatedBy: record.updatedBy,
@@ -766,31 +821,11 @@ const CapexEvidence = () => {
       // Step 1: Save compressed image to localStorage FIRST (instant, always works)
       lsSetImage(key, compressed);
 
-      // Step 2: Try uploading to Google Drive
-      let imageUrl = compressed;
-      let driveUrl = '';
-      try {
-        const uploadResp = await fetch(UPLOAD_API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-          body: JSON.stringify({
-            action: 'UPLOAD_TO_DRIVE',
-            base64,
-            mimeType: 'image/jpeg',
-            fileName,
-            folder: DRIVE_FOLDER,
-          }),
-        });
-        const uploadText = await uploadResp.text();
-        let uploadJson: any = null;
-        try { uploadJson = uploadText ? JSON.parse(uploadText) : null; } catch { uploadJson = null; }
-        if (uploadJson?.success && (uploadJson.url || uploadJson.imageUrl || uploadJson.driveUrl)) {
-          imageUrl = uploadJson.url || uploadJson.imageUrl || compressed;
-          driveUrl = uploadJson.driveUrl || uploadJson.url || '';
-        }
-      } catch {
-        // Drive upload failed — we already have localStorage fallback
-      }
+      // Step 2: Upload to Google Drive for cross-user persistence
+      const uploaded = await uploadToDrive(base64, fileName);
+      const imageUrl = uploaded.imageUrl;
+      const driveUrl = uploaded.driveUrl;
+      lsSetImage(key, imageUrl);
 
       // Step 3: Build record and update UI immediately
       const record = buildRecord(activeProject, phase, slot, {
@@ -810,17 +845,12 @@ const CapexEvidence = () => {
       // Step 4: Save metadata to Sheet (image URL without base64 if no Drive URL)
       try {
         await saveEvidenceRecord(record);
-        if (driveUrl) {
-          showToast('✓ Foto tersimpan di Drive');
-        } else {
-          showToast('✓ Foto tersimpan lokal (Drive tidak tersedia)');
-        }
+        showToast('✓ Foto tersimpan permanen di Drive');
       } catch {
-        // Sheet save failed — localStorage cache is still intact
-        showToast('✓ Foto tersimpan lokal. Sync ke Sheet gagal — coba Sinkronkan.', false);
+        showToast('✓ Foto tersimpan di Drive. Sync metadata Sheet gagal — coba Sinkronkan.', false);
       }
     } catch (error: any) {
-      alert(`Gagal upload foto: ${error?.message || 'Periksa koneksi.'}`);
+      alert(`Gagal upload foto permanen: ${error?.message || 'Periksa koneksi.'}\n\nFoto masih tersimpan sementara di browser ini. Coba upload ulang agar pimpinan/kaur lain bisa melihatnya.`);
     } finally {
       setSavingId('');
       if (fileInputs.current[key]) fileInputs.current[key]!.value = '';
