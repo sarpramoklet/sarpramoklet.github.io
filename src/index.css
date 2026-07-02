@@ -707,19 +707,15 @@ tr:hover td {
 
 /* --- Quick Actions Bottom Bar (native mobile-style tab bar) --- */
 .quick-actions-bar {
-  position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 0.65rem);
-  z-index: 950;
   display: flex;
   gap: 0.4rem;
   padding: 0.45rem;
   background: rgba(15, 23, 42, 0.78);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
-  border-radius: 18px;
+  border-radius: 0 0 18px 18px;
   border: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: none;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45),
     0 0 0 1px rgba(255, 255, 255, 0.04) inset;
   width: min(460px, calc(100vw - 1.5rem));
@@ -867,12 +863,11 @@ tr:hover td {
   .quick-actions-bar {
     width: calc(100vw - 1.25rem);
     max-width: none;
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 0.5rem);
-    border-radius: 16px;
+    border-radius: 0 0 16px 16px;
   }
 
   .content-container {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 6rem) !important;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 4rem) !important;
   }
 
   .assistant-launcher {
