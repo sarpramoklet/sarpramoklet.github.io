@@ -188,10 +188,27 @@ const parseLegacyUtilityId = (rawId: string) => {
   };
 };
 
-// Data pembayaran statis untuk bulan yang sudah dibayar (fallback jika belum tersinkron ke DB)
-const STATIC_SEED: Record<string, { PLN: number; PDAM: number }> = {
-  '2026-07': { PLN: 13214260, PDAM: 995500 },
+// Data pembayaran statis per-pelanggan per-bulan (fallback jika belum tersinkron ke DB)
+// Key format: customerKey(jenis, pelanggan) = "jenis::pelanggan_lowercase"
+const UTILITY_SEED: Record<string, Record<string, number>> = {
+  '2026-07': {
+    'pln::yayasan sandykara': 3557610,
+    'pln::smk telkom': 7815700,
+    'pln::kantin': 1840950,
+    'pdam::yys sandhikara': 995500,
+  },
 };
+
+// Untuk chart (total PLN & PDAM per bulan)
+const STATIC_SEED: Record<string, { PLN: number; PDAM: number }> = Object.fromEntries(
+  Object.entries(UTILITY_SEED).map(([month, customers]) => [
+    month,
+    {
+      PLN: Object.entries(customers).filter(([k]) => k.startsWith('pln::')).reduce((s, [, v]) => s + v, 0),
+      PDAM: Object.entries(customers).filter(([k]) => k.startsWith('pdam::')).reduce((s, [, v]) => s + v, 0),
+    },
+  ])
+);
 
 const currentMonthValue = () => {
   const now = new Date();
@@ -322,7 +339,9 @@ const Utilities = () => {
   }, [filterMonth, monthOptions]);
 
   const comparisonMonths = useMemo(() => {
-    const asc = [...monthOptions].sort((a, b) => a.localeCompare(b));
+    const seedMonths = Object.keys(UTILITY_SEED);
+    const allMonths = Array.from(new Set([...monthOptions, ...seedMonths]));
+    const asc = allMonths.sort((a, b) => a.localeCompare(b));
     return asc.filter((month) => month >= '2025-12');
   }, [monthOptions]);
 
@@ -340,6 +359,21 @@ const Utilities = () => {
       const current = matrix.get(key);
       if (!current) return;
       current.values[item.bulan] = (current.values[item.bulan] || 0) + item.nominal;
+    });
+
+    // Merge seed data untuk bulan yang belum ada di DB
+    CUSTOMER_PRESETS.forEach((preset) => {
+      const key = customerKey(preset.jenis, preset.pelanggan);
+      if (!matrix.has(key)) {
+        matrix.set(key, { label: toCustomerDisplay(preset.jenis, preset.pelanggan), values: {} });
+      }
+      const current = matrix.get(key)!;
+      Object.entries(UTILITY_SEED).forEach(([month, customers]) => {
+        const seedVal = customers[key];
+        if (seedVal !== undefined && !current.values[month]) {
+          current.values[month] = seedVal;
+        }
+      });
     });
 
     const ordered = Array.from(matrix.entries()).sort((left, right) => {
