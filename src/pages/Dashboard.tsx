@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, LabelList, LineChart, Line, Legend } from 'recharts';
+import { XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, LabelList, LineChart, Line, Legend, ReferenceLine } from 'recharts';
 import { UserCircle2, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, MessageSquare, AlertCircle, Edit3, Trash2, Wind, Briefcase, Smartphone, Activity, Coins, Camera, X, Heart, Home, Sparkles, ShieldCheck } from 'lucide-react';
 import { canAccessFinanceData, getCurrentUser, ROLES, USERS } from '../data/organization';
 import { mergeCapexProjects } from '../data/capexProjects';
@@ -4558,8 +4558,31 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
               <h3 style={{ fontSize: '0.9rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Zap size={18} color="var(--accent-amber)" /> Tren Tagihan PLN (Listrik)
               </h3>
-              <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Fasilitas & Gedung Sekolah</p>
+              <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Fasilitas &amp; Gedung Sekolah</p>
             </div>
+            {/* Stats rata-rata PLN */}
+            {utilityChartData.length > 0 && (() => {
+              const vals = utilityChartData.map(d => d.PLN).filter(v => v > 0);
+              const avg = vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 0;
+              const max = vals.length ? Math.max(...vals) : 0;
+              const min = vals.length ? Math.min(...vals) : 0;
+              return (
+                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Rata-rata</div>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--accent-amber)' }}>{(avg / 1000000).toFixed(1)}jt</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tertinggi</div>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--accent-rose)' }}>{(max / 1000000).toFixed(1)}jt</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Terendah</div>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--accent-emerald)' }}>{(min / 1000000).toFixed(1)}jt</div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
           <div style={{ flex: 1, minHeight: 0, marginTop: '1rem' }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -4571,6 +4594,13 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                   formatter={(v: any) => formatIDR(v as number)}
                   contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-focus)', borderRadius: '8px', fontSize: '10px' }}
                 />
+                {utilityChartData.length > 0 && (() => {
+                  const vals = utilityChartData.map(d => d.PLN).filter(v => v > 0);
+                  const avg = vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 0;
+                  return avg > 0 ? (
+                    <ReferenceLine y={avg} stroke="rgba(245,158,11,0.5)" strokeDasharray="4 3" label={{ value: `Avg ${(avg/1000000).toFixed(1)}jt`, position: 'insideTopRight', fontSize: 9, fill: 'var(--accent-amber)', fontWeight: 600 }} />
+                  ) : null;
+                })()}
                 <Bar dataKey="PLN" fill="var(--accent-amber)" radius={[4, 4, 0, 0]} barSize={24}>
                   <LabelList
                     dataKey="PLN"
@@ -4592,6 +4622,29 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
               </h3>
               <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Pemakaian Air Bersih Terpusat</p>
             </div>
+            {/* Stats rata-rata PDAM */}
+            {utilityChartData.length > 0 && (() => {
+              const vals = utilityChartData.map(d => d.PDAM).filter(v => v > 0);
+              const avg = vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 0;
+              const max = vals.length ? Math.max(...vals) : 0;
+              const min = vals.length ? Math.min(...vals) : 0;
+              return (
+                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Rata-rata</div>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--accent-cyan)' }}>{(avg / 1000).toFixed(0)}rb</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tertinggi</div>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--accent-rose)' }}>{(max / 1000).toFixed(0)}rb</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Terendah</div>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--accent-emerald)' }}>{(min / 1000).toFixed(0)}rb</div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
           <div style={{ flex: 1, minHeight: 0, marginTop: '1rem' }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -4603,6 +4656,13 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                   formatter={(v: any) => formatIDR(v as number)}
                   contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-focus)', borderRadius: '8px', fontSize: '10px' }}
                 />
+                {utilityChartData.length > 0 && (() => {
+                  const vals = utilityChartData.map(d => d.PDAM).filter(v => v > 0);
+                  const avg = vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 0;
+                  return avg > 0 ? (
+                    <ReferenceLine y={avg} stroke="rgba(6,182,212,0.5)" strokeDasharray="4 3" label={{ value: `Avg ${(avg/1000).toFixed(0)}rb`, position: 'insideTopRight', fontSize: 9, fill: 'var(--accent-cyan)', fontWeight: 600 }} />
+                  ) : null;
+                })()}
                 <Bar dataKey="PDAM" fill="var(--accent-cyan)" radius={[4, 4, 0, 0]} barSize={24}>
                   <LabelList
                     dataKey="PDAM"
