@@ -327,7 +327,9 @@ const Utilities = () => {
   }, []);
 
   const monthOptions = useMemo(() => {
-    const uniq = Array.from(new Set(rows.map((row) => row.bulan).filter(Boolean)));
+    const fromDb = rows.map((row) => row.bulan).filter(Boolean);
+    const seedMonths = Object.keys(UTILITY_SEED);
+    const uniq = Array.from(new Set([...fromDb, ...seedMonths]));
     return uniq.sort((a, b) => b.localeCompare(a));
   }, [rows]);
 
