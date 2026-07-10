@@ -188,6 +188,11 @@ const parseLegacyUtilityId = (rawId: string) => {
   };
 };
 
+// Data pembayaran statis untuk bulan yang sudah dibayar (fallback jika belum tersinkron ke DB)
+const STATIC_SEED: Record<string, { PLN: number; PDAM: number }> = {
+  '2026-07': { PLN: 13214260, PDAM: 995500 },
+};
+
 const currentMonthValue = () => {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -354,14 +359,21 @@ const Utilities = () => {
   };
 
   const chartData = useMemo(() => {
-    return [...monthOptions]
+    // Gabungkan monthOptions dengan bulan dari seed yang mungkin belum ada di DB
+    const seedMonths = Object.keys(STATIC_SEED);
+    const allMonths = Array.from(new Set([...monthOptions, ...seedMonths]));
+
+    return allMonths
       .sort((a, b) => a.localeCompare(b))
       .map((month) => {
         const records = rows.filter((row) => row.bulan === month);
+        const dbPLN = records.filter((row) => row.jenis === 'PLN').reduce((acc, row) => acc + row.nominal, 0);
+        const dbPDAM = records.filter((row) => row.jenis === 'PDAM').reduce((acc, row) => acc + row.nominal, 0);
+        const seed = STATIC_SEED[month];
         return {
           name: monthHeaderLabel(month, comparisonReferenceYear || month.slice(0, 4)),
-          PLN: records.filter((row) => row.jenis === 'PLN').reduce((acc, row) => acc + row.nominal, 0),
-          PDAM: records.filter((row) => row.jenis === 'PDAM').reduce((acc, row) => acc + row.nominal, 0),
+          PLN: dbPLN > 0 ? dbPLN : (seed?.PLN ?? 0),
+          PDAM: dbPDAM > 0 ? dbPDAM : (seed?.PDAM ?? 0),
         };
       });
   }, [rows, monthOptions, comparisonReferenceYear]);
