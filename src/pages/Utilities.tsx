@@ -189,13 +189,13 @@ const parseLegacyUtilityId = (rawId: string) => {
 };
 
 // Data pembayaran statis per-pelanggan per-bulan (fallback jika belum tersinkron ke DB)
-// Key format: customerKey(jenis, pelanggan) = "jenis::pelanggan_lowercase"
+// Key format: customerKey(jenis, pelanggan) = "${JENIS_UPPERCASE}::${pelanggan_lowercase}"
 const UTILITY_SEED: Record<string, Record<string, number>> = {
   '2026-07': {
-    'pln::yayasan sandykara': 3557610,
-    'pln::smk telkom': 7815700,
-    'pln::kantin': 1840950,
-    'pdam::yys sandhikara': 995500,
+    'PLN::yayasan sandykara': 3557610,
+    'PLN::smk telkom': 7815700,
+    'PLN::kantin': 1840950,
+    'PDAM::yys sandhikara': 995500,
   },
 };
 
