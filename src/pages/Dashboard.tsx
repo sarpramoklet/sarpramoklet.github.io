@@ -3049,7 +3049,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                 </div>
 
                 {classroomPriorityChartData.length > 0 ? (
-                  <div style={{ width: '100%', height: '200px' }}>
+                  <div style={{ width: '100%', height: '200px', minWidth: 0 }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={classroomPriorityChartData} layout="vertical" margin={{ left: 8, right: 24, top: 4, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" horizontal={false} />
@@ -3277,19 +3277,19 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                     title="Lihat daftar AC yang mati atau sedang perbaikan"
                   >
                     <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--accent-rose)' }}>{acMonitorData.perbaikan + acMonitorData.rusak}</div>
-                    <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>Mati / Perbaikan</div>
+                    <div style={{ fontSize: '0.73rem', color: 'var(--text-secondary)' }}>Perlu Perhatian</div>
                   </Link>
                   <div style={{ flex: 1, padding: '0.75rem', background: 'var(--accent-emerald-ghost)', borderRadius: '8px', borderLeft: '2px solid var(--accent-emerald)' }}>
                     <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--accent-emerald)' }}>{acMonitorData.baik}</div>
-                    <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>Normal / Baik</div>
+                    <div style={{ fontSize: '0.73rem', color: 'var(--text-secondary)' }}>Normal / Baik</div>
                   </div>
                 </div>
               </div>
             </div>
 
             <div className="glass-panel" style={{ padding: '1rem', background: 'var(--bg-card)', height: '220px', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Ratio Kondisi Fisik AC</div>
-              <div style={{ flex: 1, position: 'relative' }}>
+              <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Rasio Kondisi AC</div>
+              <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -3596,16 +3596,17 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
               key={`auth-${motivationIndex}`}
               className="animate-fade-in"
               style={{ 
-                fontSize: '0.75rem', 
+                fontSize: '0.8rem', 
                 color: 'var(--text-primary)', 
                 margin: '0.2rem 0 0 0', 
                 fontStyle: 'italic', 
                 opacity: 0.9,
                 textShadow: '0 0 10px rgba(59, 130, 246, 0.7), 0 0 20px rgba(59, 130, 246, 0.4)',
-                transition: 'opacity 1s ease-in-out'
+                transition: 'opacity 1s ease-in-out',
+                lineHeight: 1.5,
               }}
             >
-              "{motivationText}"
+              {`"${motivationText}"`}
             </p>
           </div>
         </div>
@@ -3638,13 +3639,99 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                 background: 'linear-gradient(90deg, var(--accent-emerald-ghost), transparent)'
               }}
             >
-              <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.45, fontStyle: 'italic' }}>
-                "{publicMotivationText}"
+              <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5, fontStyle: 'italic' }}>
+                {`"${publicMotivationText}"`}
               </p>
             </div>
           )}
         </div>
       </div>
+
+      {/* ── ⚠️ Perlu Tindakan Hari Ini ── */}
+      {isLoggedIn && (() => {
+        const pendingComplaints = mokletService.complaints?.pending ?? 0;
+        const classroomIssues = classroomMonitorRows.filter(r => {
+          const hasIssue = ['Kotor', 'Rusak', 'Perbaikan'].some(k =>
+            JSON.stringify(r).toLowerCase().includes(k.toLowerCase())
+          );
+          return hasIssue;
+        }).length;
+        const capexBelum50 = sortedCapexProjects.filter(p => (Number(p.progress) || 0) < 50).length;
+        const avgHours = sarmokAnalysis.complaints?.avgHours;
+        const avgDays = avgHours != null ? avgHours / 24 : null;
+
+        const actionItems = [
+          pendingComplaints > 0 && {
+            icon: '📨',
+            label: `${pendingComplaints} pengaduan menunggu konfirmasi`,
+            color: '#f97316',
+            bg: 'rgba(249,115,22,0.08)',
+            border: 'rgba(249,115,22,0.25)',
+            href: '#/sarpras',
+          },
+          classroomIssues > 0 && {
+            icon: '🏫',
+            label: `${classroomIssues} ruang kelas perlu tindak lanjut`,
+            color: '#f59e0b',
+            bg: 'rgba(245,158,11,0.08)',
+            border: 'rgba(245,158,11,0.25)',
+            href: '#/classroom-monitor',
+          },
+          capexBelum50 > 0 && {
+            icon: '🔧',
+            label: `${capexBelum50} proyek CAPEX di bawah 50% progres`,
+            color: '#a78bfa',
+            bg: 'rgba(167,139,250,0.08)',
+            border: 'rgba(167,139,250,0.25)',
+            href: '#/capex',
+          },
+          avgDays != null && avgDays > 3 && {
+            icon: '⏱️',
+            label: `Rata-rata respons pengaduan ${avgDays.toFixed(1)} hari`,
+            color: '#e11d48',
+            bg: 'rgba(225,29,72,0.08)',
+            border: 'rgba(225,29,72,0.25)',
+            href: '#/sarpras',
+          },
+        ].filter(Boolean) as { icon: string; label: string; color: string; bg: string; border: string; href: string }[];
+
+        if (actionItems.length === 0) return null;
+
+        return (
+          <div style={{ marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.6rem' }}>
+              <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--accent-rose)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>⚠ Perlu Tindakan</span>
+              <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>— {actionItems.length} item hari ini</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+              {actionItems.map((item, idx) => (
+                <a
+                  key={idx}
+                  href={item.href}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.65rem',
+                    padding: '0.6rem 0.85rem',
+                    background: item.bg,
+                    border: `1px solid ${item.border}`,
+                    borderLeft: `3px solid ${item.color}`,
+                    borderRadius: '8px',
+                    textDecoration: 'none',
+                    transition: 'opacity 0.15s',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.opacity = '0.8')}
+                  onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                >
+                  <span style={{ fontSize: '0.85rem' }}>{item.icon}</span>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: item.color }}>{item.label}</span>
+                  <span style={{ marginLeft: 'auto', fontSize: '0.7rem', color: 'var(--text-muted)' }}>→</span>
+                </a>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── Sarmok API Integration Boxes ── */}
       <div style={{ marginBottom: '2rem' }}>
@@ -3652,14 +3739,14 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: mokletService.error ? '#f87171' : mokletService.loading ? '#fbbf24' : '#34d399', boxShadow: `0 0 6px ${mokletService.error ? '#f8717160' : mokletService.loading ? '#fbbf2460' : '#34d39960'}` }} />
               <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Sarmok Dashboard — Status Layanan</span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', padding: '0.25rem 0.45rem', border: '1px solid var(--border-subtle)', borderRadius: 999, color: 'var(--text-muted)', fontSize: '0.62rem', fontWeight: 700, background: 'rgba(255,255,255,0.03)' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', padding: '0.25rem 0.45rem', border: '1px solid var(--border-subtle)', borderRadius: 999, color: 'var(--text-muted)', fontSize: '0.68rem', fontWeight: 700, background: 'rgba(255,255,255,0.03)' }}>
                 <Info size={11} /> Klik angka
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
               {mokletService.lastUpdated && (
-                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-                  Update: {mokletService.lastUpdated.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                <span style={{ fontSize: '0.73rem', color: 'var(--text-muted)' }}>
+                  Diperbarui: {mokletService.lastUpdated.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
                 </span>
               )}
             </div>
@@ -3881,7 +3968,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           {wifiLoading ? (
             <div style={{ padding: '3rem', display: 'flex', justifyContent: 'center' }}><Loader2 className="animate-spin" color="var(--accent-blue)" /></div>
           ) : (
-            <div style={{ width: '100%', height: '280px' }}>
+            <div style={{ width: '100%', height: '280px', minWidth: 0 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={wifiData} margin={{ top: 28, right: 20, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
@@ -4588,7 +4675,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
               );
             })()}
           </div>
-          <div style={{ flex: 1, minHeight: 0, marginTop: '1rem' }}>
+          <div style={{ flex: 1, minHeight: 0, minWidth: 0, marginTop: '1rem' }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={utilityChartData} margin={{ top: 25, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
@@ -4650,7 +4737,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
               );
             })()}
           </div>
-          <div style={{ flex: 1, minHeight: 0, marginTop: '1rem' }}>
+          <div style={{ flex: 1, minHeight: 0, minWidth: 0, marginTop: '1rem' }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={utilityChartData} margin={{ top: 25, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
