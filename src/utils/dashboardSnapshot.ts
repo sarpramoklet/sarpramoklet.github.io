@@ -1054,21 +1054,15 @@ const buildClassroomSnapshot = async (): Promise<DashboardClassroomSnapshot> => 
 };
 
 const buildDefaultACRoom = (ruang: number) => {
-  let status = 'Belum Terpasang';
-  let kondisi = '-';
-  let pk = '-';
+  // Semua 40 ruang sudah terpasang per Juli 2025
+  // R.1-6: 1.5 PK | R.7-16 & R.21-24: Gree 1.5 PK (baru) | R.17-20 & R.25-40: 2 PK
+  let pk = '1.5 PK';
 
-  if (ruang >= 1 && ruang <= 6) {
-    status = 'Terpasang';
-    kondisi = 'Baik';
-    pk = '1.5 PK';
-  } else if ((ruang >= 17 && ruang <= 20) || (ruang >= 25 && ruang <= 40)) {
-    status = 'Terpasang';
-    kondisi = 'Baik';
+  if ((ruang >= 17 && ruang <= 20) || (ruang >= 25 && ruang <= 40)) {
     pk = '2 PK';
   }
 
-  return { ruang, status, kondisi, pk };
+  return { ruang, status: 'Terpasang', kondisi: 'Baik', pk };
 };
 
 const buildACSnapshot = async (): Promise<DashboardACSnapshot> => {
@@ -1091,8 +1085,11 @@ const buildACSnapshot = async (): Promise<DashboardACSnapshot> => {
   for (let ruang = 1; ruang <= 40; ruang += 1) {
     const saved = rowByRoom.get(ruang);
     const fallback = buildDefaultACRoom(ruang);
-    const status = compactText(saved?.status || saved?.Status || fallback.status) || fallback.status;
-    const kondisi = compactText(saved?.kondisi || saved?.Kondisi || fallback.kondisi) || fallback.kondisi;
+    // Jika DB masih menyimpan 'Belum Terpasang' (data lama), gunakan default baru
+    const dbStatus = compactText(saved?.status || saved?.Status || '');
+    const status = dbStatus === 'Terpasang' ? dbStatus : fallback.status;
+    const dbKondisi = compactText(saved?.kondisi || saved?.Kondisi || '');
+    const kondisi = dbStatus === 'Terpasang' ? (dbKondisi || fallback.kondisi) : fallback.kondisi;
     const pk = compactText(saved?.pk || saved?.PK || fallback.pk) || fallback.pk;
 
     if (status === 'Terpasang') terpasang += 1;

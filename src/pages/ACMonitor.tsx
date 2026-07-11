@@ -116,11 +116,15 @@ const ACMonitor = () => {
       };
 
       // Generate 1 to 40
+      // Jika data di DB masih 'Belum Terpasang' (data lama), gunakan default baru
+      // karena semua 40 ruang sudah terpasang AC per Juli 2025
       const list: ACData[] = [];
       for (let i = 1; i <= 40; i++) {
-        if (fetchedMap.has(i)) {
-          list.push(fetchedMap.get(i)!);
+        const dbEntry = fetchedMap.get(i);
+        if (dbEntry && dbEntry.status === 'Terpasang') {
+          list.push(dbEntry);
         } else {
+          // Tidak ada di DB, atau DB masih bilang 'Belum Terpasang' → pakai default baru
           list.push(getDefaultAC(i));
         }
       }

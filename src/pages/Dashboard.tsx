@@ -2151,14 +2151,18 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           });
 
           for (let i = 1; i <= 40; i++) {
-            let status = 'Belum Terpasang';
-            let kondisi = '-';
+            // Semua 40 ruang sudah terpasang per Juli 2025
+            // Jika DB masih menyimpan 'Belum Terpasang' (data lama), abaikan dan gunakan default baru
+            let status = 'Terpasang';
+            let kondisi = 'Baik';
             if (fetchedMap.has(i)) {
-              status = fetchedMap.get(i).status || fetchedMap.get(i).Status || 'Belum Terpasang';
-              kondisi = fetchedMap.get(i).kondisi || fetchedMap.get(i).Kondisi || '-';
-            } else {
-              if (i >= 1 && i <= 6) { status = 'Terpasang'; kondisi = 'Baik'; }
-              else if ((i >= 17 && i <= 20) || (i >= 25 && i <= 40)) { status = 'Terpasang'; kondisi = 'Baik'; }
+              const dbStatus = fetchedMap.get(i).status || fetchedMap.get(i).Status || '';
+              const dbKondisi = fetchedMap.get(i).kondisi || fetchedMap.get(i).Kondisi || '';
+              if (dbStatus === 'Terpasang') {
+                status = dbStatus;
+                kondisi = dbKondisi || 'Baik';
+              }
+              // else: DB masih bilang 'Belum Terpasang' → pakai default 'Terpasang'
             }
 
             if (status === 'Terpasang') terpasang++; else belum++;
