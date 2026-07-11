@@ -88,31 +88,28 @@ const ACMonitor = () => {
       }
 
       const getDefaultAC = (i: number): ACData => {
-        let status = 'Belum Terpasang';
-        let kondisi = '-';
-        let pk = '-';
-        let jumlah = 0;
-        
-        if (i >= 1 && i <= 6) {
-          status = 'Terpasang';
-          kondisi = 'Baik';
-          pk = '1.5 PK';
-          jumlah = 2;
-        } else if ((i >= 17 && i <= 20) || (i >= 25 && i <= 40)) {
-          status = 'Terpasang';
-          kondisi = 'Baik';
+        // R.1-6: sudah lama terpasang (1.5 PK, 2 unit)
+        // R.17-20 & R.25-40: sudah lama terpasang (2 PK, 2 unit)
+        // R.7-16 & R.21-24: baru terpasang Juli 2025 — Gree 1.5 PK, 2 unit
+        let pk = '1.5 PK';
+        let merk = 'Gree';
+
+        if ((i >= 17 && i <= 20) || (i >= 25 && i <= 40)) {
           pk = '2 PK';
-          jumlah = 2;
+          merk = '-';
+        } else if (i >= 1 && i <= 6) {
+          merk = '-';
         }
-        
+        // i 7-16 dan 21-24 → Gree 1.5 PK (default di atas)
+
         return {
           id: `AC-${i}`,
           ruang: i,
-          status,
-          kondisi,
-          merk: '-',
+          status: 'Terpasang',
+          kondisi: 'Baik',
+          merk,
           pk,
-          jumlah,
+          jumlah: 2,
           updatedAt: '',
           updatedBy: '-'
         };
@@ -149,13 +146,11 @@ const ACMonitor = () => {
       console.error("Error fetching AC data:", error);
       // Fallback local list
       const getDefaultAC = (i: number): ACData => {
-        let status = 'Belum Terpasang';
-        let kondisi = '-';
-        let pk = '-';
-        let jumlah = 0;
-        if (i >= 1 && i <= 6) { status = 'Terpasang'; kondisi = 'Baik'; pk = '1.5 PK'; jumlah = 2; }
-        else if ((i >= 17 && i <= 20) || (i >= 25 && i <= 40)) { status = 'Terpasang'; kondisi = 'Baik'; pk = '2 PK'; jumlah = 2; }
-        return { id: `AC-${i}`, ruang: i, status, kondisi, merk: '-', pk, jumlah, updatedAt: '', updatedBy: '-' };
+        let pk = '1.5 PK';
+        let merk = 'Gree';
+        if ((i >= 17 && i <= 20) || (i >= 25 && i <= 40)) { pk = '2 PK'; merk = '-'; }
+        else if (i >= 1 && i <= 6) { merk = '-'; }
+        return { id: `AC-${i}`, ruang: i, status: 'Terpasang', kondisi: 'Baik', merk, pk, jumlah: 2, updatedAt: '', updatedBy: '-' };
       };
 
       const list: ACData[] = [];
