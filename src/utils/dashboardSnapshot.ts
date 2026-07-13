@@ -1054,11 +1054,13 @@ const buildClassroomSnapshot = async (): Promise<DashboardClassroomSnapshot> => 
 };
 
 const buildDefaultACRoom = (ruang: number) => {
-  // Semua 40 ruang sudah terpasang per Juli 2025
-  // R.1-6: 1.5 PK | R.7-16 & R.21-24: Gree 1.5 PK (baru) | R.17-20 & R.25-40: 2 PK
+  // R.1-6:   1.5 PK, 2 unit, merk -
+  // R.7-16:  1.5 PK, 1 unit, Gree (revisi Juli 2025)
+  // R.17-24: 2 PK,   2 unit, merk - (R20-24 revisi Juli 2025)
+  // R.25-40: 2 PK,   2 unit, merk -
   let pk = '1.5 PK';
 
-  if ((ruang >= 17 && ruang <= 20) || (ruang >= 25 && ruang <= 40)) {
+  if ((ruang >= 17 && ruang <= 40)) {
     pk = '2 PK';
   }
 

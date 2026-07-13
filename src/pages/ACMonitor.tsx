@@ -88,19 +88,28 @@ const ACMonitor = () => {
       }
 
       const getDefaultAC = (i: number): ACData => {
-        // R.1-6: sudah lama terpasang (1.5 PK, 2 unit)
-        // R.17-20 & R.25-40: sudah lama terpasang (2 PK, 2 unit)
-        // R.7-16 & R.21-24: baru terpasang Juli 2025 — Gree 1.5 PK, 2 unit
+        // R.1-6:   1.5 PK, 2 unit, merk -
+        // R.7-16:  1.5 PK, 1 unit, Gree (revisi Juli 2025)
+        // R.17-19: 2 PK,   2 unit, merk -
+        // R.20-24: 2 PK,   2 unit, merk - (revisi Juli 2025)
+        // R.25-40: 2 PK,   2 unit, merk -
         let pk = '1.5 PK';
         let merk = 'Gree';
+        let jumlah = 1;
 
-        if ((i >= 17 && i <= 20) || (i >= 25 && i <= 40)) {
+        if (i >= 1 && i <= 6) {
+          merk = '-';
+          jumlah = 2;
+        } else if (i >= 7 && i <= 16) {
+          // Gree 1.5 PK, 1 pcs
+          merk = 'Gree';
+          pk = '1.5 PK';
+          jumlah = 1;
+        } else if ((i >= 17 && i <= 24) || (i >= 25 && i <= 40)) {
           pk = '2 PK';
           merk = '-';
-        } else if (i >= 1 && i <= 6) {
-          merk = '-';
+          jumlah = 2;
         }
-        // i 7-16 dan 21-24 → Gree 1.5 PK (default di atas)
 
         return {
           id: `AC-${i}`,
@@ -109,7 +118,7 @@ const ACMonitor = () => {
           kondisi: 'Baik',
           merk,
           pk,
-          jumlah: 2,
+          jumlah,
           updatedAt: '',
           updatedBy: '-'
         };
