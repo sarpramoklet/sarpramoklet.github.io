@@ -90,9 +90,8 @@ const ACMonitor = () => {
       const getDefaultAC = (i: number): ACData => {
         // R.1-6:   1.5 PK, 2 unit, merk -
         // R.7-16:  1.5 PK, 1 unit, Gree (revisi Juli 2025)
-        // R.17-19: 2 PK,   2 unit, merk -
-        // R.20-24: 2 PK,   2 unit, merk - (revisi Juli 2025)
-        // R.25-40: 2 PK,   2 unit, merk -
+        // R.17-24: 2 PK,   2 unit, merk - (R20-24 revisi Juli 2025)
+        // R.25-40: 2 PK,   1 unit, merk - (revisi Juli 2025)
         let pk = '1.5 PK';
         let merk = 'Gree';
         let jumlah = 1;
@@ -101,14 +100,17 @@ const ACMonitor = () => {
           merk = '-';
           jumlah = 2;
         } else if (i >= 7 && i <= 16) {
-          // Gree 1.5 PK, 1 pcs
           merk = 'Gree';
           pk = '1.5 PK';
           jumlah = 1;
-        } else if ((i >= 17 && i <= 24) || (i >= 25 && i <= 40)) {
+        } else if (i >= 17 && i <= 24) {
           pk = '2 PK';
           merk = '-';
           jumlah = 2;
+        } else if (i >= 25 && i <= 40) {
+          pk = '2 PK';
+          merk = '-';
+          jumlah = 1;
         }
 
         return {

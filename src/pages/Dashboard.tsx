@@ -3251,8 +3251,8 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
                 <div>
                   <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Cakupan Terpasang</div>
                   <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--accent-blue)' }}>{((acMonitorData.terpasang / 40) * 100).toFixed(0)}%</div>
-                  {/* Total unit: R1-6 (2×6=12) + R7-16 (1×10=10) + R17-24 (2×8=16) + R25-40 (2×16=32) = 70 */}
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>Total: <strong style={{ color: 'var(--accent-blue)' }}>70 unit</strong> AC</div>
+                  {/* Total unit: R1-6 (2×6=12) + R7-16 (1×10=10) + R17-24 (2×8=16) + R25-40 (1×16=16) = 54 */}
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>Total: <strong style={{ color: 'var(--accent-blue)' }}>54 unit</strong> AC</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: '1rem', fontWeight: 700 }}>{acMonitorData.terpasang} Ruang</div>
