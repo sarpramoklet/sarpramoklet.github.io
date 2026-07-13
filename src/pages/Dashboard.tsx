@@ -3249,12 +3249,14 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div className="glass-panel" style={{ padding: '1rem', background: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Cakupan Terpasang</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Cakupan Terpasang</div>
                   <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--accent-blue)' }}>{((acMonitorData.terpasang / 40) * 100).toFixed(0)}%</div>
+                  {/* Total unit: R1-6 (2×6=12) + R7-16 (1×10=10) + R17-24 (2×8=16) + R25-40 (2×16=32) = 70 */}
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>Total: <strong style={{ color: 'var(--accent-blue)' }}>70 unit</strong> AC</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: '1rem', fontWeight: 700 }}>{acMonitorData.terpasang} Ruang</div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--accent-rose)' }}>{acMonitorData.belum} Belum Ada</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--accent-rose)' }}>{acMonitorData.belum} Belum Ada</div>
                 </div>
               </div>
 
@@ -3331,7 +3333,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
           <Activity size={18} color="var(--accent-emerald)" /> Infrastructure Health Snapshot
         </h3>
         <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
-          Last update: {formatSnapshotDate(netSnapshot?.tanggal || netSnapshot?.Tanggal || '')}
+          Diperbarui: {formatSnapshotDate(netSnapshot?.tanggal || netSnapshot?.Tanggal || '')}
         </span>
       </div>
 
