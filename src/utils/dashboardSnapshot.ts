@@ -1056,13 +1056,15 @@ const buildClassroomSnapshot = async (): Promise<DashboardClassroomSnapshot> => 
 const buildDefaultACRoom = (ruang: number) => {
   // R.1-6:   1.5 PK, 2 unit, merk -
   // R.7-16:  1.5 PK, 1 unit, Gree (revisi Juli 2025)
-  // R.17-24: 2 PK,   2 unit, merk - (R20-24 revisi Juli 2025)
-  // R.25-40: 2 PK,   2 unit, merk -
+  // R.17-24: 2 PK,   2 unit, merk -
+  // R.25-32: 2 PK,   1 unit, merk -
+  // R.33-40: 1.5 PK, 1 unit, LG Inverter
   let pk = '1.5 PK';
 
-  if ((ruang >= 17 && ruang <= 40)) {
+  if ((ruang >= 17 && ruang <= 32)) {
     pk = '2 PK';
   }
+  // R33-40 kembali ke 1.5 PK (LG Inverter)
 
   return { ruang, status: 'Terpasang', kondisi: 'Baik', pk };
 };

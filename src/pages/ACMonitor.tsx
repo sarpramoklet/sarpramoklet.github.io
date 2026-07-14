@@ -90,8 +90,9 @@ const ACMonitor = () => {
       const getDefaultAC = (i: number): ACData => {
         // R.1-6:   1.5 PK, 2 unit, merk -
         // R.7-16:  1.5 PK, 1 unit, Gree (revisi Juli 2025)
-        // R.17-24: 2 PK,   2 unit, merk - (R20-24 revisi Juli 2025)
-        // R.25-40: 2 PK,   1 unit, merk - (revisi Juli 2025)
+        // R.17-24: 2 PK,   2 unit, merk -
+        // R.25-32: 2 PK,   1 unit, merk -
+        // R.33-40: 1.5 PK, 1 unit, LG Inverter
         let pk = '1.5 PK';
         let merk = 'Gree';
         let jumlah = 1;
@@ -107,9 +108,13 @@ const ACMonitor = () => {
           pk = '2 PK';
           merk = '-';
           jumlah = 2;
-        } else if (i >= 25 && i <= 40) {
+        } else if (i >= 25 && i <= 32) {
           pk = '2 PK';
           merk = '-';
+          jumlah = 1;
+        } else if (i >= 33 && i <= 40) {
+          pk = '1.5 PK';
+          merk = 'LG Inverter';
           jumlah = 1;
         }
 
