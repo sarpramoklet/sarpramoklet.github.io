@@ -1804,11 +1804,11 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
   }, []);
 
   const PIKET_SCHEDULE = [
-    { day: 'Senin', personnel: ['Chusni', 'Whyna', 'Rudi'], color: 'var(--accent-blue)' },
-    { day: 'Selasa', personnel: ['Bidin', 'Bagus', 'Rudi'], color: 'var(--accent-emerald)' },
-    { day: 'Rabu', personnel: ['Zakaria', 'Yoko', 'Rudi'], color: 'var(--accent-violet)' },
-    { day: 'Kamis', personnel: ['Chandra', 'Nico', 'Rudi'], color: 'var(--accent-amber)' },
-    { day: 'Jumat', personnel: ['Ayat', 'Amalia', 'Rudi'], color: 'var(--accent-rose)' },
+    { day: 'Senin', personnel: ['Rudi', 'Nico', 'Bagus'], color: 'var(--accent-blue)' },
+    { day: 'Selasa', personnel: ['Rudi', 'Bidin', 'Zakaria'], color: 'var(--accent-emerald)' },
+    { day: 'Rabu', personnel: ['Rudi', 'Whyna', 'Ayat'], color: 'var(--accent-violet)' },
+    { day: 'Kamis', personnel: ['Rudi', 'Amalia', 'Chandra'], color: 'var(--accent-amber)' },
+    { day: 'Jumat', personnel: ['Rudi', 'Chusni', 'Yoko', 'Ekon'], color: 'var(--accent-rose)' },
   ];
   const todayDayLabel = new Intl.DateTimeFormat('id-ID', { weekday: 'long' }).format(new Date());
   const todayPiket = PIKET_SCHEDULE.find(s => s.day.toLowerCase() === todayDayLabel.toLowerCase()) || null;
