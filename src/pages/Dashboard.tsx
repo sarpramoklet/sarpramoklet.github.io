@@ -4495,18 +4495,19 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
       {/* Sisa Anggaran RKA Investasi 2026 */}
       {(() => {
         const rkaAccounts = [
-          { akun: '1232101', deskripsi: 'Gedung dan Bangunan',      anggaran: 3128087702, realisasi: 2594581583, sisa: 533506119,   serapan: 82.9,  color: 'var(--accent-blue)' },
-          { akun: '1232201', deskripsi: 'Sarana dan Prasarana Umum',anggaran: 0,          realisasi: 116339000,  sisa: -116339000,  serapan: 0.0,   color: 'var(--accent-rose)' },
-          { akun: '1233101', deskripsi: 'SarPen Laboratorium',      anggaran: 700576820,  realisasi: 116505548,  sisa: 584071272,   serapan: 16.6,  color: 'var(--accent-amber)' },
-          { akun: '1233201', deskripsi: 'Sarana Pendidikan',        anggaran: 731701609,  realisasi: 562298815,  sisa: 169402794,   serapan: 76.8,  color: 'var(--accent-cyan)' },
-          { akun: '1234101', deskripsi: 'Inventaris Kantor',        anggaran: 2885730,    realisasi: 55223080,   sisa: -52337350,   serapan: 100.0, color: 'var(--accent-emerald)' },
-          { akun: '1235101', deskripsi: 'Alat Pengolah Data',       anggaran: 0,          realisasi: 7800000,    sisa: -7800000,    serapan: 0.0,   color: 'var(--accent-rose)' },
-          { akun: '1236101', deskripsi: 'Alat Catu Daya',           anggaran: 0,          realisasi: 413215785,  sisa: -413215785,  serapan: 0.0,   color: 'var(--accent-rose)' },
+          // anggaran = TOTAL (RKA±RRA±ABT), realisasi = Approved Release, sisa = sisa anggaran per tabel
+          { akun: '1232101', deskripsi: 'Gedung dan Bangunan',       anggaran: 2638395567, realisasi: 2594581583, sisa:  43813984,  serapan: 98.3,  color: 'var(--accent-blue)' },
+          { akun: '1232201', deskripsi: 'Sarana dan Prasarana Umum', anggaran:   24909000, realisasi:   24909000, sisa:         0,  serapan: 100.0, color: 'var(--accent-emerald)' },
+          { akun: '1233101', deskripsi: 'SarPen Laboratorium',       anggaran:  692006820, realisasi:  332185548, sisa: 359821272,  serapan:  48.0, color: 'var(--accent-amber)' },
+          { akun: '1233201', deskripsi: 'Sarana Pendidikan',         anggaran:  731701609, realisasi:  562298815, sisa: 169402794,  serapan:  76.8, color: 'var(--accent-cyan)' },
+          { akun: '1234101', deskripsi: 'Inventaris Kantor',         anggaran:   55223080, realisasi:   55223080, sisa:         0,  serapan: 100.0, color: 'var(--accent-emerald)' },
+          { akun: '1235101', deskripsi: 'Alat Pengolah Data',        anggaran:    7800000, realisasi:    7800000, sisa:         0,  serapan: 100.0, color: 'var(--accent-emerald)' },
+          { akun: '1236101', deskripsi: 'Alat Catu Daya',            anggaran:  413215785, realisasi:  413215785, sisa:         0,  serapan: 100.0, color: 'var(--accent-emerald)' },
         ];
         const totalAnggaran  = 4563251861;
-        const totalRealisasi = 3865963811;
-        const totalSisa      = 697288050;
-        const totalSerapan   = 84.72;
+        const totalRealisasi = 3990213811;
+        const totalSisa      = 573038050;
+        const totalSerapan   = 87.44;
 
         const fmt = (n: number) => {
           const abs = Math.abs(n);
