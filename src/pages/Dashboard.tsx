@@ -3649,6 +3649,283 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         </div>
       </div>
 
+      {/* Jadwal Piket Sarpras Section - Top */}
+      <div className="glass-panel delay-300" style={{ marginBottom: '2rem', overflow: 'hidden' }}>
+        <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border-subtle)', background: 'linear-gradient(90deg, var(--accent-violet-ghost), transparent)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+          <div>
+            <h3 style={{ fontSize: '1.1rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <Calendar size={20} color="var(--accent-violet)" /> Jadwal Piket Peminjaman Sarpras
+            </h3>
+            <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Berlaku mulai 27 Juli 2026</p>
+          </div>
+          <div className="badge badge-info" style={{ background: 'var(--accent-violet-ghost)', color: 'var(--accent-violet)', borderColor: 'rgba(139, 92, 246, 0.3)' }}>
+            UPDATE TERBARU
+          </div>
+        </div>
+
+        <div className="flex-row-responsive" style={{ padding: '1.25rem', gap: '2rem', alignItems: 'flex-start' }}>
+          {/* Day Cards */}
+          <div style={{ flex: 1.5, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+            {PIKET_SCHEDULE.map((item, idx) => {
+              const isToday = todayDayLabel.toLowerCase() === item.day.toLowerCase();
+              const isCurrentUserDay = isLoggedIn && item.personnel.some(p =>
+                currentUser.nama.toLowerCase().includes(p.toLowerCase())
+              );
+
+              return (
+                <div key={idx} className={isToday ? 'piket-today-card' : ''} style={{
+                  padding: '1rem',
+                  borderRadius: '12px',
+                  background: isToday ? `${item.color}15` : 'rgba(255,255,255,0.02)',
+                  border: `1px solid ${isToday ? item.color : isCurrentUserDay ? `${item.color}55` : 'var(--border-subtle)'}`,
+                  position: 'relative',
+                  transition: 'all 0.3s ease',
+                  boxShadow: isToday ? `0 0 18px ${item.color}33, 0 0 0 1px ${item.color}55 inset` : 'none',
+                  transform: isToday ? 'scale(1.02)' : 'none',
+                  zIndex: isToday ? 2 : 1
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: isToday ? item.color : 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      {item.day}
+                    </div>
+                    {isToday && (
+                      <div className="piket-today-badge" style={{
+                        background: item.color,
+                        color: 'white',
+                        fontSize: '0.6rem',
+                        fontWeight: 800,
+                        padding: '3px 9px',
+                        borderRadius: '10px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        boxShadow: `0 2px 8px ${item.color}60`,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.3rem',
+                        flexShrink: 0
+                      }}>
+                        <Sparkles size={10} /> Hari Ini
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {item.personnel.map((p, pIdx) => {
+                      const user = USERS.find(u => u.nama.includes(p));
+                      const isMe = isLoggedIn && currentUser.nama.toLowerCase().includes(p.toLowerCase());
+                      return (
+                        <div key={pIdx} style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.6rem',
+                          fontSize: '0.8rem',
+                          color: isMe ? item.color : p === 'Rudi' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                          padding: isMe ? '4px 8px' : '0',
+                          margin: isMe ? '-4px -8px' : '0',
+                          borderRadius: isMe ? '8px' : '0',
+                          background: isMe ? `${item.color}1a` : 'transparent',
+                          border: isMe ? `1px solid ${item.color}55` : '1px solid transparent',
+                          transition: 'background 0.2s'
+                        }}>
+                          <UserAvatar
+                            name={user?.nama || p}
+                            email={user?.email}
+                            photoUrl={user?.fotoProfil}
+                            profileThumbByEmail={profileThumbByEmail}
+                            size={22}
+                          />
+                          <span style={{ fontWeight: isMe ? 700 : p === 'Rudi' ? 600 : 400 }}>
+                            {p}{isMe ? ' (kamu)' : ''}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {isLoggedIn && (
+            <div style={{ flex: 1, background: 'rgba(255,255,255,0.03)', borderRadius: '16px', padding: '1.25rem', border: '1px solid var(--border-subtle)' }}>
+              <h4 style={{ fontSize: '0.9rem', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-cyan)' }}>
+                <Info size={18} /> Ketentuan & Himbauan
+              </h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {[
+                  "Piket berdasarkan jumlah jam kosong terbanyak.",
+                  "Standby di Sarpras saat jam kosong untuk melayani.",
+                  "Pak Rudi standby penuh setiap hari (Backup non-guru).",
+                  "Layanan mencakup peminjaman barang harian.",
+                  "Ruang, mobil & event tanggung jawab Pak Ekon (dibantu piket).",
+                  "Wajib memastikan semua data terinput di aplikasi.",
+                  "Pastikan pengembalian barang tepat waktu/konfirmasi.",
+                  "Sampaikan informasi handover ke petugas piket berikutnya."
+                ].map((text, i) => (
+                  <div key={i} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                    <div style={{ minWidth: '18px', height: '18px', borderRadius: '50%', background: 'var(--accent-cyan-ghost)', color: 'var(--accent-cyan)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 700 }}>
+                      {i + 1}
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.75rem', lineHeight: '1.4', color: 'var(--text-secondary)' }}>{text}</p>
+                  </div>
+                ))}
+              </div>
+              {isCurrentUserOnDuty ? (
+                <div style={{
+                  marginTop: '1.25rem',
+                  padding: '0.9rem 1rem',
+                  borderRadius: '12px',
+                  background: 'linear-gradient(135deg, rgba(16,185,129,0.18), rgba(59,130,246,0.10))',
+                  border: '1px solid rgba(16,185,129,0.4)',
+                  fontSize: '0.78rem',
+                  color: 'var(--text-primary)',
+                  display: 'flex',
+                  gap: '0.65rem',
+                  alignItems: 'flex-start'
+                }}>
+                  <ShieldCheck size={18} color="var(--accent-emerald)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <div>
+                    <div style={{ fontWeight: 800, color: 'var(--accent-emerald)', marginBottom: '0.25rem', letterSpacing: '0.02em' }}>
+                      Hari ini giliran kamu, {currentUser.nama.split(' ')[0]}!
+                    </div>
+                    <div style={{ lineHeight: 1.5, color: 'var(--text-secondary)' }}>
+                      {piketDutyQuote}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div style={{
+                  marginTop: '1.25rem',
+                  padding: '0.85rem 1rem',
+                  borderRadius: '12px',
+                  background: 'linear-gradient(135deg, rgba(245,158,11,0.14), rgba(244,63,94,0.06))',
+                  border: '1px solid rgba(245, 158, 11, 0.28)',
+                  fontSize: '0.75rem',
+                  color: 'var(--accent-amber)',
+                  display: 'flex',
+                  gap: '0.55rem',
+                  alignItems: 'flex-start',
+                  fontStyle: 'italic'
+                }}>
+                  <Sparkles size={15} style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <span style={{ lineHeight: 1.5 }}>{piketDailyReminder}</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Catatan Piket Terkini */}
+      <div className="glass-panel delay-300" style={{ marginBottom: '2rem', borderTop: '1px solid var(--border-subtle)' }}>
+        <div style={{ padding: '1rem 1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 style={{ fontSize: '0.95rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <MessageSquare size={18} color="var(--accent-blue)" /> Catatan Temuan Piket Terkini
+          </h3>
+          <a href="#/duty-notes" style={{ fontSize: '0.75rem', color: 'var(--accent-blue)', fontWeight: 600, textDecoration: 'none' }}>Lihat Semua &rarr;</a>
+        </div>
+        <div style={{ padding: '0 1.25rem 1.25rem 1.25rem' }}>
+          {piketLoading ? (
+            <div style={{ padding: '2rem', textAlign: 'center' }}><Loader2 size={24} className="animate-spin" color="var(--accent-blue)" /></div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
+              {piketNotes.length === 0 ? (
+                <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.8rem', background: 'rgba(255,255,255,0.01)', borderRadius: '12px', border: '1px dashed var(--border-subtle)' }}>
+                  Belum ada catatan temuan baru di database.
+                </div>
+              ) : piketNotes.map((note, idx) => (
+                <div key={idx} className="note-card-dashboard" style={{
+                  padding: '1rem',
+                  borderRadius: '12px',
+                  background: 'rgba(255,255,255,0.02)',
+                  border: `1px solid ${note.type === 'Urgent' ? 'rgba(244, 63, 94, 0.2)' : 'var(--border-subtle)'}`,
+                  position: 'relative'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                    <span className={`badge ${note.kategori === 'Temuan' ? 'badge-danger' : 'badge-info'}`} style={{ fontSize: '0.6rem', padding: '0.1rem 0.4rem' }}>
+                      {note.kategori}
+                    </span>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{formatPiketDate(note.tanggal)}</span>
+                  </div>
+                  <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.85rem', color: 'var(--text-primary)', lineHeight: '1.4', fontStyle: 'italic' }}>
+                    "{note.amount}"
+                  </p>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: 'var(--accent-blue)', fontWeight: 600 }}>
+                      {(() => {
+                        const sender = resolveDutyNoteUser(note);
+                        return (
+                          <UserAvatar
+                            name={sender?.nama || note.keterangan}
+                            email={note.senderEmail || sender?.email}
+                            photoUrl={sender?.fotoProfil}
+                            profileThumbByEmail={profileThumbByEmail}
+                            size={18}
+                          />
+                        );
+                      })()}
+                      {note.keterangan.split(' ')[0]}
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                      <button
+                        onClick={(e) => { e.preventDefault(); handleLikePiket(note); }}
+                        style={{ 
+                          background: 'transparent', border: 'none', cursor: 'pointer', padding: '2px',
+                          display: 'flex', alignItems: 'center', gap: '0.25rem',
+                          color: (() => {
+                            let cl: string[] = [];
+                            try { cl = JSON.parse(note.likes || '[]'); } catch(e){}
+                            return cl.includes(currentUser?.email || currentUser?.nama || 'unknown') ? 'var(--accent-rose)' : 'var(--text-muted)';
+                          })(),
+                          transition: 'all 0.2s ease'
+                        }}
+                        title={(() => {
+                          let cl: string[] = [];
+                          try { cl = JSON.parse(note.likes || '[]'); } catch(e){}
+                          return cl.includes(currentUser?.email || currentUser?.nama || 'unknown') ? 'Batal Suka' : 'Suka';
+                        })()}
+                      >
+                        <Heart size={14} fill={(() => {
+                            let cl: string[] = [];
+                            try { cl = JSON.parse(note.likes || '[]'); } catch(e){}
+                            return cl.includes(currentUser?.email || currentUser?.nama || 'unknown') ? 'var(--accent-rose)' : 'none';
+                        })()} />
+                        <span style={{ fontSize: '0.65rem', fontWeight: 600 }}>
+                          {(() => {
+                            let cl: string[] = [];
+                            try { cl = JSON.parse(note.likes || '[]'); } catch(e){}
+                            return cl.length > 0 ? cl.length : '';
+                          })()}
+                        </span>
+                      </button>
+                      {isAuthorizedToManagePiket(note.keterangan) && (
+                        <>
+                          <button
+                            onClick={(e) => { e.preventDefault(); window.location.hash = '/duty-notes'; }}
+                            style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px' }}
+                            title="Edit"
+                          >
+                            <Edit3 size={13} />
+                          </button>
+                          <button
+                            onClick={(e) => { e.preventDefault(); handleDeletePiket(note.id, note.keterangan); }}
+                            style={{ background: 'transparent', border: 'none', color: 'var(--accent-rose)', cursor: 'pointer', padding: '2px' }}
+                            title="Hapus"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </>
+                      )}
+                      {note.type === 'Urgent' && <AlertCircle size={14} color="var(--accent-rose)" className="animate-pulse" />}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* ── ⚠️ Perlu Tindakan Hari Ini ── */}
       {isLoggedIn && (() => {
         const pendingComplaints = mokletService.complaints?.pending ?? 0;
@@ -4215,282 +4492,7 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         </div>
       </div>
 
-      {/* Jadwal Piket Sarpras Section - Moved to Top */}
-      <div className="glass-panel delay-300" style={{ marginBottom: '2rem', overflow: 'hidden' }}>
-        <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border-subtle)', background: 'linear-gradient(90deg, var(--accent-violet-ghost), transparent)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-          <div>
-            <h3 style={{ fontSize: '1.1rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <Calendar size={20} color="var(--accent-violet)" /> Jadwal Piket Peminjaman Sarpras
-            </h3>
-            <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Berlaku mulai 27 Juli 2026</p>
-          </div>
-          <div className="badge badge-info" style={{ background: 'var(--accent-violet-ghost)', color: 'var(--accent-violet)', borderColor: 'rgba(139, 92, 246, 0.3)' }}>
-            UPDATE TERBARU
-          </div>
-        </div>
 
-        <div className="flex-row-responsive" style={{ padding: '1.25rem', gap: '2rem', alignItems: 'flex-start' }}>
-          {/* Day Cards */}
-          <div style={{ flex: 1.5, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
-            {PIKET_SCHEDULE.map((item, idx) => {
-              const isToday = todayDayLabel.toLowerCase() === item.day.toLowerCase();
-              const isCurrentUserDay = isLoggedIn && item.personnel.some(p =>
-                currentUser.nama.toLowerCase().includes(p.toLowerCase())
-              );
-
-              return (
-                <div key={idx} className={isToday ? 'piket-today-card' : ''} style={{
-                  padding: '1rem',
-                  borderRadius: '12px',
-                  background: isToday ? `${item.color}15` : 'rgba(255,255,255,0.02)',
-                  border: `1px solid ${isToday ? item.color : isCurrentUserDay ? `${item.color}55` : 'var(--border-subtle)'}`,
-                  position: 'relative',
-                  transition: 'all 0.3s ease',
-                  boxShadow: isToday ? `0 0 18px ${item.color}33, 0 0 0 1px ${item.color}55 inset` : 'none',
-                  transform: isToday ? 'scale(1.02)' : 'none',
-                  zIndex: isToday ? 2 : 1
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: isToday ? item.color : 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      {item.day}
-                    </div>
-                    {isToday && (
-                      <div className="piket-today-badge" style={{
-                        background: item.color,
-                        color: 'white',
-                        fontSize: '0.6rem',
-                        fontWeight: 800,
-                        padding: '3px 9px',
-                        borderRadius: '10px',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em',
-                        boxShadow: `0 2px 8px ${item.color}60`,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.3rem',
-                        flexShrink: 0
-                      }}>
-                        <Sparkles size={10} /> Hari Ini
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {item.personnel.map((p, pIdx) => {
-                      const user = USERS.find(u => u.nama.includes(p));
-                      const isMe = isLoggedIn && currentUser.nama.toLowerCase().includes(p.toLowerCase());
-                      return (
-                        <div key={pIdx} style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.6rem',
-                          fontSize: '0.8rem',
-                          color: isMe ? item.color : p === 'Rudi' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                          padding: isMe ? '4px 8px' : '0',
-                          margin: isMe ? '-4px -8px' : '0',
-                          borderRadius: isMe ? '8px' : '0',
-                          background: isMe ? `${item.color}1a` : 'transparent',
-                          border: isMe ? `1px solid ${item.color}55` : '1px solid transparent',
-                          transition: 'background 0.2s'
-                        }}>
-                          <UserAvatar
-                            name={user?.nama || p}
-                            email={user?.email}
-                            photoUrl={user?.fotoProfil}
-                            profileThumbByEmail={profileThumbByEmail}
-                            size={22}
-                          />
-                          <span style={{ fontWeight: isMe ? 700 : p === 'Rudi' ? 600 : 400 }}>
-                            {p}{isMe ? ' (kamu)' : ''}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {isLoggedIn && (
-            <div style={{ flex: 1, background: 'rgba(255,255,255,0.03)', borderRadius: '16px', padding: '1.25rem', border: '1px solid var(--border-subtle)' }}>
-              <h4 style={{ fontSize: '0.9rem', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-cyan)' }}>
-                <Info size={18} /> Ketentuan & Himbauan
-              </h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {[
-                  "Piket berdasarkan jumlah jam kosong terbanyak.",
-                  "Standby di Sarpras saat jam kosong untuk melayani.",
-                  "Pak Rudi standby penuh setiap hari (Backup non-guru).",
-                  "Layanan mencakup peminjaman barang harian.",
-                  "Ruang, mobil & event tanggung jawab Pak Ekon (dibantu piket).",
-                  "Wajib memastikan semua data terinput di aplikasi.",
-                  "Pastikan pengembalian barang tepat waktu/konfirmasi.",
-                  "Sampaikan informasi handover ke petugas piket berikutnya."
-                ].map((text, i) => (
-                  <div key={i} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-                    <div style={{ minWidth: '18px', height: '18px', borderRadius: '50%', background: 'var(--accent-cyan-ghost)', color: 'var(--accent-cyan)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 700 }}>
-                      {i + 1}
-                    </div>
-                    <p style={{ margin: 0, fontSize: '0.75rem', lineHeight: '1.4', color: 'var(--text-secondary)' }}>{text}</p>
-                  </div>
-                ))}
-              </div>
-              {isCurrentUserOnDuty ? (
-                <div style={{
-                  marginTop: '1.25rem',
-                  padding: '0.9rem 1rem',
-                  borderRadius: '12px',
-                  background: 'linear-gradient(135deg, rgba(16,185,129,0.18), rgba(59,130,246,0.10))',
-                  border: '1px solid rgba(16,185,129,0.4)',
-                  fontSize: '0.78rem',
-                  color: 'var(--text-primary)',
-                  display: 'flex',
-                  gap: '0.65rem',
-                  alignItems: 'flex-start'
-                }}>
-                  <ShieldCheck size={18} color="var(--accent-emerald)" style={{ flexShrink: 0, marginTop: '2px' }} />
-                  <div>
-                    <div style={{ fontWeight: 800, color: 'var(--accent-emerald)', marginBottom: '0.25rem', letterSpacing: '0.02em' }}>
-                      Hari ini giliran kamu, {currentUser.nama.split(' ')[0]}!
-                    </div>
-                    <div style={{ lineHeight: 1.5, color: 'var(--text-secondary)' }}>
-                      {piketDutyQuote}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div style={{
-                  marginTop: '1.25rem',
-                  padding: '0.85rem 1rem',
-                  borderRadius: '12px',
-                  background: 'linear-gradient(135deg, rgba(245,158,11,0.14), rgba(244,63,94,0.06))',
-                  border: '1px solid rgba(245, 158, 11, 0.28)',
-                  fontSize: '0.75rem',
-                  color: 'var(--accent-amber)',
-                  display: 'flex',
-                  gap: '0.55rem',
-                  alignItems: 'flex-start',
-                  fontStyle: 'italic'
-                }}>
-                  <Sparkles size={15} style={{ flexShrink: 0, marginTop: '2px' }} />
-                  <span style={{ lineHeight: 1.5 }}>{piketDailyReminder}</span>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Catatan Piket Terkini */}
-      <div className="glass-panel delay-300" style={{ marginBottom: '2rem', borderTop: '1px solid var(--border-subtle)' }}>
-        <div style={{ padding: '1rem 1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 style={{ fontSize: '0.95rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <MessageSquare size={18} color="var(--accent-blue)" /> Catatan Temuan Piket Terkini
-          </h3>
-          <a href="#/duty-notes" style={{ fontSize: '0.75rem', color: 'var(--accent-blue)', fontWeight: 600, textDecoration: 'none' }}>Lihat Semua &rarr;</a>
-        </div>
-        <div style={{ padding: '0 1.25rem 1.25rem 1.25rem' }}>
-          {piketLoading ? (
-            <div style={{ padding: '2rem', textAlign: 'center' }}><Loader2 size={24} className="animate-spin" color="var(--accent-blue)" /></div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
-              {piketNotes.length === 0 ? (
-                <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.8rem', background: 'rgba(255,255,255,0.01)', borderRadius: '12px', border: '1px dashed var(--border-subtle)' }}>
-                  Belum ada catatan temuan baru di database.
-                </div>
-              ) : piketNotes.map((note, idx) => (
-                <div key={idx} className="note-card-dashboard" style={{
-                  padding: '1rem',
-                  borderRadius: '12px',
-                  background: 'rgba(255,255,255,0.02)',
-                  border: `1px solid ${note.type === 'Urgent' ? 'rgba(244, 63, 94, 0.2)' : 'var(--border-subtle)'}`,
-                  position: 'relative'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                    <span className={`badge ${note.kategori === 'Temuan' ? 'badge-danger' : 'badge-info'}`} style={{ fontSize: '0.6rem', padding: '0.1rem 0.4rem' }}>
-                      {note.kategori}
-                    </span>
-                    <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{formatPiketDate(note.tanggal)}</span>
-                  </div>
-                  <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.85rem', color: 'var(--text-primary)', lineHeight: '1.4', fontStyle: 'italic' }}>
-                    "{note.amount}"
-                  </p>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: 'var(--accent-blue)', fontWeight: 600 }}>
-                      {(() => {
-                        const sender = resolveDutyNoteUser(note);
-                        return (
-                          <UserAvatar
-                            name={sender?.nama || note.keterangan}
-                            email={note.senderEmail || sender?.email}
-                            photoUrl={sender?.fotoProfil}
-                            profileThumbByEmail={profileThumbByEmail}
-                            size={18}
-                          />
-                        );
-                      })()}
-                      {note.keterangan.split(' ')[0]}
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
-                      <button
-                        onClick={(e) => { e.preventDefault(); handleLikePiket(note); }}
-                        style={{ 
-                          background: 'transparent', border: 'none', cursor: 'pointer', padding: '2px',
-                          display: 'flex', alignItems: 'center', gap: '0.25rem',
-                          color: (() => {
-                            let cl: string[] = [];
-                            try { cl = JSON.parse(note.likes || '[]'); } catch(e){}
-                            return cl.includes(currentUser?.email || currentUser?.nama || 'unknown') ? 'var(--accent-rose)' : 'var(--text-muted)';
-                          })(),
-                          transition: 'all 0.2s ease'
-                        }}
-                        title={(() => {
-                          let cl: string[] = [];
-                          try { cl = JSON.parse(note.likes || '[]'); } catch(e){}
-                          return cl.includes(currentUser?.email || currentUser?.nama || 'unknown') ? 'Batal Suka' : 'Suka';
-                        })()}
-                      >
-                        <Heart size={14} fill={(() => {
-                            let cl: string[] = [];
-                            try { cl = JSON.parse(note.likes || '[]'); } catch(e){}
-                            return cl.includes(currentUser?.email || currentUser?.nama || 'unknown') ? 'var(--accent-rose)' : 'none';
-                        })()} />
-                        <span style={{ fontSize: '0.65rem', fontWeight: 600 }}>
-                          {(() => {
-                            let cl: string[] = [];
-                            try { cl = JSON.parse(note.likes || '[]'); } catch(e){}
-                            return cl.length > 0 ? cl.length : '';
-                          })()}
-                        </span>
-                      </button>
-                      {isAuthorizedToManagePiket(note.keterangan) && (
-                        <>
-                          <button
-                            onClick={(e) => { e.preventDefault(); window.location.hash = '/duty-notes'; }}
-                            style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px' }}
-                            title="Edit"
-                          >
-                            <Edit3 size={13} />
-                          </button>
-                          <button
-                            onClick={(e) => { e.preventDefault(); handleDeletePiket(note.id, note.keterangan); }}
-                            style={{ background: 'transparent', border: 'none', color: 'var(--accent-rose)', cursor: 'pointer', padding: '2px' }}
-                            title="Hapus"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </>
-                      )}
-                      {note.type === 'Urgent' && <AlertCircle size={14} color="var(--accent-rose)" className="animate-pulse" />}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
 
 
       {isLoggedIn && isAuthorizedFinance && (
