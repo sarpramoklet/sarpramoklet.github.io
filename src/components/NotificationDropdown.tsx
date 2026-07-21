@@ -508,11 +508,11 @@ export default function NotificationDropdown({ currentUser }: { currentUser: any
 
       // Cek pengingat piket jam 15:00
       const PiketSchedule = [
-        { day: 'Senin', personnel: ['Chusni', 'Whyna', 'Rudi'] },
-        { day: 'Selasa', personnel: ['Bidin', 'Bagus', 'Rudi'] },
-        { day: 'Rabu', personnel: ['Zakaria', 'Yoko', 'Rudi'] },
-        { day: 'Kamis', personnel: ['Chandra', 'Nico', 'Rudi'] },
-        { day: 'Jumat', personnel: ['Ayat', 'Amalia', 'Rudi'] },
+        { day: 'Senin',  personnel: ['Rudi', 'Nico', 'Bagus'] },
+        { day: 'Selasa', personnel: ['Rudi', 'Bidin', 'Zakaria'] },
+        { day: 'Rabu',   personnel: ['Rudi', 'Whyna', 'Ayat'] },
+        { day: 'Kamis',  personnel: ['Rudi', 'Amalia', 'Chandra'] },
+        { day: 'Jumat',  personnel: ['Rudi', 'Chusni', 'Yoko', 'Ekon'] },
       ];
       const todayDayName = new Intl.DateTimeFormat('id-ID', { weekday: 'long' }).format(now);
       const todaySchedule = PiketSchedule.find(s => s.day.toLowerCase() === todayDayName.toLowerCase());

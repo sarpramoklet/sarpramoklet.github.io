@@ -48,11 +48,11 @@ const ONT_SERIES = [
 ] as const;
 
 const DUTY_SCHEDULE = [
-  { day: 'Senin', personnel: ['Chusni', 'Whyna', 'Rudi'] },
-  { day: 'Selasa', personnel: ['Bidin', 'Bagus', 'Rudi'] },
-  { day: 'Rabu', personnel: ['Zakaria', 'Yoko', 'Rudi'] },
-  { day: 'Kamis', personnel: ['Chandra', 'Nico', 'Rudi'] },
-  { day: 'Jumat', personnel: ['Ayat', 'Amalia', 'Rudi'] },
+  { day: 'Senin',  personnel: ['Rudi', 'Nico', 'Bagus'] },
+  { day: 'Selasa', personnel: ['Rudi', 'Bidin', 'Zakaria'] },
+  { day: 'Rabu',   personnel: ['Rudi', 'Whyna', 'Ayat'] },
+  { day: 'Kamis',  personnel: ['Rudi', 'Amalia', 'Chandra'] },
+  { day: 'Jumat',  personnel: ['Rudi', 'Chusni', 'Yoko', 'Ekon'] },
 ];
 
 export type DashboardSectionKey =
