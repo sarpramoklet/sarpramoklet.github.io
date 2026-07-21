@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, LabelList, LineChart, Line, Legend, ReferenceLine } from 'recharts';
-import { UserCircle2, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, MessageSquare, AlertCircle, Edit3, Trash2, Wind, Briefcase, Smartphone, Activity, Coins, Camera, X, Heart, Home, Sparkles, ShieldCheck } from 'lucide-react';
+import { UserCircle2, Wallet, Loader2, Zap, Droplets, Calendar, Info, UserCheck, MessageSquare, AlertCircle, Edit3, Trash2, Wind, Briefcase, Smartphone, Activity, Coins, Camera, X, Heart, Home, Sparkles, ShieldCheck, TrendingUp } from 'lucide-react';
 import { canAccessFinanceData, getCurrentUser, ROLES, USERS } from '../data/organization';
 import { mergeCapexProjects } from '../data/capexProjects';
 import { getUtilityChartData } from '../data/utilities';
@@ -4492,10 +4492,110 @@ const Dashboard = ({ isLoggedIn = false, userPicture = '' }: DashboardProps) => 
         </div>
       </div>
 
+      {/* Sisa Anggaran RKA Investasi 2026 */}
+      {(() => {
+        const rkaAccounts = [
+          { akun: '1232101', deskripsi: 'Gedung dan Bangunan',      anggaran: 3128087702, realisasi: 2594581583, sisa: 533506119,   serapan: 82.9,  color: 'var(--accent-blue)' },
+          { akun: '1232201', deskripsi: 'Sarana dan Prasarana Umum',anggaran: 0,          realisasi: 116339000,  sisa: -116339000,  serapan: 0.0,   color: 'var(--accent-rose)' },
+          { akun: '1233101', deskripsi: 'SarPen Laboratorium',      anggaran: 700576820,  realisasi: 116505548,  sisa: 584071272,   serapan: 16.6,  color: 'var(--accent-amber)' },
+          { akun: '1233201', deskripsi: 'Sarana Pendidikan',        anggaran: 731701609,  realisasi: 562298815,  sisa: 169402794,   serapan: 76.8,  color: 'var(--accent-cyan)' },
+          { akun: '1234101', deskripsi: 'Inventaris Kantor',        anggaran: 2885730,    realisasi: 55223080,   sisa: -52337350,   serapan: 100.0, color: 'var(--accent-emerald)' },
+          { akun: '1235101', deskripsi: 'Alat Pengolah Data',       anggaran: 0,          realisasi: 7800000,    sisa: -7800000,    serapan: 0.0,   color: 'var(--accent-rose)' },
+          { akun: '1236101', deskripsi: 'Alat Catu Daya',           anggaran: 0,          realisasi: 413215785,  sisa: -413215785,  serapan: 0.0,   color: 'var(--accent-rose)' },
+        ];
+        const totalAnggaran  = 4563251861;
+        const totalRealisasi = 3865963811;
+        const totalSisa      = 697288050;
+        const totalSerapan   = 84.72;
 
+        const fmt = (n: number) => {
+          const abs = Math.abs(n);
+          const str = abs >= 1e9
+            ? `${(abs / 1e9).toFixed(2)} M`
+            : abs >= 1e6
+            ? `${(abs / 1e6).toFixed(1)} Jt`
+            : `${abs.toLocaleString('id-ID')}`;
+          return n < 0 ? `-Rp ${str}` : `Rp ${str}`;
+        };
+
+        return (
+          <div className="glass-panel delay-200" style={{ marginBottom: '2rem', borderLeft: '4px solid var(--accent-violet)', background: 'linear-gradient(135deg, rgba(139,92,246,0.04), transparent)' }}>
+            {/* Header */}
+            <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div>
+                <h3 style={{ fontSize: '0.95rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <TrendingUp size={16} color="var(--accent-violet)" /> Sisa Anggaran RKA Investasi 2026 — Per Akun
+                </h3>
+                <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Rekap TANGIBLE ASSET · Total serapan {totalSerapan}%</p>
+              </div>
+              <a href="#/capex" className="btn btn-outline" style={{ fontSize: '0.72rem', padding: '0.3rem 0.65rem', borderColor: 'rgba(139,92,246,0.35)', color: 'var(--accent-violet)', background: 'rgba(139,92,246,0.06)' }}>Detail CAPEX →</a>
+            </div>
+
+            <div style={{ padding: '1rem' }}>
+              {/* Summary bar total */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.6rem', marginBottom: '1rem' }}>
+                {[
+                  { label: 'Total Anggaran', value: fmt(totalAnggaran), color: 'var(--text-primary)', bg: 'rgba(255,255,255,0.04)' },
+                  { label: 'Total Realisasi', value: fmt(totalRealisasi), color: 'var(--accent-emerald)', bg: 'rgba(16,185,129,0.07)' },
+                  { label: 'Total Sisa', value: fmt(totalSisa), color: 'var(--accent-violet)', bg: 'rgba(139,92,246,0.08)' },
+                  { label: 'Serapan', value: `${totalSerapan}%`, color: 'var(--accent-amber)', bg: 'rgba(245,158,11,0.08)' },
+                ].map((s, i) => (
+                  <div key={i} style={{ padding: '0.6rem 0.75rem', borderRadius: '10px', background: s.bg, border: '1px solid rgba(255,255,255,0.06)' }}>
+                    <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>{s.label}</div>
+                    <div style={{ marginTop: '0.15rem', fontSize: '0.95rem', fontWeight: 800, color: s.color, lineHeight: 1.2 }}>{s.value}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Per-akun rows */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {rkaAccounts.map((acc, idx) => {
+                  const isMinus = acc.sisa < 0;
+                  const pct = acc.anggaran > 0 ? Math.min(100, (acc.realisasi / acc.anggaran) * 100) : 100;
+                  const barColor = isMinus ? 'var(--accent-rose)' : acc.serapan >= 80 ? 'var(--accent-emerald)' : acc.serapan >= 40 ? 'var(--accent-amber)' : acc.color;
+                  return (
+                    <div key={idx} style={{ padding: '0.7rem 0.85rem', borderRadius: '10px', background: 'rgba(255,255,255,0.025)', border: `1px solid ${isMinus ? 'rgba(244,63,94,0.18)' : 'var(--border-subtle)'}` }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.45rem' }}>
+                        {/* Akun & label */}
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '0.65rem', fontWeight: 700, color: acc.color, fontFamily: 'monospace', letterSpacing: '0.02em' }}>{acc.akun}</span>
+                            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)' }}>{acc.deskripsi}</span>
+                          </div>
+                          <div style={{ display: 'flex', gap: '1rem', marginTop: '0.2rem', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Anggaran: <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{fmt(acc.anggaran)}</span></span>
+                            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Realisasi: <span style={{ color: 'var(--accent-emerald)', fontWeight: 600 }}>{fmt(acc.realisasi)}</span></span>
+                          </div>
+                        </div>
+                        {/* Sisa & serapan */}
+                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                          <div style={{ fontSize: '0.82rem', fontWeight: 800, color: isMinus ? 'var(--accent-rose)' : 'var(--accent-violet)', lineHeight: 1.1 }}>{fmt(acc.sisa)}</div>
+                          <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>
+                            serapan <span style={{ fontWeight: 700, color: barColor }}>{acc.serapan}%</span>
+                          </div>
+                        </div>
+                      </div>
+                      {/* Progress bar */}
+                      <div style={{ height: '5px', borderRadius: 999, background: 'rgba(148,163,184,0.12)', overflow: 'hidden' }}>
+                        <div style={{ width: `${Math.min(100, pct)}%`, height: '100%', borderRadius: 999, background: barColor, transition: 'width 0.6s ease' }} />
+                      </div>
+                      {isMinus && (
+                        <div style={{ marginTop: '0.3rem', fontSize: '0.6rem', color: 'var(--accent-rose)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                          <AlertCircle size={11} /> Realisasi melebihi anggaran (over budget)
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
 
       {isLoggedIn && isAuthorizedFinance && (
+
         <div className="stats-grid" style={{ marginBottom: '1.5rem', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
           {/* Internal Sarpra Cash Monitor */}
           <div className="glass-panel stat-card" style={{ padding: '1.25rem', background: 'linear-gradient(135deg, var(--accent-blue-ghost), transparent)', borderLeft: '4px solid var(--accent-blue)' }}>
